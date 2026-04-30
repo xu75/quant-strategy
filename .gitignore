@@ -2,3 +2,40 @@
 .claude/
 .codex/
 .gemini/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment & secrets
+.env
+config.json
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data (large files)
+*.csv.bak
+
+# Logs
+*.log
+
+# Node (site)
+site/node_modules/
+site/.astro/
+site/dist/
+
+# Cat Cafe local
+.kimi/
+KIMI.md

@@ -1,0 +1,150 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dataDir = path.resolve(process.cwd(), '../data/btc_ma240_4d');
+const latest = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf-8'));
+const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
+
+const signal = latest.current_signal;
+const position = latest.position;
+const strategy = latest.strategy;
+const perf = backtest.performance;
+const period = backtest.period;
+
+const updatedAt = new Date(latest.updated_at).toLocaleString('en-US', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC'
+});
+const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC'
+});
+---
+
+<Layout title="BTC 4H MA240 + 4D Strategy" description="Live signal status for BTC MA240 trend-following strategy">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Home</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{strategy.name}</h1>
+    <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} · Min hold {strategy.min_hold_days}D</p>
+    <p class="text-xs text-gray-600 mt-2">Last updated: {updatedAt} UTC</p>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">Current Signal</h2>
+    <div class="border border-gray-800 rounded-xl p-6">
+      <div class="flex items-center gap-4 mb-6">
+        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+          position.in_position
+            ? 'bg-green-900/50 text-green-400'
+            : 'bg-gray-800 text-gray-400'
+        }`}>
+          {position.in_position ? 'In Position' : 'No Position'}
+        </span>
+        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+          signal.action === 'buy' ? 'bg-green-900/50 text-green-400'
+            : signal.action === 'sell' ? 'bg-red-900/50 text-red-400'
+            : 'bg-gray-800 text-gray-400'
+        }`}>
+          Signal: {signal.action.toUpperCase()}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">Price</p>
+          <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
+          <p class="text-xl font-mono">${signal.ma_value.toLocaleString()}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">Hold Bars</p>
+          <p class="text-xl font-mono">{signal.hold_bars ?? '—'}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">Signal Time</p>
+          <p class="text-sm font-mono mt-1">{signalTime}</p>
+        </div>
+      </div>
+
+      <p class="text-sm text-gray-400 mt-4">{signal.reason}</p>
+    </div>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">Performance Summary</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Return (MTM)</p>
+        <p class={`text-xl font-mono ${perf.total_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {perf.total_return_pct > 0 ? '+' : ''}{perf.total_return_pct}%
+        </p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Buy & Hold</p>
+        <p class={`text-xl font-mono ${perf.buy_hold_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {perf.buy_hold_return_pct > 0 ? '+' : ''}{perf.buy_hold_return_pct}%
+        </p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Max Drawdown</p>
+        <p class="text-xl font-mono text-red-400">-{perf.max_drawdown_pct}%</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Sharpe Ratio</p>
+        <p class="text-xl font-mono">{perf.sharpe_ratio}</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Win Rate</p>
+        <p class="text-xl font-mono">{perf.win_rate_pct}%</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Total Trades</p>
+        <p class="text-xl font-mono">{perf.total_trades}</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Hold</p>
+        <p class="text-xl font-mono">{perf.avg_hold_bars} bars</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Period</p>
+        <p class="text-sm font-mono mt-1">{new Date(period.start).toLocaleDateString('en-US', {month:'short',year:'numeric'})} — {new Date(period.end).toLocaleDateString('en-US', {month:'short',year:'numeric'})}</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <a href="/backtest/btc-ma240-4d" class="text-blue-400 hover:text-blue-300 text-sm">
+        View full backtest results &rarr;
+      </a>
+    </div>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">Strategy Rules</h2>
+    <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
+      <div>
+        <p class="text-white font-medium mb-1">Entry (Buy)</p>
+        <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+      </div>
+      <div>
+        <p class="text-white font-medium mb-1">Exit (Sell)</p>
+        <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
+      </div>
+      <div>
+        <p class="text-white font-medium mb-1">Design</p>
+        <p>Asymmetric entry/exit: entry requires crossover confirmation to reduce whipsaws, exit only requires price below MA. Minimum hold period prevents premature exits during consolidation.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-semibold mb-4">Data Source</h2>
+    <p class="text-gray-400 text-sm">
+      All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
+      Signals are generated automatically every 4 hours via GitHub Actions.
+      <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">View source code</a>.
+    </p>
+  </section>
+</Layout>
