@@ -4,7 +4,7 @@ related_features: []
 topics: [mesh-hub, btc-strategy, open-source, quant]
 doc_kind: spec
 created: 2026-04-30
-status: draft
+status: in-progress
 ---
 
 # F001 - MeshHub: 开源低频量化研究站
@@ -154,14 +154,14 @@ status: draft
 ## 验收标准 (AC)
 
 ### P1 - MVP
-- [ ] 策略信号模块提取完成，单元测试覆盖核心逻辑
-- [ ] 数据管道能自动从OKX拉取4H K线
-- [ ] 回测引擎能产出收益率/回撤/胜率等指标
-- [ ] 报告生成器输出JSON状态文件和PNG图表
-- [ ] GitHub Actions每4H自动运行并commit结果
-- [ ] Astro静态站能展示策略状态和回测结果
+- [x] 策略信号模块提取完成，单元测试覆盖核心逻辑
+- [x] 数据管道能自动从OKX拉取4H K线
+- [x] 回测引擎能产出收益率/回撤/胜率等指标
+- [x] 报告生成器输出JSON状态文件和PNG图表
+- [x] GitHub Actions每4H自动运行并commit结果
+- [x] Astro静态站能展示策略状态和回测结果
 - [ ] 部署到 mesh-hub.xyz
-- [ ] 免责声明页完成
+- [x] 免责声明页完成
 
 ### P2 - 增强
 - [ ] MSTR策略接入
@@ -185,3 +185,9 @@ status: draft
 | W2 | 第2周 | Astro前端 + 策略展示页 + 回测展示页 |
 | W3 | 第3周 | GitHub Actions自动化 + 部署 mesh-hub.xyz |
 | W4 | 第4周 | 免责声明 + 捐赠入口 + 上线 |
+
+### Timeline
+
+| 日期 | 事件 |
+|------|------|
+| 2026-04-30 | W1+W2 merged (PR #1) — 策略引擎 + 数据管道 + 回测 + Astro 前端 4 页 |
