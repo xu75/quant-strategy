@@ -1,10 +1,10 @@
-"""OKX market data fetcher.
+"""Market data fetcher.
 
-Fetches 4H BTC-USDT candle data from OKX public API.
-No authentication required for market data.
+Loads local historical data and fetches recent candles from OKX public API.
 """
 
 import time
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -12,6 +12,42 @@ import requests
 
 OKX_BASE_URL = "https://www.okx.com"
 MAX_CANDLES_PER_REQUEST = 100  # OKX limit per request
+
+# Default path to local historical 1h data
+LOCAL_HISTORY_PATH = Path.home() / "VSCode/SynologyDrive/backtest/history_data/normalized/BTC-USD_1h.csv"
+
+
+def load_local_history(
+    path: str | Path = LOCAL_HISTORY_PATH,
+    target_bar: str = "4H",
+) -> pd.DataFrame:
+    """Load local historical CSV and resample to target timeframe.
+
+    Args:
+        path: Path to normalized 1h CSV (columns: datetime,open,high,low,close,volume).
+        target_bar: Target candle interval (e.g., "4H").
+
+    Returns:
+        DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume'],
+        sorted oldest-first.
+    """
+    df = pd.read_csv(path, parse_dates=["datetime"])
+    df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
+    df = df.set_index("datetime").sort_index()
+
+    resample_map = {"4H": "4h", "1H": "1h", "1D": "1D"}
+    freq = resample_map.get(target_bar, target_bar.lower())
+
+    resampled = df.resample(freq, offset="0h").agg({
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+    }).dropna()
+
+    resampled = resampled.reset_index().rename(columns={"datetime": "timestamp"})
+    return resampled
 
 
 def fetch_candles(

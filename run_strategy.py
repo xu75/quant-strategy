@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strategies.btc_ma_trend.signal import StrategyConfig
-from pipeline.data_fetcher import fetch_candles, fetch_historical_candles
+from pipeline.data_fetcher import fetch_candles, load_local_history
 from pipeline.backtest import run_backtest
 from pipeline.report import (
     generate_status_json,
@@ -41,19 +41,38 @@ def main():
 
     print(f"[MeshHub] Running strategy: BTC {config.timeframe} MA{config.ma_window}")
 
-    # 1. Fetch data
-    print("[MeshHub] Fetching historical candle data from OKX...")
+    # 1. Load local historical data (resampled 1h→4h)
+    df_hist = None
     try:
-        df = fetch_historical_candles(
-            symbol=config.symbol,
-            bar=config.timeframe,
-            limit=1440,  # ~240 days of 4H data
-        )
+        df_hist = load_local_history()
+        print(f"[MeshHub] Loaded local history: {len(df_hist)} candles, "
+              f"{df_hist.iloc[0]['timestamp']} to {df_hist.iloc[-1]['timestamp']}")
     except Exception as e:
-        print(f"[MeshHub] Historical fetch failed, falling back to recent: {e}")
-        df = fetch_candles(symbol=config.symbol, bar=config.timeframe, limit=300)
+        print(f"[MeshHub] Local history not available: {e}")
 
-    print(f"[MeshHub] Got {len(df)} candles, from {df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}")
+    # 2. Fetch recent data from OKX (forward updates)
+    print("[MeshHub] Fetching recent candles from OKX...")
+    try:
+        df_recent = fetch_candles(symbol=config.symbol, bar=config.timeframe, limit=300)
+        print(f"[MeshHub] Got {len(df_recent)} recent candles from OKX")
+    except Exception as e:
+        print(f"[MeshHub] OKX fetch failed: {e}")
+        df_recent = None
+
+    # 3. Combine: local history + OKX recent (dedup by timestamp)
+    import pandas as pd
+    if df_hist is not None and df_recent is not None:
+        df = pd.concat([df_hist, df_recent], ignore_index=True)
+        df = df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
+    elif df_hist is not None:
+        df = df_hist
+    elif df_recent is not None:
+        df = df_recent
+    else:
+        print("[MeshHub] ERROR: No data available")
+        sys.exit(1)
+
+    print(f"[MeshHub] Combined: {len(df)} candles, {df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}")
 
     # 2. Run backtest
     print("[MeshHub] Running backtest...")

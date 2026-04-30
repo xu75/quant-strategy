@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-30T14:20:50.939227+00:00",
+  "updated_at": "2026-04-30T16:18:31.619949+00:00",
   "strategy": {
     "name": "BTC 4H MA240 + 4D",
     "timeframe": "4H",
@@ -9,14 +9,14 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 76064.8,
-    "ma_value": 72174.3,
-    "timestamp": "2026-04-30T08:00:00+00:00",
+    "price": 76465.7,
+    "ma_value": 72198.82,
+    "timestamp": "2026-04-30T12:00:00+00:00",
     "hold_bars": 147,
     "reason": "Holding, price above MA240"
   },
   "position": {
     "in_position": true,
-    "entry_bar_idx": 1292
+    "entry_bar_idx": 4303
   }
 }
