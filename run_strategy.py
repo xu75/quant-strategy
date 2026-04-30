@@ -16,9 +16,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from strategies.btc_ma_trend.signal import StrategyConfig
+from strategies.btc_ma_trend.signal import StrategyConfig, compute_signals
 from pipeline.data_fetcher import fetch_candles, load_local_history
-from pipeline.backtest import run_backtest
+from pipeline.backtest import run_backtest, compute_period_metrics
 from pipeline.report import (
     generate_status_json,
     generate_backtest_json,
@@ -27,8 +27,14 @@ from pipeline.report import (
 )
 
 
+import pandas as pd
+
 OUTPUT_DIR = Path("data/btc_ma240_4d")
 CHARTS_DIR = OUTPUT_DIR / "charts"
+
+# Fixed launch date — "Since" reference is the last signal before this date.
+# Once set per strategy, never changes.
+LAUNCH_DATE = pd.Timestamp("2026-04-30", tz="UTC")
 
 
 def main():
@@ -60,7 +66,6 @@ def main():
         df_recent = None
 
     # 3. Combine: local history + OKX recent (dedup by timestamp)
-    import pandas as pd
     if df_hist is not None and df_recent is not None:
         df = pd.concat([df_hist, df_recent], ignore_index=True)
         df = df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
@@ -85,10 +90,7 @@ def main():
     print(f"  Win Rate: {result.win_rate:.1f}%")
     print(f"  Buy & Hold: {result.buy_hold_return_pct:.2f}%")
 
-    # 3. Determine current position from signal sequence (not trades)
-    # Signal sequence is the single source of truth for position state.
-    # If the last signal is "buy" with no subsequent "sell", we're in position.
-    from strategies.btc_ma_trend.signal import compute_signals
+    # 3. Determine current position from signal sequence
     signals = compute_signals(df, config)
 
     in_position = False
@@ -100,11 +102,61 @@ def main():
         if mask.any():
             entry_bar_idx = mask.idxmax()
 
-    # 4. Generate outputs
+    # 4. Compute "Since" date and period-filtered performance
+    since_date = None
+    for sig in reversed(signals):
+        if sig.timestamp <= LAUNCH_DATE:
+            since_date = sig.timestamp
+            break
+
+    if since_date:
+        print(f"[MeshHub] Since date (last signal before launch): {since_date}")
+
+    # Open position info for period metrics
+    open_entry_time = None
+    open_entry_price = 0.0
+    if in_position and signals and signals[-1].action == "buy":
+        open_entry_time = signals[-1].timestamp
+        open_entry_price = signals[-1].price
+
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    end_price = df_sorted.iloc[-1]["close"]
+    end_date = df_sorted.iloc[-1]["timestamp"]
+
+    period_boundaries = {}
+    if since_date:
+        period_boundaries["since_launch"] = since_date
+    period_boundaries["1y"] = end_date - pd.DateOffset(years=1)
+    period_boundaries["2y"] = end_date - pd.DateOffset(years=2)
+    period_boundaries["all"] = df_sorted.iloc[0]["timestamp"]
+
+    periods_data = {}
+    for name, p_start in period_boundaries.items():
+        mask = df_sorted["timestamp"] <= p_start
+        start_price = float(df_sorted.loc[mask, "close"].iloc[-1]) if mask.any() else float(df_sorted.iloc[0]["close"])
+
+        metrics = compute_period_metrics(
+            result.trades, p_start, end_price, start_price,
+            open_entry_time, open_entry_price,
+        )
+        if metrics:
+            periods_data[name] = {
+                "start": p_start.isoformat(),
+                "end": end_date.isoformat(),
+                "performance": metrics,
+            }
+
+    print(f"[MeshHub] Period metrics computed: {list(periods_data.keys())}")
+
+    # 5. Generate outputs
     print("[MeshHub] Generating reports...")
 
     generate_status_json(df, config, in_position, entry_bar_idx, OUTPUT_DIR / "latest.json")
-    generate_backtest_json(result, OUTPUT_DIR / "backtest.json")
+    generate_backtest_json(
+        result, OUTPUT_DIR / "backtest.json",
+        since_date=since_date.isoformat() if since_date else None,
+        periods=periods_data,
+    )
     generate_equity_chart(result, CHARTS_DIR / "equity.png")
     generate_price_ma_chart(df, config, result.trades, CHARTS_DIR / "price_ma.png")
 

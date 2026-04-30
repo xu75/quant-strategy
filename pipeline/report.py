@@ -69,11 +69,28 @@ def generate_status_json(
     return status
 
 
-def generate_backtest_json(result: BacktestResult, output_path: Path) -> None:
-    """Write backtest results to JSON."""
+def generate_backtest_json(
+    result: BacktestResult,
+    output_path: Path,
+    since_date: str | None = None,
+    periods: dict | None = None,
+) -> None:
+    """Write backtest results to JSON.
+
+    Args:
+        result: Backtest result.
+        output_path: Path to write JSON file.
+        since_date: Fixed launch reference date (ISO string).
+        periods: Period-filtered performance data.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    data = result_to_dict(result)
+    if since_date:
+        data["since_date"] = since_date
+    if periods:
+        data["periods"] = periods
     with open(output_path, "w") as f:
-        json.dump(result_to_dict(result), f, indent=2, default=str)
+        json.dump(data, f, indent=2, default=str)
 
 
 def generate_equity_chart(result: BacktestResult, output_path: Path) -> None:

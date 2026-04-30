@@ -24,11 +24,14 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
         <a href="/" class="text-xl font-bold text-white tracking-tight">
           MeshHub
         </a>
-        <div class="flex gap-6 text-sm text-gray-400">
-          <a href="/" class="hover:text-white transition-colors">Home</a>
-          <a href="/strategy/btc-ma240-4d" class="hover:text-white transition-colors">Strategy</a>
-          <a href="/backtest/btc-ma240-4d" class="hover:text-white transition-colors">Backtest</a>
+        <div class="flex items-center gap-4 sm:gap-6 text-sm text-gray-400 flex-wrap">
+          <a href="/" class="hover:text-white transition-colors" data-i18n="nav.home">Home</a>
+          <a href="/strategy/btc-ma240-4d" class="hover:text-white transition-colors" data-i18n="nav.strategy">Strategy</a>
+          <a href="/backtest/btc-ma240-4d" class="hover:text-white transition-colors" data-i18n="nav.backtest">Backtest</a>
           <a href="https://github.com/xu75/quant-strategy" class="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <button id="lang-toggle" class="px-2 py-1 rounded text-xs border border-gray-700 hover:border-gray-500 transition-colors" aria-label="Switch language">
+            中文
+          </button>
         </div>
       </div>
     </nav>
@@ -39,13 +42,44 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
 
     <footer class="border-t border-gray-800 px-6 py-6 text-center text-sm text-gray-500">
       <div class="max-w-5xl mx-auto flex flex-col gap-2">
-        <p>MeshHub — Open-source low-frequency quant research lab</p>
+        <p data-i18n="footer.tagline">MeshHub — Open-source low-frequency quant research lab</p>
         <div class="flex justify-center gap-4">
-          <a href="/disclaimer" class="hover:text-gray-300 transition-colors">Disclaimer</a>
-          <a href="https://github.com/xu75/quant-strategy" class="hover:text-gray-300 transition-colors" target="_blank" rel="noopener noreferrer">Source Code</a>
+          <a href="/disclaimer" class="hover:text-gray-300 transition-colors" data-i18n="footer.disclaimer">Disclaimer</a>
+          <a href="https://github.com/xu75/quant-strategy" class="hover:text-gray-300 transition-colors" target="_blank" rel="noopener noreferrer" data-i18n="footer.source">Source Code</a>
         </div>
-        <p class="text-gray-600">This is not investment advice. For research purposes only.</p>
+        <p class="text-gray-600" data-i18n="footer.notice">This is not investment advice. For research purposes only.</p>
       </div>
     </footer>
+
+    <script>
+      import { translations } from '../i18n/translations';
+
+      function getLang(): string {
+        return localStorage.getItem('meshhub-lang') || 'en';
+      }
+
+      function applyLang(lang: string) {
+        const t = translations[lang];
+        if (!t) return;
+        document.querySelectorAll('[data-i18n]').forEach((el) => {
+          const key = el.getAttribute('data-i18n')!;
+          if (t[key]) el.textContent = t[key];
+        });
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        const btn = document.getElementById('lang-toggle');
+        if (btn) btn.textContent = lang === 'zh' ? 'EN' : '中文';
+        localStorage.setItem('meshhub-lang', lang);
+      }
+
+      // Apply on load
+      const lang = getLang();
+      if (lang !== 'en') applyLang(lang);
+
+      // Toggle button
+      document.getElementById('lang-toggle')?.addEventListener('click', () => {
+        const current = getLang();
+        applyLang(current === 'en' ? 'zh' : 'en');
+      });
+    </script>
   </body>
 </html>

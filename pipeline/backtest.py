@@ -163,6 +163,127 @@ def run_backtest(
     )
 
 
+def compute_period_metrics(
+    trades: list[Trade],
+    period_start: pd.Timestamp,
+    end_price: float,
+    start_price: float,
+    open_entry_time: pd.Timestamp | None = None,
+    open_entry_price: float = 0.0,
+    fee_rate: float = 0.001,
+) -> dict | None:
+    """Compute performance metrics for a period, including cross-boundary trades.
+
+    Trades that were entered before period_start but exited within the period
+    are included with P&L measured from start_price (not original entry).
+
+    Args:
+        trades: All completed trades from backtest.
+        period_start: Start of the period (inclusive, tz-aware UTC).
+        end_price: Last close price (for buy_hold and unrealized PnL).
+        start_price: Close price at period_start (for buy_hold).
+        open_entry_time: Entry time of open position (if any).
+        open_entry_price: Entry price of open position (pre-fee).
+        fee_rate: Fee rate per side.
+
+    Returns:
+        Dict with period metrics, or None if no activity in period.
+    """
+    # Trades fully within the period
+    in_period = [t for t in trades if t.entry_time >= period_start]
+
+    # Trades crossing the boundary (entered before period, exited within)
+    cross_boundary = [
+        t for t in trades
+        if t.entry_time < period_start and t.exit_time >= period_start
+    ]
+
+    # Open position contributes regardless of when it was entered
+    include_open = open_entry_time is not None
+    open_crosses_boundary = include_open and open_entry_time < period_start
+
+    if not in_period and not cross_boundary and not include_open:
+        return None
+
+    equity = 1.0
+    peak = 1.0
+    max_dd = 0.0
+    wins = 0
+    returns_list: list[float] = []
+
+    # Cross-boundary trades: P&L from start_price to exit (no entry fee)
+    for t in cross_boundary:
+        exit_value = t.exit_price * (1 - fee_rate)
+        ret = (exit_value - start_price) / start_price
+        equity *= (1 + ret)
+        if equity > peak:
+            peak = equity
+        dd = (peak - equity) / peak
+        if dd > max_dd:
+            max_dd = dd
+        if ret > 0:
+            wins += 1
+        returns_list.append(ret * 100)
+
+    # In-period trades: use original P&L
+    for t in in_period:
+        ret = t.pnl_pct / 100
+        equity *= (1 + ret)
+        if equity > peak:
+            peak = equity
+        dd = (peak - equity) / peak
+        if dd > max_dd:
+            max_dd = dd
+        if t.pnl_pct > 0:
+            wins += 1
+        returns_list.append(t.pnl_pct)
+
+    realized_equity = equity
+
+    # Unrealized P&L from open position
+    if include_open:
+        if open_crosses_boundary:
+            # Entered before period — measure from start_price (no entry fee)
+            unrealized_ret = (end_price * (1 - fee_rate) - start_price) / start_price
+        else:
+            # Entered within period — use actual entry with fee
+            entry_cost = open_entry_price * (1 + fee_rate)
+            exit_value = end_price * (1 - fee_rate)
+            unrealized_ret = (exit_value - entry_cost) / entry_cost
+        equity *= (1 + unrealized_ret)
+        if equity > peak:
+            peak = equity
+        dd = (peak - equity) / peak
+        if dd > max_dd:
+            max_dd = dd
+
+    closed_count = len(in_period) + len(cross_boundary)
+
+    # Sharpe ratio from closed trade returns
+    if len(returns_list) > 1:
+        avg_ret = sum(returns_list) / len(returns_list)
+        std_ret = (sum((r - avg_ret) ** 2 for r in returns_list) / (len(returns_list) - 1)) ** 0.5
+        sharpe = avg_ret / std_ret if std_ret > 0 else 0.0
+    else:
+        sharpe = 0.0
+
+    buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
+    all_closed = cross_boundary + in_period
+    avg_hold = sum(t.hold_bars for t in all_closed) / closed_count if closed_count > 0 else 0.0
+
+    return {
+        "total_return_pct": round((equity - 1) * 100, 2),
+        "realized_return_pct": round((realized_equity - 1) * 100, 2),
+        "max_drawdown_pct": round(max_dd * 100, 2),
+        "win_rate_pct": round(wins / closed_count * 100, 2) if closed_count > 0 else 0.0,
+        "total_trades": closed_count,
+        "avg_hold_bars": round(avg_hold, 1),
+        "sharpe_ratio": round(sharpe, 3),
+        "buy_hold_return_pct": round(buy_hold, 2),
+        "has_open_position": include_open,
+    }
+
+
 def result_to_dict(result: BacktestResult) -> dict:
     """Convert BacktestResult to a JSON-serializable dict."""
     return {

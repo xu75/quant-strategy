@@ -19,88 +19,88 @@ function fmtDate(iso: string) {
 <Layout title="Backtest — BTC MA240 + 4D" description="Backtest results for BTC MA240 trend-following strategy">
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
-      <a href="/strategy/btc-ma240-4d" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Strategy</a>
+      <a href="/strategy/btc-ma240-4d" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="backtest.back">&larr; Strategy</a>
     </div>
-    <h1 class="text-3xl font-bold mb-1">Backtest Results</h1>
+    <h1 class="text-3xl font-bold mb-1" data-i18n="backtest.title">Backtest Results</h1>
     <p class="text-gray-400">
       {strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} · {fmtDate(period.start)} — {fmtDate(period.end)}
     </p>
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Performance</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.perf">Performance</h2>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Return (MTM)</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
         <p class={`text-xl font-mono ${perf.total_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
           {perf.total_return_pct > 0 ? '+' : ''}{perf.total_return_pct}%
         </p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Realized Return</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="backtest.realized">Realized Return</p>
         <p class={`text-xl font-mono ${perf.realized_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
           {perf.realized_return_pct > 0 ? '+' : ''}{perf.realized_return_pct}%
         </p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Buy & Hold</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold">Buy & Hold</p>
         <p class={`text-xl font-mono ${perf.buy_hold_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
           {perf.buy_hold_return_pct > 0 ? '+' : ''}{perf.buy_hold_return_pct}%
         </p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Max Drawdown</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.drawdown">Max Drawdown</p>
         <p class="text-xl font-mono text-red-400">-{perf.max_drawdown_pct}%</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Sharpe Ratio</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe Ratio</p>
         <p class="text-xl font-mono">{perf.sharpe_ratio}</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Win Rate</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.winrate">Win Rate</p>
         <p class="text-xl font-mono">{perf.win_rate_pct}%</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Total Trades</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.trades">Total Trades</p>
         <p class="text-xl font-mono">{perf.total_trades}</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Hold</p>
-        <p class="text-xl font-mono">{perf.avg_hold_bars} bars</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.avghold">Avg Hold</p>
+        <p class="text-xl font-mono">{perf.avg_hold_bars} <span data-i18n="label.bars">bars</span></p>
       </div>
     </div>
     {perf.has_open_position && (
-      <p class="text-xs text-gray-500 mt-3">* MTM return includes unrealized P&L from the current open position.</p>
+      <p class="text-xs text-gray-500 mt-3" data-i18n="backtest.mtm_note">* MTM return includes unrealized P&L from the current open position.</p>
     )}
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Equity Curve</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.equity">Equity Curve</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
       <img src="/charts/equity.png" alt="Equity curve" class="w-full rounded" />
     </div>
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Price & MA Overlay</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.overlay">Price & MA Overlay</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
       <img src="/charts/price_ma.png" alt="Price and MA overlay with trade markers" class="w-full rounded" />
     </div>
   </section>
 
   <section>
-    <h2 class="text-xl font-semibold mb-4">Trade History</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.history">Trade History</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase tracking-wide">
-            <th class="text-left py-3 px-3">#</th>
-            <th class="text-left py-3 px-3">Entry</th>
-            <th class="text-right py-3 px-3">Entry Price</th>
-            <th class="text-left py-3 px-3">Exit</th>
-            <th class="text-right py-3 px-3">Exit Price</th>
-            <th class="text-right py-3 px-3">Hold</th>
-            <th class="text-right py-3 px-3">P&L</th>
+            <th class="text-left py-3 px-3" data-i18n="backtest.col.num">#</th>
+            <th class="text-left py-3 px-3" data-i18n="backtest.col.entry">Entry</th>
+            <th class="text-right py-3 px-3" data-i18n="backtest.col.entry_price">Entry Price</th>
+            <th class="text-left py-3 px-3" data-i18n="backtest.col.exit">Exit</th>
+            <th class="text-right py-3 px-3" data-i18n="backtest.col.exit_price">Exit Price</th>
+            <th class="text-right py-3 px-3" data-i18n="backtest.col.hold">Hold</th>
+            <th class="text-right py-3 px-3" data-i18n="backtest.col.pnl">P&L</th>
           </tr>
         </thead>
         <tbody>

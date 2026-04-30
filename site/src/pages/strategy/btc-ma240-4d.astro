@@ -12,6 +12,16 @@ const position = latest.position;
 const strategy = latest.strategy;
 const perf = backtest.performance;
 const period = backtest.period;
+const periods = backtest.periods || {};
+
+// Default to "since_launch" if available, fallback to full period
+const defaultPerf = periods.since_launch?.performance || perf;
+const defaultRange = periods.since_launch
+  ? { start: periods.since_launch.start, end: periods.since_launch.end }
+  : period;
+
+// Serialize periods for client-side tab switching
+const periodsJson = JSON.stringify(periods);
 
 const updatedAt = new Date(latest.updated_at).toLocaleString('en-US', {
   dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC'
@@ -24,22 +34,22 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
 <Layout title="BTC 4H MA240 + 4D Strategy" description="Live signal status for BTC MA240 trend-following strategy">
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
-      <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Home</a>
+      <a href="/" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="strategy.back">&larr; Home</a>
     </div>
     <h1 class="text-3xl font-bold mb-1">{strategy.name}</h1>
     <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} · Min hold {strategy.min_hold_days}D</p>
-    <p class="text-xs text-gray-600 mt-2">Last updated: {updatedAt} UTC</p>
+    <p class="text-xs text-gray-600 mt-2"><span data-i18n="strategy.updated">Last updated:</span> {updatedAt} UTC</p>
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Current Signal</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.signal">Current Signal</h2>
     <div class="border border-gray-800 rounded-xl p-6">
       <div class="flex items-center gap-4 mb-6">
         <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
           position.in_position
             ? 'bg-green-900/50 text-green-400'
             : 'bg-gray-800 text-gray-400'
-        }`}>
+        }`} data-i18n={position.in_position ? 'label.in_position' : 'label.no_position'}>
           {position.in_position ? 'In Position' : 'No Position'}
         </span>
         <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
@@ -47,13 +57,13 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
             : signal.action === 'sell' ? 'bg-red-900/50 text-red-400'
             : 'bg-gray-800 text-gray-400'
         }`}>
-          Signal: {signal.action.toUpperCase()}
+          <span data-i18n="strategy.signal_prefix">Signal:</span> {signal.action.toUpperCase()}
         </span>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
         <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wide">Price</p>
+          <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
           <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
         </div>
         <div>
@@ -61,11 +71,11 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
           <p class="text-xl font-mono">${signal.ma_value.toLocaleString()}</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wide">Hold Bars</p>
+          <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
           <p class="text-xl font-mono">{signal.hold_bars ?? '—'}</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wide">Signal Time</p>
+          <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_time">Signal Time</p>
           <p class="text-sm font-mono mt-1">{signalTime}</p>
         </div>
       </div>
@@ -75,76 +85,137 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Performance Summary</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Return (MTM)</p>
-        <p class={`text-xl font-mono ${perf.total_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {perf.total_return_pct > 0 ? '+' : ''}{perf.total_return_pct}%
-        </p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Buy & Hold</p>
-        <p class={`text-xl font-mono ${perf.buy_hold_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {perf.buy_hold_return_pct > 0 ? '+' : ''}{perf.buy_hold_return_pct}%
-        </p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Max Drawdown</p>
-        <p class="text-xl font-mono text-red-400">-{perf.max_drawdown_pct}%</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Sharpe Ratio</p>
-        <p class="text-xl font-mono">{perf.sharpe_ratio}</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Win Rate</p>
-        <p class="text-xl font-mono">{perf.win_rate_pct}%</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Total Trades</p>
-        <p class="text-xl font-mono">{perf.total_trades}</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Hold</p>
-        <p class="text-xl font-mono">{perf.avg_hold_bars} bars</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Period</p>
-        <p class="text-sm font-mono mt-1">{new Date(period.start).toLocaleDateString('en-US', {month:'short',year:'numeric'})} — {new Date(period.end).toLocaleDateString('en-US', {month:'short',year:'numeric'})}</p>
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <h2 class="text-xl font-semibold" data-i18n="strategy.perf">Performance Summary</h2>
+      <div class="flex gap-1" id="period-tabs">
+        {periods.since_launch && <button data-period="since_launch" class="px-3 py-1.5 rounded-lg text-sm bg-blue-600 text-white transition-colors" data-i18n="strategy.since_launch">Since Launch</button>}
+        {periods['1y'] && <button data-period="1y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">1Y</button>}
+        {periods['2y'] && <button data-period="2y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">2Y</button>}
+        {periods.all && <button data-period="all" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">All</button>}
       </div>
     </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
+        <p id="perf-return" class={`text-xl font-mono ${defaultPerf.total_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {defaultPerf.total_return_pct > 0 ? '+' : ''}{defaultPerf.total_return_pct}%
+        </p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold">Buy & Hold</p>
+        <p id="perf-buyhold" class={`text-xl font-mono ${defaultPerf.buy_hold_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          {defaultPerf.buy_hold_return_pct > 0 ? '+' : ''}{defaultPerf.buy_hold_return_pct}%
+        </p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.drawdown">Max Drawdown</p>
+        <p id="perf-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.max_drawdown_pct}%</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe Ratio</p>
+        <p id="perf-sharpe" class="text-xl font-mono">{defaultPerf.sharpe_ratio}</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.winrate">Win Rate</p>
+        <p id="perf-winrate" class="text-xl font-mono">{defaultPerf.win_rate_pct}%</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.trades">Total Trades</p>
+        <p id="perf-trades" class="text-xl font-mono">{defaultPerf.total_trades}</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.avghold">Avg Hold</p>
+        <p id="perf-hold" class="text-xl font-mono"><span id="perf-hold-val">{defaultPerf.avg_hold_bars}</span> <span data-i18n="label.bars">bars</span></p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.period">Period</p>
+        <p id="perf-period" class="text-sm font-mono mt-1">{new Date(defaultRange.start).toLocaleDateString('en-US', {month:'short',year:'numeric'})} — {new Date(defaultRange.end).toLocaleDateString('en-US', {month:'short',year:'numeric'})}</p>
+      </div>
+    </div>
+    {defaultPerf.has_open_position && (
+      <p class="text-xs text-gray-500 mt-3" id="perf-open-note" data-i18n="strategy.mtm_note">* MTM return includes unrealized P&L from the current open position.</p>
+    )}
     <div class="mt-4">
-      <a href="/backtest/btc-ma240-4d" class="text-blue-400 hover:text-blue-300 text-sm">
+      <a href="/backtest/btc-ma240-4d" class="text-blue-400 hover:text-blue-300 text-sm" data-i18n="strategy.view_backtest">
         View full backtest results &rarr;
       </a>
     </div>
   </section>
 
+  <script define:vars={{ periodsJson }}>
+    const periods = JSON.parse(periodsJson);
+    const tabs = document.getElementById('period-tabs');
+    if (tabs) {
+      tabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-period]');
+        if (!btn) return;
+        const key = btn.dataset.period;
+        const data = periods[key];
+        if (!data) return;
+        const p = data.performance;
+
+        // Update tab styles
+        tabs.querySelectorAll('button').forEach(b => {
+          b.className = b === btn
+            ? 'px-3 py-1.5 rounded-lg text-sm bg-blue-600 text-white transition-colors'
+            : 'px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors';
+        });
+
+        // Helper: set value + color
+        const setVal = (id, val, suffix, colored) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const prefix = val > 0 ? '+' : '';
+          el.textContent = colored !== false ? `${prefix}${val}${suffix}` : `${val}${suffix}`;
+          if (colored !== false) {
+            el.className = el.className.replace(/text-(green|red)-400/g, '');
+            el.classList.add(val >= 0 ? 'text-green-400' : 'text-red-400');
+          }
+        };
+
+        setVal('perf-return', p.total_return_pct, '%');
+        setVal('perf-buyhold', p.buy_hold_return_pct, '%');
+        document.getElementById('perf-drawdown').textContent = `-${p.max_drawdown_pct}%`;
+        document.getElementById('perf-sharpe').textContent = p.sharpe_ratio;
+        document.getElementById('perf-winrate').textContent = `${p.win_rate_pct}%`;
+        document.getElementById('perf-trades').textContent = p.total_trades;
+        document.getElementById('perf-hold-val').textContent = p.avg_hold_bars;
+
+        // Period date range
+        const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', {month:'short',year:'numeric',timeZone:'UTC'});
+        document.getElementById('perf-period').textContent = `${fmtDate(data.start)} — ${fmtDate(data.end)}`;
+
+        // Open position note
+        const note = document.getElementById('perf-open-note');
+        if (note) note.style.display = p.has_open_position ? '' : 'none';
+      });
+    }
+  </script>
+
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Strategy Rules</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.rules">Strategy Rules</h2>
     <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
       <div>
-        <p class="text-white font-medium mb-1">Entry (Buy)</p>
-        <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
+        <p data-i18n="strategy.entry_desc">Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
       </div>
       <div>
-        <p class="text-white font-medium mb-1">Exit (Sell)</p>
-        <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
+        <p><span data-i18n="strategy.exit_desc_pre">Close &lt; MA{strategy.ma_window} after minimum hold of</span> {strategy.min_hold_days} <span data-i18n="strategy.exit_desc_mid">days</span> ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
       </div>
       <div>
-        <p class="text-white font-medium mb-1">Design</p>
-        <p>Asymmetric entry/exit: entry requires crossover confirmation to reduce whipsaws, exit only requires price below MA. Minimum hold period prevents premature exits during consolidation.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
+        <p data-i18n="strategy.design_desc">Asymmetric entry/exit: entry requires crossover confirmation to reduce whipsaws, exit only requires price below MA. Minimum hold period prevents premature exits during consolidation.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <h2 class="text-xl font-semibold mb-4">Data Source</h2>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
     <p class="text-gray-400 text-sm">
-      All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
-      Signals are generated automatically every 4 hours via GitHub Actions.
-      <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">View source code</a>.
+      <span data-i18n="strategy.datasource_desc">All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
+      Signals are generated automatically every 4 hours via GitHub Actions.</span>
+      <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.viewsource">View source code</a>.
     </p>
   </section>
 </Layout>

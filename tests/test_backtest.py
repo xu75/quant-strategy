@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from strategies.btc_ma_trend.signal import StrategyConfig, compute_signals
-from pipeline.backtest import run_backtest
+from pipeline.backtest import run_backtest, compute_period_metrics, Trade
 
 
 def make_candles(prices: list[float], start: str = "2024-01-01") -> pd.DataFrame:
@@ -81,3 +81,113 @@ class TestPositionDetection:
 
         # And the last signal should be "buy"
         assert signals[-1].action == "buy"
+
+
+class TestPeriodMetricsCrossBoundary:
+    """P1 regression: compute_period_metrics must include trades that span
+    the period boundary (entered before period_start, exited within)."""
+
+    FEE = 0.001
+
+    def _make_trade(self, entry_time, entry_price, exit_time, exit_price, hold_bars):
+        entry_cost = entry_price * (1 + self.FEE)
+        exit_value = exit_price * (1 - self.FEE)
+        pnl_pct = (exit_value - entry_cost) / entry_cost * 100
+        pnl_abs = pnl_pct  # simplified, per-unit
+        return Trade(
+            entry_time=pd.Timestamp(entry_time, tz="UTC"),
+            entry_price=entry_price,
+            exit_time=pd.Timestamp(exit_time, tz="UTC"),
+            exit_price=exit_price,
+            hold_bars=hold_bars,
+            pnl_pct=pnl_pct,
+            pnl_abs=pnl_abs,
+        )
+
+    def test_cross_boundary_trade_included(self):
+        """A trade entered before period_start and exited after should be
+        counted with P&L measured from start_price."""
+        trade = self._make_trade("2025-01-01", 50000, "2025-02-01", 60000, 180)
+        period_start = pd.Timestamp("2025-01-15", tz="UTC")
+        start_price = 55000.0
+        end_price = 60000.0
+
+        result = compute_period_metrics(
+            [trade], period_start, end_price, start_price,
+        )
+
+        assert result is not None
+        assert result["total_trades"] == 1
+        # Return should be from start_price to exit_price (with exit fee only)
+        expected_ret = (60000 * (1 - self.FEE) - 55000) / 55000 * 100
+        assert abs(result["total_return_pct"] - round(expected_ret, 2)) < 0.1
+
+    def test_cross_boundary_open_position(self):
+        """An open position entered before period_start should measure
+        unrealized P&L from start_price, not original entry."""
+        period_start = pd.Timestamp("2025-01-15", tz="UTC")
+        start_price = 55000.0
+        end_price = 65000.0
+
+        result = compute_period_metrics(
+            trades=[],
+            period_start=period_start,
+            end_price=end_price,
+            start_price=start_price,
+            open_entry_time=pd.Timestamp("2025-01-01", tz="UTC"),
+            open_entry_price=50000.0,
+        )
+
+        assert result is not None
+        assert result["has_open_position"] is True
+        assert result["total_trades"] == 0
+        # Return from start_price to end_price (exit fee only, no entry fee)
+        expected_ret = (65000 * (1 - self.FEE) - 55000) / 55000 * 100
+        assert abs(result["total_return_pct"] - round(expected_ret, 2)) < 0.1
+
+    def test_in_period_open_position_uses_entry_price(self):
+        """An open position entered within the period should use actual
+        entry price with fee, not start_price."""
+        period_start = pd.Timestamp("2025-01-15", tz="UTC")
+        start_price = 55000.0
+        end_price = 65000.0
+
+        result = compute_period_metrics(
+            trades=[],
+            period_start=period_start,
+            end_price=end_price,
+            start_price=start_price,
+            open_entry_time=pd.Timestamp("2025-02-01", tz="UTC"),
+            open_entry_price=58000.0,
+        )
+
+        assert result is not None
+        # Return from actual entry (with fee) to end_price
+        entry_cost = 58000 * (1 + self.FEE)
+        expected_ret = (65000 * (1 - self.FEE) - entry_cost) / entry_cost * 100
+        assert abs(result["total_return_pct"] - round(expected_ret, 2)) < 0.1
+
+    def test_mixed_cross_and_in_period(self):
+        """Both cross-boundary and in-period trades should be counted."""
+        cross_trade = self._make_trade("2025-01-01", 50000, "2025-02-01", 60000, 180)
+        in_trade = self._make_trade("2025-02-10", 62000, "2025-03-01", 65000, 48)
+        period_start = pd.Timestamp("2025-01-15", tz="UTC")
+
+        result = compute_period_metrics(
+            [cross_trade, in_trade], period_start,
+            end_price=65000.0, start_price=55000.0,
+        )
+
+        assert result is not None
+        assert result["total_trades"] == 2
+
+    def test_no_activity_returns_none(self):
+        """Period with no trades and no open position returns None."""
+        trade = self._make_trade("2024-01-01", 50000, "2024-02-01", 55000, 180)
+        period_start = pd.Timestamp("2025-01-01", tz="UTC")
+
+        result = compute_period_metrics(
+            [trade], period_start, end_price=70000.0, start_price=65000.0,
+        )
+
+        assert result is None
