@@ -39,3 +39,4 @@ site/dist/
 # Cat Cafe local
 .kimi/
 KIMI.md
+.vercel
