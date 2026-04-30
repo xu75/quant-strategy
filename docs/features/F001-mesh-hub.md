@@ -160,7 +160,7 @@ status: in-progress
 - [x] 报告生成器输出JSON状态文件和PNG图表
 - [x] GitHub Actions每4H自动运行并commit结果
 - [x] Astro静态站能展示策略状态和回测结果
-- [ ] 部署到 mesh-hub.xyz
+- [x] 部署到 mesh-hub.xyz
 - [x] 免责声明页完成
 
 ### P2 - 增强
