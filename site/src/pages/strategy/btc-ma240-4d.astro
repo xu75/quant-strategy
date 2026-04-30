@@ -130,7 +130,7 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
       </div>
       <div>
         <p class="text-white font-medium mb-1">Exit (Sell)</p>
-        <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({strategy.ma_window / 10} bars on {strategy.timeframe} timeframe).</p>
+        <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
       </div>
       <div>
         <p class="text-white font-medium mb-1">Design</p>
@@ -144,7 +144,7 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
     <p class="text-gray-400 text-sm">
       All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
       Signals are generated automatically every 4 hours via GitHub Actions.
-      <a href="https://github.com/xu75/quant-strategy" target="_blank" class="text-blue-400 hover:text-blue-300">View source code</a>.
+      <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">View source code</a>.
     </p>
   </section>
 </Layout>
