@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-01T02:30:59.106989+00:00",
+  "updated_at": "2026-05-01T04:10:30.523609+00:00",
   "strategy": {
     "name": "TrendLock 40",
     "code": "T40-4",
@@ -10,14 +10,14 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 76344.9,
-    "ma_value": 72253.82,
-    "timestamp": "2026-04-30T20:00:00+00:00",
-    "hold_bars": 149,
+    "price": 77130.6,
+    "ma_value": 72287.03,
+    "timestamp": "2026-05-01T00:00:00+00:00",
+    "hold_bars": 151,
     "reason": "Holding, price above MA240"
   },
   "position": {
     "in_position": true,
-    "entry_bar_idx": 13721
+    "entry_bar_idx": 5848
   }
 }
