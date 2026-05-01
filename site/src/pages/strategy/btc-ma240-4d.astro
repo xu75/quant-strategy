@@ -31,7 +31,7 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
 });
 ---
 
-<Layout title="BTC 4H MA240 + 4D Strategy" description="Live signal status for BTC MA240 trend-following strategy">
+<Layout title="TrendLock 40 Strategy" description="Live signal status for TrendLock 40">
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
       <a href="/" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="strategy.back">&larr; Home</a>
@@ -112,7 +112,11 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
         <p id="perf-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.max_drawdown_pct}%</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe Ratio</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold_drawdown">B&H Max DD</p>
+        <p id="perf-buyhold-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.buy_hold_max_drawdown_pct}%</p>
+      </div>
+      <div class="border border-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe (Ann.)</p>
         <p id="perf-sharpe" class="text-xl font-mono">{defaultPerf.sharpe_ratio}</p>
       </div>
       <div class="border border-gray-800 rounded-lg p-4">
@@ -176,6 +180,7 @@ const signalTime = new Date(signal.timestamp).toLocaleString('en-US', {
         setVal('perf-return', p.total_return_pct, '%');
         setVal('perf-buyhold', p.buy_hold_return_pct, '%');
         document.getElementById('perf-drawdown').textContent = `-${p.max_drawdown_pct}%`;
+        document.getElementById('perf-buyhold-drawdown').textContent = `-${p.buy_hold_max_drawdown_pct}%`;
         document.getElementById('perf-sharpe').textContent = p.sharpe_ratio;
         document.getElementById('perf-winrate').textContent = `${p.win_rate_pct}%`;
         document.getElementById('perf-trades').textContent = p.total_trades;

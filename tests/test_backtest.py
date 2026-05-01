@@ -83,6 +83,45 @@ class TestPositionDetection:
         assert signals[-1].action == "buy"
 
 
+class TestMarkToMarketMetrics:
+    """Regression coverage for metrics that must use the full price path."""
+
+    def test_open_position_sharpe_uses_mark_to_market_returns(self):
+        """Sharpe should not be forced to 0 just because there are no closed trades."""
+        config = StrategyConfig(ma_window=3, min_hold_bars=100)
+        prices = [100, 100, 100, 99, 110, 112, 114, 116, 118, 120]
+        df = make_candles(prices)
+
+        result = run_backtest(df, config)
+
+        assert result.total_trades == 0
+        assert result.has_open_position is True
+        assert result.sharpe_ratio > 0
+
+    def test_open_position_drawdown_uses_intraperiod_price_path(self):
+        """Open-position drawdown should see peaks and troughs before the final bar."""
+        config = StrategyConfig(ma_window=3, min_hold_bars=100)
+        prices = [100, 100, 100, 99, 110, 150, 120, 130]
+        df = make_candles(prices)
+
+        result = run_backtest(df, config)
+
+        assert result.total_trades == 0
+        assert result.has_open_position is True
+        assert result.max_drawdown_pct > 15
+
+    def test_buy_hold_max_drawdown_uses_benchmark_price_path(self):
+        """B&H max drawdown should be available alongside strategy drawdown."""
+        config = StrategyConfig(ma_window=2, min_hold_bars=100)
+        prices = [100, 100, 120, 60, 90]
+        df = make_candles(prices)
+
+        result = run_backtest(df, config)
+
+        assert result.buy_hold_return_pct == pytest.approx(-25.0)
+        assert result.buy_hold_max_drawdown_pct == pytest.approx(50.0)
+
+
 class TestPeriodMetricsCrossBoundary:
     """P1 regression: compute_period_metrics must include trades that span
     the period boundary (entered before period_start, exited within)."""

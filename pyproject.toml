@@ -1,7 +1,7 @@
 [project]
-name = "mesh-hub"
+name = "quant-strategy"
 version = "0.1.0"
-description = "MeshHub - Open-source low-frequency quant research lab"
+description = "Quant Strategy - Open-source low-frequency quant research lab"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.10"

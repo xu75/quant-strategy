@@ -43,7 +43,12 @@ jobs:
                   sys.exit(1)
               print(f'OK: {path}')
           import os
-          for chart in ['data/btc_ma240_4d/charts/equity.png', 'data/btc_ma240_4d/charts/price_ma.png']:
+          for chart in [
+              'data/btc_ma240_4d/charts/equity.png',
+              'data/btc_ma240_4d/charts/price_ma.png',
+              'site/public/charts/equity.png',
+              'site/public/charts/price_ma.png',
+          ]:
               if not os.path.exists(chart) or os.path.getsize(chart) < 1000:
                   print(f'FAIL: {chart} missing or too small')
                   sys.exit(1)
@@ -53,9 +58,9 @@ jobs:
 
       - name: Commit and push results
         run: |
-          git config user.name "MeshHub Bot"
-          git config user.email "bot@mesh-hub.xyz"
-          git add data/
+          git config user.name "Quant Strategy Bot"
+          git config user.email "bot@quant-strategy.mesh-hub.xyz"
+          git add data/ site/public/charts/
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
