@@ -16,7 +16,7 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} | Quant Strategy</title>
+    <title>{title === 'Quant Strategy' ? title : `${title} | Quant Strategy`}</title>
   </head>
   <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col">
     <nav class="border-b border-gray-800 px-6 py-4">

@@ -2,6 +2,8 @@
 
 Generates strategy status files and backtest visualization charts
 that can be served as static content on the website.
+
+Strategy functions are injected by the caller, never imported directly.
 """
 
 import json
@@ -14,30 +16,44 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-from strategies.btc_ma_trend.signal import StrategyConfig, Signal, get_current_signal
 from pipeline.backtest import BacktestResult, result_to_dict
+
+
+def _hours_per_bar(timeframe: str) -> float:
+    """Parse timeframe string to hours per bar."""
+    tf = timeframe.strip().upper()
+    if tf.endswith("H"):
+        return float(tf[:-1])
+    if tf.endswith("D"):
+        return float(tf[:-1]) * 24
+    return 4.0  # default
 
 
 def generate_status_json(
     df: pd.DataFrame,
-    config: StrategyConfig,
+    config,
     in_position: bool,
     entry_bar_idx: int,
     output_path: Path,
+    current_signal=None,
 ) -> dict:
     """Generate current strategy status as JSON.
 
     Args:
         df: Recent candle data sorted oldest-first.
-        config: Strategy configuration.
+        config: Strategy configuration (duck-typed).
         in_position: Current position state.
         entry_bar_idx: Bar index of entry.
         output_path: Path to write JSON file.
+        current_signal: Pre-computed current signal (injected by caller).
 
     Returns:
         Status dict.
     """
-    signal = get_current_signal(df, in_position, entry_bar_idx, config)
+    if current_signal is None:
+        raise ValueError("current_signal must be provided (injected by caller)")
+
+    signal = current_signal
 
     status = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -45,8 +61,6 @@ def generate_status_json(
             "name": config.display_name,
             "code": config.internal_code,
             "timeframe": config.timeframe,
-            "ma_window": config.ma_window,
-            "min_hold_days": config.min_hold_bars * 4 / 24,
             "symbol": config.symbol,
         },
         "current_signal": {
@@ -62,6 +76,14 @@ def generate_status_json(
             "entry_bar_idx": entry_bar_idx if in_position else None,
         },
     }
+
+    # Strategy-specific fields (optional, only added if config provides them)
+    ma_window = getattr(config, 'ma_window', None)
+    if ma_window is not None:
+        status["strategy"]["ma_window"] = ma_window
+    min_hold_bars = getattr(config, 'min_hold_bars', None)
+    if min_hold_bars is not None:
+        status["strategy"]["min_hold_days"] = min_hold_bars * _hours_per_bar(config.timeframe) / 24
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
@@ -118,23 +140,36 @@ def generate_equity_chart(result: BacktestResult, output_path: Path) -> None:
 
 def generate_price_ma_chart(
     df: pd.DataFrame,
-    config: StrategyConfig,
+    config,
     trades: list,
     output_path: Path,
     last_n_bars: int = 500,
 ) -> None:
-    """Generate price + MA overlay chart with trade markers."""
+    """Generate price chart with optional MA overlay and trade markers.
+
+    Args:
+        config: Strategy configuration (duck-typed).
+            Required: timeframe, display_name, symbol.
+            Optional: ma_window (if absent, MA overlay is skipped).
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     df = df.copy().sort_values("timestamp").reset_index(drop=True)
-    df["ma"] = df["close"].rolling(window=config.ma_window, min_periods=config.ma_window).mean()
+
+    ma_window = getattr(config, 'ma_window', None)
+    if ma_window is not None:
+        df["ma"] = df["close"].rolling(window=ma_window, min_periods=ma_window).mean()
 
     if len(df) > last_n_bars:
         df = df.iloc[-last_n_bars:]
 
+    symbol = getattr(config, 'symbol', 'BTC-USDT')
+    base_asset = symbol.split('-')[0] if '-' in symbol else symbol
+
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.plot(df["timestamp"], df["close"], color="#374151", linewidth=0.8, label="BTC Close")
-    ax.plot(df["timestamp"], df["ma"], color="#f59e0b", linewidth=1.2, label=f"MA{config.ma_window}")
+    ax.plot(df["timestamp"], df["close"], color="#374151", linewidth=0.8, label=f"{base_asset} Close")
+    if ma_window is not None and "ma" in df.columns:
+        ax.plot(df["timestamp"], df["ma"], color="#f59e0b", linewidth=1.2, label=f"MA{ma_window}")
 
     # Mark trades
     for t in trades:
@@ -148,7 +183,7 @@ def generate_price_ma_chart(
             ax.scatter(exit_time, t.exit_price, color=color, marker="v", s=80, zorder=5)
 
     ax.set_title(
-        f"BTC/USDT {config.timeframe} - {config.display_name}",
+        f"{symbol.replace('-', '/')} {config.timeframe} - {config.display_name}",
         fontsize=14, fontweight="bold",
     )
     ax.set_ylabel("Price (USDT)")

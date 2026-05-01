@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const dataDir = path.resolve(process.cwd(), '../data/btc_ma240_4d');
+const dataDir = path.resolve(process.cwd(), '../data/btc_ma_trend');
 const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
 
 const perf = backtest.performance;
@@ -81,14 +81,14 @@ function fmtDate(iso: string) {
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.equity">Equity Curve</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
-      <img src="/charts/equity.png" alt="Equity curve" class="w-full rounded" />
+      <img src="/charts/btc_ma_trend/equity.png" alt="Equity curve" class="w-full rounded" />
     </div>
   </section>
 
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.overlay">Price & MA Overlay</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
-      <img src="/charts/price_ma.png" alt="Price and MA overlay with trade markers" class="w-full rounded" />
+      <img src="/charts/btc_ma_trend/price_ma.png" alt="Price and MA overlay with trade markers" class="w-full rounded" />
     </div>
   </section>
 

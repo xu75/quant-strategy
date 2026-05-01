@@ -3,21 +3,29 @@ import Layout from '../layouts/Layout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const dataDir = path.resolve(process.cwd(), '../data/btc_ma240_4d');
-const latest = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf-8'));
-const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
+const strategyEntries = [
+  { id: 'btc_ma_trend', href: '/strategy/btc-ma240-4d' },
+  { id: 'btc_ma40d_trend', href: '/strategy/btc-ma40d-5d' },
+];
 
-const signal = latest.current_signal;
-const strategy = latest.strategy;
-const sincePerf = backtest.periods?.since_launch?.performance;
-const sinceDate = backtest.since_date ? new Date(backtest.since_date) : null;
-const sinceDateStr = sinceDate
-  ? sinceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-  : '—';
-const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
+const strategyCards = strategyEntries.map(({ id, href }) => {
+  const dataDir = path.resolve(process.cwd(), `../data/${id}`);
+  const latest = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf-8'));
+  const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
+  const signal = latest.current_signal;
+  const strategy = latest.strategy;
+  const sincePerf = backtest.periods?.since_launch?.performance;
+  const sinceDate = backtest.since_date ? new Date(backtest.since_date) : null;
+  const sinceDateStr = sinceDate
+    ? sinceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+    : '—';
+  const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
+
+  return { href, latest, signal, strategy, sinceDateStr, returnPct };
+});
 ---
 
-<Layout title="Home">
+<Layout title="Quant Strategy">
   <section class="mb-12">
     <h1 class="text-4xl font-bold mb-3">Quant Strategy</h1>
     <p class="text-lg text-gray-400 max-w-2xl" data-i18n="home.subtitle">
@@ -38,48 +46,52 @@ const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_retu
 
   <section class="mb-12">
     <h2 class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
-    <a href="/strategy/btc-ma240-4d" class="block">
-      <div class="border border-gray-800 rounded-xl p-6 hover:border-gray-600 transition-colors">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-lg font-semibold">{strategy.name}</h3>
-            <p class="text-sm text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window}</p>
-          </div>
-          <span class={`px-3 py-1 rounded-full text-sm font-medium ${
-            signal.action === 'hold' && latest.position.in_position
-              ? 'bg-green-900/50 text-green-400'
-              : signal.action === 'buy'
-                ? 'bg-green-900/50 text-green-400'
-                : signal.action === 'sell'
-                  ? 'bg-red-900/50 text-red-400'
-                  : 'bg-gray-800 text-gray-400'
-          }`} data-i18n={latest.position.in_position ? 'label.in_position' : 'label.no_position'}>
-            {latest.position.in_position ? 'In Position' : 'No Position'}
-          </span>
-        </div>
+    <div class="grid gap-4">
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateStr, returnPct }) => (
+        <a href={href} class="block">
+          <div class="border border-gray-800 rounded-xl p-6 hover:border-gray-600 transition-colors">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-lg font-semibold">{strategy.name}</h3>
+                <p class="text-sm text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window}</p>
+              </div>
+              <span class={`px-3 py-1 rounded-full text-sm font-medium ${
+                signal.action === 'hold' && latest.position.in_position
+                  ? 'bg-green-900/50 text-green-400'
+                  : signal.action === 'buy'
+                    ? 'bg-green-900/50 text-green-400'
+                    : signal.action === 'sell'
+                      ? 'bg-red-900/50 text-red-400'
+                      : 'bg-gray-800 text-gray-400'
+              }`} data-i18n={latest.position.in_position ? 'label.in_position' : 'label.no_position'}>
+                {latest.position.in_position ? 'In Position' : 'No Position'}
+              </span>
+            </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
-            <p class="text-lg font-mono">${signal.price.toLocaleString()}</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
+                <p class="text-lg font-mono">${signal.price.toLocaleString()}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
+                <p class="text-lg font-mono">${signal.ma_value.toLocaleString()}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
+                <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {returnPct > 0 ? '+' : ''}{returnPct}%
+                </p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
+                <p class="text-lg font-mono">{sinceDateStr}</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
-            <p class="text-lg font-mono">${signal.ma_value.toLocaleString()}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
-            <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {returnPct > 0 ? '+' : ''}{returnPct}%
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
-            <p class="text-lg font-mono">{sinceDateStr}</p>
-          </div>
-        </div>
-      </div>
-    </a>
+        </a>
+      ))}
+    </div>
   </section>
 
   <section class="mb-12">

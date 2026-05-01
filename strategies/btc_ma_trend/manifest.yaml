@@ -1,0 +1,20 @@
+# strategies/btc_ma_trend/manifest.yaml
+id: btc_ma_trend
+name: "TrendLock 40"
+version: "1.0.0"
+description: "BTC 4H MA240 趋势跟踪，最小持仓 4 天"
+
+config:
+  ma_window: 240
+  min_hold_bars: 24
+  timeframe: "4H"
+  symbol: "BTC-USDT"
+  data_source: "okx"
+
+display:
+  slug: "btc-ma240-4d"
+  category: "trend-following"
+  short_desc: "BTC 均线趋势跟踪"
+
+launch_date: "2026-04-30"
+enabled: true

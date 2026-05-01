@@ -22,7 +22,7 @@ class TestUnrealizedPnL:
         # Cross above MA then price keeps rising — never reaches sell condition
         prices = [100, 100, 100, 99, 110, 120, 130, 140, 150]
         df = make_candles(prices)
-        result = run_backtest(df, config, initial_capital=10000)
+        result = run_backtest(df, config, initial_capital=10000, compute_signals_fn=compute_signals)
 
         # No completed trades, but should have open position
         assert result.total_trades == 0
@@ -37,7 +37,7 @@ class TestUnrealizedPnL:
         config = StrategyConfig(ma_window=3, min_hold_bars=100)
         prices = [100, 100, 100, 99, 110, 105, 102, 101, 100]
         df = make_candles(prices)
-        result = run_backtest(df, config, initial_capital=10000)
+        result = run_backtest(df, config, initial_capital=10000, compute_signals_fn=compute_signals)
 
         assert result.has_open_position is True
         # Price went from 110 entry to 100 — unrealized loss
@@ -48,7 +48,7 @@ class TestUnrealizedPnL:
         config = StrategyConfig(ma_window=3, min_hold_bars=1)
         prices = [100, 100, 100, 99, 110, 85]  # buy at 110, sell at 85
         df = make_candles(prices)
-        result = run_backtest(df, config, initial_capital=10000)
+        result = run_backtest(df, config, initial_capital=10000, compute_signals_fn=compute_signals)
 
         assert result.has_open_position is False
         assert result.total_trades == 1
@@ -67,7 +67,7 @@ class TestPositionDetection:
         df = make_candles(prices)
 
         signals = compute_signals(df, config)
-        result = run_backtest(df, config)
+        result = run_backtest(df, config, compute_signals_fn=compute_signals)
 
         # There should be a buy signal
         buys = [s for s in signals if s.action == "buy"]
@@ -92,7 +92,7 @@ class TestMarkToMarketMetrics:
         prices = [100, 100, 100, 99, 110, 112, 114, 116, 118, 120]
         df = make_candles(prices)
 
-        result = run_backtest(df, config)
+        result = run_backtest(df, config, compute_signals_fn=compute_signals)
 
         assert result.total_trades == 0
         assert result.has_open_position is True
@@ -104,7 +104,7 @@ class TestMarkToMarketMetrics:
         prices = [100, 100, 100, 99, 110, 150, 120, 130]
         df = make_candles(prices)
 
-        result = run_backtest(df, config)
+        result = run_backtest(df, config, compute_signals_fn=compute_signals)
 
         assert result.total_trades == 0
         assert result.has_open_position is True
@@ -116,7 +116,7 @@ class TestMarkToMarketMetrics:
         prices = [100, 100, 120, 60, 90]
         df = make_candles(prices)
 
-        result = run_backtest(df, config)
+        result = run_backtest(df, config, compute_signals_fn=compute_signals)
 
         assert result.buy_hold_return_pct == pytest.approx(-25.0)
         assert result.buy_hold_max_drawdown_pct == pytest.approx(50.0)

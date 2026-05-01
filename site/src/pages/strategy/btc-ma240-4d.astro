@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const dataDir = path.resolve(process.cwd(), '../data/btc_ma240_4d');
+const dataDir = path.resolve(process.cwd(), '../data/btc_ma_trend');
 const latest = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf-8'));
 const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
 

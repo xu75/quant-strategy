@@ -1,14 +1,13 @@
-"""Backtesting engine for MA trend strategy.
+"""Backtesting engine - strategy-agnostic.
 
 Simulates trading over historical data and computes performance metrics.
+Strategy functions are injected by the caller (core/runner.py), never imported directly.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, fields
 from math import sqrt
 
 import pandas as pd
-
-from strategies.btc_ma_trend.signal import StrategyConfig, compute_signals
 
 
 @dataclass
@@ -28,7 +27,7 @@ class Trade:
 class BacktestResult:
     """Results from a backtest run."""
 
-    config: StrategyConfig
+    config: any  # Strategy-specific config (injected, not imported)
     trades: list[Trade]
     equity_curve: pd.DataFrame  # timestamp, equity
     total_return_pct: float  # mark-to-market (includes unrealized)
@@ -109,26 +108,40 @@ def _period_equity_curve(equity_curve: pd.DataFrame, period_start: pd.Timestamp)
 
 def run_backtest(
     df: pd.DataFrame,
-    config: StrategyConfig | None = None,
+    config=None,
     initial_capital: float = 10000.0,
     fee_rate: float = 0.001,
+    signals: list | None = None,
+    compute_signals_fn=None,
 ) -> BacktestResult:
     """Run a backtest on historical data.
 
     Args:
         df: DataFrame with ['timestamp', 'close'], sorted oldest-first.
-        config: Strategy configuration.
+        config: Strategy configuration (duck-typed).
         initial_capital: Starting capital in quote currency (USDT).
         fee_rate: Trading fee rate per side (0.001 = 0.1%).
+        signals: Pre-computed signals. If provided, used directly.
+        compute_signals_fn: Signal computation function. Used if signals not provided.
 
     Returns:
         BacktestResult with trades, equity curve, and performance metrics.
+
+    Raises:
+        ValueError: If neither signals nor compute_signals_fn is provided.
     """
     if config is None:
-        config = StrategyConfig()
+        raise ValueError("config is required")
 
     df = df.copy().sort_values("timestamp").reset_index(drop=True)
-    signals = compute_signals(df, config)
+
+    if signals is not None:
+        pass  # use pre-computed signals
+    elif compute_signals_fn is not None:
+        signals = compute_signals_fn(df, config)
+    else:
+        raise ValueError("Either signals or compute_signals_fn must be provided")
+
     signals_by_timestamp = {sig.timestamp: sig for sig in signals}
 
     trades: list[Trade] = []
@@ -188,7 +201,8 @@ def run_backtest(
     realized_return = (realized_equity - initial_capital) / initial_capital * 100
     total_return = (equity_mtm - initial_capital) / initial_capital * 100
 
-    first_price_idx = config.ma_window if len(df) > config.ma_window else 0
+    warmup = getattr(config, 'warmup_bars', getattr(config, 'ma_window', 0))
+    first_price_idx = warmup if len(df) > warmup else 0
     buy_hold_prices = df.iloc[first_price_idx:]["close"].astype(float)
     first_price = float(buy_hold_prices.iloc[0])
     last_price = float(buy_hold_prices.iloc[-1])
@@ -349,15 +363,18 @@ def compute_period_metrics(
     }
 
 
+def _config_to_dict(config) -> dict:
+    """Serialize strategy config to dict (works with any dataclass config)."""
+    import dataclasses
+    if dataclasses.is_dataclass(config) and not isinstance(config, type):
+        return dataclasses.asdict(config)
+    return {k: v for k, v in vars(config).items() if not k.startswith('_')}
+
+
 def result_to_dict(result: BacktestResult) -> dict:
     """Convert BacktestResult to a JSON-serializable dict."""
     return {
-        "strategy": {
-            "ma_window": result.config.ma_window,
-            "min_hold_bars": result.config.min_hold_bars,
-            "timeframe": result.config.timeframe,
-            "symbol": result.config.symbol,
-        },
+        "strategy": _config_to_dict(result.config),
         "performance": {
             "total_return_pct": round(result.total_return_pct, 2),
             "realized_return_pct": round(result.realized_return_pct, 2),

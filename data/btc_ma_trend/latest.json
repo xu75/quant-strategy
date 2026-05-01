@@ -2,7 +2,7 @@
   "updated_at": "2026-05-01T04:10:30.523609+00:00",
   "strategy": {
     "name": "TrendLock 40",
-    "code": "T40-4",
+    "code": "btc_ma_trend",
     "timeframe": "4H",
     "ma_window": 240,
     "min_hold_days": 4.0,

@@ -26,6 +26,7 @@ class StrategyConfig:
     min_hold_bars: int = 24  # 24 * 4H = 4 days
     timeframe: str = "4H"
     symbol: str = "BTC-USDT"
+    data_source: str = "okx"
 
 
 @dataclass
