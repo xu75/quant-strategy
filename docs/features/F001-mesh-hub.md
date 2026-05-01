@@ -192,3 +192,4 @@ status: in-progress
 | 日期 | 事件 |
 |------|------|
 | 2026-04-30 | W1+W2 merged (PR #1) — 策略引擎 + 数据管道 + 回测 + Astro 前端 4 页 |
+| 2026-05-01 | Follow-up merged (PR #2) — TrendLock 40 命名、Quant Strategy 品牌、年化 Sharpe 与 CI 历史数据容灾 |
