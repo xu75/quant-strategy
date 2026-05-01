@@ -32,6 +32,7 @@ OUTPUT_DIR = Path("data/btc_ma240_4d")
 CHARTS_DIR = OUTPUT_DIR / "charts"
 PUBLIC_CHARTS_DIR = Path("site/public/charts")
 FALLBACK_HISTORY_CANDLES = 6000
+LOG_PREFIX = "[Quant Strategy]"
 
 # Fixed launch date — "Since" reference is the last signal before this date.
 # Once set per strategy, never changes.
@@ -43,30 +44,30 @@ def load_strategy_data(config: StrategyConfig) -> pd.DataFrame:
     df_hist = None
     try:
         df_hist = load_local_history()
-        print(f"[MeshHub] Loaded local history: {len(df_hist)} candles, "
+        print(f"{LOG_PREFIX} Loaded local history: {len(df_hist)} candles, "
               f"{df_hist.iloc[0]['timestamp']} to {df_hist.iloc[-1]['timestamp']}")
     except Exception as e:
-        print(f"[MeshHub] Local history not available: {e}")
+        print(f"{LOG_PREFIX} Local history not available: {e}")
 
     if df_hist is None:
-        print("[MeshHub] Fetching extended historical candles from OKX...")
+        print(f"{LOG_PREFIX} Fetching extended historical candles from OKX...")
         try:
             df_hist = fetch_historical_candles(
                 symbol=config.symbol,
                 bar=config.timeframe,
                 limit=FALLBACK_HISTORY_CANDLES,
             )
-            print(f"[MeshHub] Got {len(df_hist)} historical candles from OKX")
+            print(f"{LOG_PREFIX} Got {len(df_hist)} historical candles from OKX")
             return df_hist
         except Exception as e:
-            print(f"[MeshHub] Historical fetch failed: {e}")
+            print(f"{LOG_PREFIX} Historical fetch failed: {e}")
 
-    print("[MeshHub] Fetching recent candles from OKX...")
+    print(f"{LOG_PREFIX} Fetching recent candles from OKX...")
     try:
         df_recent = fetch_candles(symbol=config.symbol, bar=config.timeframe, limit=300)
-        print(f"[MeshHub] Got {len(df_recent)} recent candles from OKX")
+        print(f"{LOG_PREFIX} Got {len(df_recent)} recent candles from OKX")
     except Exception as e:
-        print(f"[MeshHub] OKX fetch failed: {e}")
+        print(f"{LOG_PREFIX} OKX fetch failed: {e}")
         df_recent = None
 
     if df_hist is not None and df_recent is not None:
@@ -77,7 +78,7 @@ def load_strategy_data(config: StrategyConfig) -> pd.DataFrame:
     if df_recent is not None:
         return df_recent
 
-    print("[MeshHub] ERROR: No data available")
+    print(f"{LOG_PREFIX} ERROR: No data available")
     sys.exit(1)
 
 
@@ -103,16 +104,16 @@ def main():
         symbol="BTC-USDT",
     )
 
-    print(f"[MeshHub] Running strategy: BTC {config.timeframe} MA{config.ma_window}")
+    print(f"{LOG_PREFIX} Running strategy: {config.display_name}")
 
     df = load_strategy_data(config)
-    print(f"[MeshHub] Combined: {len(df)} candles, {df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}")
+    print(f"{LOG_PREFIX} Combined: {len(df)} candles, {df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}")
 
     # 2. Run backtest
-    print("[MeshHub] Running backtest...")
+    print(f"{LOG_PREFIX} Running backtest...")
     result = run_backtest(df, config)
 
-    print("[MeshHub] Backtest complete:")
+    print(f"{LOG_PREFIX} Backtest complete:")
     print(f"  Trades: {result.total_trades}")
     print(f"  Return: {result.total_return_pct:.2f}%")
     print(f"  Max DD: {result.max_drawdown_pct:.2f}%")
@@ -141,7 +142,7 @@ def main():
             break
 
     if since_date:
-        print(f"[MeshHub] Since date (last signal before launch): {since_date}")
+        print(f"{LOG_PREFIX} Since date (last signal before launch): {since_date}")
 
     # Open position info for period metrics
     open_entry_time = None
@@ -181,10 +182,10 @@ def main():
                 "performance": metrics,
             }
 
-    print(f"[MeshHub] Period metrics computed: {list(periods_data.keys())}")
+    print(f"{LOG_PREFIX} Period metrics computed: {list(periods_data.keys())}")
 
     # 5. Generate outputs
-    print("[MeshHub] Generating reports...")
+    print(f"{LOG_PREFIX} Generating reports...")
 
     generate_status_json(df, config, in_position, entry_bar_idx, OUTPUT_DIR / "latest.json")
     generate_backtest_json(
@@ -196,8 +197,8 @@ def main():
     generate_price_ma_chart(df, config, result.trades, CHARTS_DIR / "price_ma.png")
     sync_public_charts()
 
-    print(f"[MeshHub] Reports written to {OUTPUT_DIR}/")
-    print("[MeshHub] Done.")
+    print(f"{LOG_PREFIX} Reports written to {OUTPUT_DIR}/")
+    print(f"{LOG_PREFIX} Done.")
 
 
 if __name__ == "__main__":

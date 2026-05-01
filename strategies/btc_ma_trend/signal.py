@@ -20,6 +20,8 @@ import pandas as pd
 class StrategyConfig:
     """Configuration for the MA trend strategy."""
 
+    display_name: str = "TrendLock 40"
+    internal_code: str = "T40-4"
     ma_window: int = 240
     min_hold_bars: int = 24  # 24 * 4H = 4 days
     timeframe: str = "4H"

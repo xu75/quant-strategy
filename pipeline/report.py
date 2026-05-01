@@ -42,7 +42,8 @@ def generate_status_json(
     status = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "strategy": {
-            "name": f"BTC {config.timeframe} MA{config.ma_window} + {config.min_hold_bars * 4 // 24}D",
+            "name": config.display_name,
+            "code": config.internal_code,
             "timeframe": config.timeframe,
             "ma_window": config.ma_window,
             "min_hold_days": config.min_hold_bars * 4 / 24,
@@ -103,7 +104,7 @@ def generate_equity_chart(result: BacktestResult, output_path: Path) -> None:
     ax.fill_between(eq["timestamp"], eq["equity"], alpha=0.1, color="#2563eb")
 
     ax.set_title(
-        f"Equity Curve — BTC MA{result.config.ma_window} {result.config.timeframe}",
+        f"Equity Curve - {result.config.display_name}",
         fontsize=14, fontweight="bold",
     )
     ax.set_ylabel("Equity (USDT)")
@@ -147,7 +148,7 @@ def generate_price_ma_chart(
             ax.scatter(exit_time, t.exit_price, color=color, marker="v", s=80, zorder=5)
 
     ax.set_title(
-        f"BTC/USDT {config.timeframe} — MA{config.ma_window} Strategy",
+        f"BTC/USDT {config.timeframe} - {config.display_name}",
         fontsize=14, fontweight="bold",
     )
     ax.set_ylabel("Price (USDT)")

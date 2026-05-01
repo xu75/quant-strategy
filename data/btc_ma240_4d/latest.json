@@ -1,7 +1,8 @@
 {
-  "updated_at": "2026-05-01T02:01:03.005630+00:00",
+  "updated_at": "2026-05-01T02:30:59.106989+00:00",
   "strategy": {
-    "name": "BTC 4H MA240 + 4D",
+    "name": "TrendLock 40",
+    "code": "T40-4",
     "timeframe": "4H",
     "ma_window": 240,
     "min_hold_days": 4.0,

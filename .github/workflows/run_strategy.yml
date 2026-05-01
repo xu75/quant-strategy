@@ -58,8 +58,8 @@ jobs:
 
       - name: Commit and push results
         run: |
-          git config user.name "MeshHub Bot"
-          git config user.email "bot@mesh-hub.xyz"
+          git config user.name "Quant Strategy Bot"
+          git config user.email "bot@quant-strategy.mesh-hub.xyz"
           git add data/ site/public/charts/
           if git diff --cached --quiet; then
             echo "No changes to commit"

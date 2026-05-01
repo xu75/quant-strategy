@@ -1,21 +1,21 @@
 ---
 feature_ids: [F001]
 related_features: []
-topics: [mesh-hub, btc-strategy, open-source, quant]
+topics: [quant-strategy, trendlock-40, btc-strategy, open-source, quant]
 doc_kind: spec
 created: 2026-04-30
 status: in-progress
 ---
 
-# F001 - MeshHub: 开源低频量化研究站
+# F001 - Quant Strategy: 开源低频量化研究站
 
 ## 愿景
 
-搭建一个开源的低频量化研究实验室网站（quant-strategy.mesh-hub.xyz），免费公开策略研究成果和实时信号状态，通过开源社区捐赠模式运营。
+搭建一个开源的低频量化研究实验室网站 Quant Strategy（quant-strategy.mesh-hub.xyz），免费公开策略研究成果和实时信号状态，通过开源社区捐赠模式运营。
 
 ## 背景
 
-铲屎官已有一套经过实盘验证的 BTC 4H MA240 + 4D 策略（运行在 OKX 上），希望：
+铲屎官已有一套经过实盘验证的 TrendLock 40（BTC 4H MA240 + 4D，内部代号 T40-4）策略（运行在 OKX 上），希望：
 1. 将策略研究过程和成果公开分享
 2. 代码完全开源，任何人可复现
 3. 通过网站展示策略当前状态和历史回测
@@ -29,7 +29,7 @@ status: in-progress
 
 ## 策略规格
 
-### BTC 4H MA240 + 4D
+### TrendLock 40（BTC 4H MA240 + 4D）
 
 | 参数 | 值 | 说明 |
 |------|-----|------|

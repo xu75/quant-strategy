@@ -16,13 +16,13 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} | MeshHub</title>
+    <title>{title} | Quant Strategy</title>
   </head>
   <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col">
     <nav class="border-b border-gray-800 px-6 py-4">
       <div class="max-w-5xl mx-auto flex items-center justify-between">
         <a href="/" class="text-xl font-bold text-white tracking-tight">
-          MeshHub
+          Quant Strategy
         </a>
         <div class="flex items-center gap-4 sm:gap-6 text-sm text-gray-400 flex-wrap">
           <a href="/" class="hover:text-white transition-colors" data-i18n="nav.home">Home</a>
@@ -42,7 +42,7 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
 
     <footer class="border-t border-gray-800 px-6 py-6 text-center text-sm text-gray-500">
       <div class="max-w-5xl mx-auto flex flex-col gap-2">
-        <p data-i18n="footer.tagline">MeshHub — Open-source low-frequency quant research lab</p>
+        <p data-i18n="footer.tagline">Quant Strategy - Open-source low-frequency quant research lab</p>
         <div class="flex justify-center gap-4">
           <a href="/disclaimer" class="hover:text-gray-300 transition-colors" data-i18n="footer.disclaimer">Disclaimer</a>
           <a href="https://github.com/xu75/quant-strategy" class="hover:text-gray-300 transition-colors" target="_blank" rel="noopener noreferrer" data-i18n="footer.source">Source Code</a>
@@ -55,7 +55,7 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
       import { translations } from '../i18n/translations';
 
       function getLang(): string {
-        return localStorage.getItem('meshhub-lang') || 'en';
+        return localStorage.getItem('quant-strategy-lang') || 'en';
       }
 
       function applyLang(lang: string) {
@@ -68,7 +68,7 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
         document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
         const btn = document.getElementById('lang-toggle');
         if (btn) btn.textContent = lang === 'zh' ? 'EN' : '中文';
-        localStorage.setItem('meshhub-lang', lang);
+        localStorage.setItem('quant-strategy-lang', lang);
       }
 
       // Apply on load
