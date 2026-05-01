@@ -1,8 +1,17 @@
 """Tests for strategy runner data-source selection."""
 
+from dataclasses import dataclass
+from pathlib import Path
+
 import pandas as pd
 
-import run_strategy
+import core.runner as runner
+from strategies.btc_ma_trend.signal import StrategyConfig
+
+
+@dataclass
+class MockManifest:
+    id: str = "btc_ma_trend"
 
 
 def make_history(start: str = "2025-01-01") -> pd.DataFrame:
@@ -33,11 +42,13 @@ def test_load_strategy_data_uses_extended_history_when_local_missing(monkeypatch
         calls.append("recent")
         return make_history("2025-02-01")
 
-    monkeypatch.setattr(run_strategy, "load_local_history", missing_local)
-    monkeypatch.setattr(run_strategy, "fetch_historical_candles", extended_history)
-    monkeypatch.setattr(run_strategy, "fetch_candles", recent_only)
+    monkeypatch.setattr(runner, "load_local_history", missing_local)
+    monkeypatch.setattr(runner, "fetch_historical_candles", extended_history)
+    monkeypatch.setattr(runner, "fetch_candles", recent_only)
 
-    df = run_strategy.load_strategy_data(run_strategy.StrategyConfig())
+    manifest = MockManifest()
+    config = StrategyConfig()
+    df = runner.load_strategy_data(manifest, config)
 
     assert len(df) == 3
     assert calls == ["local", "historical:6000"]
@@ -59,24 +70,28 @@ def test_load_strategy_data_merges_local_history_with_recent_data(monkeypatch):
         calls.append("recent")
         return make_history("2025-01-01 08:00")
 
-    monkeypatch.setattr(run_strategy, "load_local_history", local_history)
-    monkeypatch.setattr(run_strategy, "fetch_historical_candles", extended_history)
-    monkeypatch.setattr(run_strategy, "fetch_candles", recent_only)
+    monkeypatch.setattr(runner, "load_local_history", local_history)
+    monkeypatch.setattr(runner, "fetch_historical_candles", extended_history)
+    monkeypatch.setattr(runner, "fetch_candles", recent_only)
 
-    df = run_strategy.load_strategy_data(run_strategy.StrategyConfig())
+    manifest = MockManifest()
+    config = StrategyConfig()
+    df = runner.load_strategy_data(manifest, config)
 
     assert len(df) == 5
     assert calls == ["local", "recent"]
 
 
-def test_sync_public_charts_copies_generated_outputs(tmp_path):
-    charts_dir = tmp_path / "data" / "charts"
-    public_dir = tmp_path / "site" / "public" / "charts"
+def test_sync_public_charts_copies_generated_outputs(tmp_path, monkeypatch):
+    charts_dir = tmp_path / "data" / "btc_ma_trend" / "charts"
     charts_dir.mkdir(parents=True)
     (charts_dir / "equity.png").write_bytes(b"new-equity")
     (charts_dir / "price_ma.png").write_bytes(b"new-price")
 
-    run_strategy.sync_public_charts(charts_dir, public_dir)
+    public_base = tmp_path / "site" / "public" / "charts"
+    monkeypatch.setattr(runner, "SITE_PUBLIC_CHARTS", public_base)
 
-    assert (public_dir / "equity.png").read_bytes() == b"new-equity"
-    assert (public_dir / "price_ma.png").read_bytes() == b"new-price"
+    runner.sync_public_charts("btc_ma_trend", charts_dir)
+
+    assert (public_base / "btc_ma_trend" / "equity.png").read_bytes() == b"new-equity"
+    assert (public_base / "btc_ma_trend" / "price_ma.png").read_bytes() == b"new-price"

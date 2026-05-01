@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from pipeline.report import generate_status_json
-from strategies.btc_ma_trend.signal import StrategyConfig
+from strategies.btc_ma_trend.signal import StrategyConfig, Signal
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,12 +17,21 @@ def test_status_json_uses_public_strategy_name(tmp_path):
         "close": [100.0, 101.0],
     })
 
+    mock_signal = Signal(
+        action="hold",
+        price=101.0,
+        ma_value=100.5,
+        timestamp=pd.Timestamp("2026-01-01 04:00", tz="UTC"),
+        reason="Test signal",
+    )
+
     status = generate_status_json(
         df=df,
         config=StrategyConfig(),
         in_position=False,
         entry_bar_idx=0,
         output_path=tmp_path / "latest.json",
+        current_signal=mock_signal,
     )
 
     assert status["strategy"]["name"] == "TrendLock 40"

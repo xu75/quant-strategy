@@ -23,7 +23,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install pandas requests pytz matplotlib pytest
+        run: pip install pandas requests pytz matplotlib pytest pyyaml
 
       - name: Run tests
         run: python -m pytest tests/ -v
@@ -35,7 +35,7 @@ jobs:
         run: |
           python -c "
           import json, sys
-          for path in ['data/btc_ma240_4d/latest.json', 'data/btc_ma240_4d/backtest.json']:
+          for path in ['data/btc_ma_trend/latest.json', 'data/btc_ma_trend/backtest.json']:
               with open(path) as f:
                   data = json.load(f)
               if not data:
@@ -44,10 +44,10 @@ jobs:
               print(f'OK: {path}')
           import os
           for chart in [
-              'data/btc_ma240_4d/charts/equity.png',
-              'data/btc_ma240_4d/charts/price_ma.png',
-              'site/public/charts/equity.png',
-              'site/public/charts/price_ma.png',
+              'data/btc_ma_trend/charts/equity.png',
+              'data/btc_ma_trend/charts/price_ma.png',
+              'site/public/charts/btc_ma_trend/equity.png',
+              'site/public/charts/btc_ma_trend/price_ma.png',
           ]:
               if not os.path.exists(chart) or os.path.getsize(chart) < 1000:
                   print(f'FAIL: {chart} missing or too small')
