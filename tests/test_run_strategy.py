@@ -30,7 +30,7 @@ def test_load_strategy_data_uses_extended_history_when_local_missing(monkeypatch
     """CI must not fall back to only 300 recent candles when local CSV is missing."""
     calls: list[str] = []
 
-    def missing_local():
+    def missing_local(**kwargs):
         calls.append("local")
         raise FileNotFoundError("missing local CSV")
 
@@ -58,7 +58,7 @@ def test_load_strategy_data_merges_local_history_with_recent_data(monkeypatch):
     """Local runs should still extend the checked-in history with recent candles."""
     calls: list[str] = []
 
-    def local_history():
+    def local_history(**kwargs):
         calls.append("local")
         return make_history()
 
@@ -80,6 +80,27 @@ def test_load_strategy_data_merges_local_history_with_recent_data(monkeypatch):
 
     assert len(df) == 5
     assert calls == ["local", "recent"]
+
+
+def test_load_strategy_data_requests_configured_local_timeframe(monkeypatch):
+    """Strategy manifests must control local resampling cadence."""
+    requested_bars: list[str | None] = []
+
+    def local_history(**kwargs):
+        requested_bars.append(kwargs.get("target_bar"))
+        return make_history()
+
+    def recent_only(**kwargs):
+        return make_history("2025-01-01 08:00")
+
+    monkeypatch.setattr(runner, "load_local_history", local_history)
+    monkeypatch.setattr(runner, "fetch_candles", recent_only)
+
+    manifest = MockManifest()
+    config = StrategyConfig(timeframe="1D")
+    runner.load_strategy_data(manifest, config)
+
+    assert requested_bars == ["1D"]
 
 
 def test_sync_public_charts_copies_generated_outputs(tmp_path, monkeypatch):

@@ -30,7 +30,7 @@ def load_strategy_data(manifest, config) -> pd.DataFrame:
     """Load enough candles for reproducible backtests."""
     df_hist = None
     try:
-        df_hist = load_local_history()
+        df_hist = load_local_history(target_bar=config.timeframe)
         print(
             f"{LOG_PREFIX} [{manifest.id}] Loaded local history: {len(df_hist)} candles, "
             f"{df_hist.iloc[0]['timestamp']} to {df_hist.iloc[-1]['timestamp']}"
