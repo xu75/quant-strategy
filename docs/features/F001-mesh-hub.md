@@ -11,7 +11,7 @@ status: in-progress
 
 ## 愿景
 
-搭建一个开源的低频量化研究实验室网站（mesh-hub.xyz），免费公开策略研究成果和实时信号状态，通过开源社区捐赠模式运营。
+搭建一个开源的低频量化研究实验室网站（quant-strategy.mesh-hub.xyz），免费公开策略研究成果和实时信号状态，通过开源社区捐赠模式运营。
 
 ## 背景
 
@@ -115,6 +115,7 @@ status: in-progress
                             ┌─────────────────┐
                             │ Vercel (免费)    │
                             │ 静态站 (SSG)     │
+                            │ quant-strategy.  │
                             │ mesh-hub.xyz     │
                             └─────────────────┘
 ```
@@ -160,7 +161,7 @@ status: in-progress
 - [x] 报告生成器输出JSON状态文件和PNG图表
 - [x] GitHub Actions每4H自动运行并commit结果
 - [x] Astro静态站能展示策略状态和回测结果
-- [x] 部署到 mesh-hub.xyz
+- [x] 部署到 quant-strategy.mesh-hub.xyz
 - [x] 免责声明页完成
 
 ### P2 - 增强
@@ -183,7 +184,7 @@ status: in-progress
 |------|------|--------|
 | W1 | 第1周 | 策略模块 + 数据管道 + 回测引擎 + 报告生成器 |
 | W2 | 第2周 | Astro前端 + 策略展示页 + 回测展示页 |
-| W3 | 第3周 | GitHub Actions自动化 + 部署 mesh-hub.xyz |
+| W3 | 第3周 | GitHub Actions自动化 + 部署 quant-strategy.mesh-hub.xyz |
 | W4 | 第4周 | 免责声明 + 捐赠入口 + 上线 |
 
 ### Timeline

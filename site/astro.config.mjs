@@ -5,5 +5,5 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  site: 'https://mesh-hub.xyz',
+  site: 'https://quant-strategy.mesh-hub.xyz',
 });

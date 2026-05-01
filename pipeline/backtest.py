@@ -3,7 +3,8 @@
 Simulates trading over historical data and computes performance metrics.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from math import sqrt
 
 import pandas as pd
 
@@ -40,7 +41,70 @@ class BacktestResult:
     start_date: pd.Timestamp
     end_date: pd.Timestamp
     buy_hold_return_pct: float
+    buy_hold_max_drawdown_pct: float
     has_open_position: bool
+
+
+def _bars_per_year(timeframe: str) -> float:
+    """Return annualization factor for a candle timeframe."""
+    value = timeframe.strip().upper()
+    if value.endswith("H"):
+        return 365 * 24 / float(value[:-1])
+    if value.endswith("D"):
+        return 365 / float(value[:-1])
+    return 365.0
+
+
+def _max_drawdown(values) -> float:
+    """Compute max drawdown from a price or equity path."""
+    series = [float(v) for v in values if pd.notna(v)]
+    if not series:
+        return 0.0
+
+    peak = series[0]
+    max_dd = 0.0
+    for value in series:
+        if value > peak:
+            peak = value
+        if peak <= 0:
+            continue
+        dd = (peak - value) / peak
+        if dd > max_dd:
+            max_dd = dd
+    return max_dd
+
+
+def _annualized_sharpe_from_equity(equity_curve: pd.DataFrame, timeframe: str) -> float:
+    """Compute annualized Sharpe from mark-to-market equity returns."""
+    if len(equity_curve) < 3:
+        return 0.0
+
+    returns = equity_curve["equity"].astype(float).pct_change().dropna()
+    if len(returns) < 2:
+        return 0.0
+
+    avg_ret = float(returns.mean())
+    std_ret = float(returns.std(ddof=1))
+    if std_ret <= 0:
+        return 0.0
+
+    return avg_ret / std_ret * sqrt(_bars_per_year(timeframe))
+
+
+def _period_equity_curve(equity_curve: pd.DataFrame, period_start: pd.Timestamp) -> pd.DataFrame:
+    """Slice an equity curve with the last point before period_start as baseline."""
+    if equity_curve.empty:
+        return equity_curve
+
+    curve = equity_curve.sort_values("timestamp").reset_index(drop=True)
+    before_or_at = curve[curve["timestamp"] <= period_start]
+    after = curve[curve["timestamp"] > period_start]
+
+    if before_or_at.empty:
+        return curve[curve["timestamp"] >= period_start].reset_index(drop=True)
+
+    baseline = before_or_at.tail(1)
+    return pd.concat([baseline, after], ignore_index=True)
 
 
 def run_backtest(
@@ -63,31 +127,40 @@ def run_backtest(
     if config is None:
         config = StrategyConfig()
 
+    df = df.copy().sort_values("timestamp").reset_index(drop=True)
     signals = compute_signals(df, config)
+    signals_by_timestamp = {sig.timestamp: sig for sig in signals}
 
     trades: list[Trade] = []
-    equity = initial_capital
-    peak_equity = initial_capital
-    max_drawdown = 0.0
-
-    equity_points: list[dict] = [{"timestamp": df.iloc[0]["timestamp"], "equity": equity}]
-
-    entry_price = 0.0
+    cash = initial_capital
+    realized_equity = initial_capital
+    position_units = 0.0
+    entry_price_with_fee = 0.0
+    entry_equity = 0.0
     entry_time = pd.Timestamp("1970-01-01")
+    equity_points: list[dict] = []
 
-    for sig in signals:
-        if sig.action == "buy":
-            entry_price = sig.price * (1 + fee_rate)  # slippage via fee
+    for _, row in df.iterrows():
+        timestamp = row["timestamp"]
+        close = float(row["close"])
+        sig = signals_by_timestamp.get(timestamp)
+
+        if sig and sig.action == "buy" and position_units == 0:
+            entry_price_with_fee = sig.price * (1 + fee_rate)
+            entry_equity = cash
+            position_units = cash / entry_price_with_fee
+            cash = 0.0
             entry_time = sig.timestamp
-        elif sig.action == "sell" and entry_price > 0:
-            exit_price = sig.price * (1 - fee_rate)
-            pnl_pct = (exit_price - entry_price) / entry_price
-            pnl_abs = equity * pnl_pct
-            equity += pnl_abs
+        elif sig and sig.action == "sell" and position_units > 0:
+            exit_value = position_units * sig.price * (1 - fee_rate)
+            pnl_pct = (exit_value - entry_equity) / entry_equity
+            pnl_abs = exit_value - entry_equity
+            cash = exit_value
+            realized_equity = cash
 
             trades.append(Trade(
                 entry_time=entry_time,
-                entry_price=entry_price / (1 + fee_rate),  # record pre-fee price
+                entry_price=entry_price_with_fee / (1 + fee_rate),  # record pre-fee price
                 exit_time=sig.timestamp,
                 exit_price=sig.price,
                 hold_bars=sig.hold_bars,
@@ -95,33 +168,19 @@ def run_backtest(
                 pnl_abs=pnl_abs,
             ))
 
-            equity_points.append({"timestamp": sig.timestamp, "equity": equity})
+            position_units = 0.0
+            entry_price_with_fee = 0.0
+            entry_equity = 0.0
 
-            if equity > peak_equity:
-                peak_equity = equity
-            dd = (peak_equity - equity) / peak_equity
-            if dd > max_drawdown:
-                max_drawdown = dd
+        current_equity = cash if position_units == 0 else position_units * close * (1 - fee_rate)
+        equity_points.append({"timestamp": timestamp, "equity": current_equity})
 
-            entry_price = 0.0
+    equity_df = pd.DataFrame(equity_points)
+    equity_mtm = float(equity_df.iloc[-1]["equity"])
+    max_drawdown = _max_drawdown(equity_df["equity"])
+    sharpe = _annualized_sharpe_from_equity(equity_df, config.timeframe)
+    has_open_position = bool(position_units > 0)
 
-    # Mark-to-market: account for unrealized PnL if position is open
-    realized_equity = equity
-    has_open_position = bool(entry_price > 0)
-    if has_open_position:
-        last_close = df.iloc[-1]["close"]
-        unrealized_pnl_pct = (last_close * (1 - fee_rate) - entry_price) / entry_price
-        equity_mtm = equity + equity * unrealized_pnl_pct
-        equity_points.append({"timestamp": df.iloc[-1]["timestamp"], "equity": equity_mtm})
-        if equity_mtm > peak_equity:
-            peak_equity = equity_mtm
-        dd = (peak_equity - equity_mtm) / peak_equity
-        if dd > max_drawdown:
-            max_drawdown = dd
-    else:
-        equity_mtm = equity
-
-    # Compute metrics
     total_trades = len(trades)
     wins = sum(1 for t in trades if t.pnl_pct > 0)
     win_rate = wins / total_trades if total_trades > 0 else 0.0
@@ -129,21 +188,12 @@ def run_backtest(
     realized_return = (realized_equity - initial_capital) / initial_capital * 100
     total_return = (equity_mtm - initial_capital) / initial_capital * 100
 
-    # Buy & hold benchmark
-    first_price = df.iloc[config.ma_window]["close"] if len(df) > config.ma_window else df.iloc[0]["close"]
-    last_price = df.iloc[-1]["close"]
+    first_price_idx = config.ma_window if len(df) > config.ma_window else 0
+    buy_hold_prices = df.iloc[first_price_idx:]["close"].astype(float)
+    first_price = float(buy_hold_prices.iloc[0])
+    last_price = float(buy_hold_prices.iloc[-1])
     buy_hold_return = (last_price - first_price) / first_price * 100
-
-    # Sharpe ratio (simplified: using trade returns)
-    if total_trades > 1:
-        returns = [t.pnl_pct for t in trades]
-        avg_ret = sum(returns) / len(returns)
-        std_ret = (sum((r - avg_ret) ** 2 for r in returns) / (len(returns) - 1)) ** 0.5
-        sharpe = avg_ret / std_ret if std_ret > 0 else 0.0
-    else:
-        sharpe = 0.0
-
-    equity_df = pd.DataFrame(equity_points)
+    buy_hold_max_drawdown = _max_drawdown(buy_hold_prices) * 100
 
     return BacktestResult(
         config=config,
@@ -159,6 +209,7 @@ def run_backtest(
         start_date=df.iloc[0]["timestamp"],
         end_date=df.iloc[-1]["timestamp"],
         buy_hold_return_pct=buy_hold_return,
+        buy_hold_max_drawdown_pct=buy_hold_max_drawdown,
         has_open_position=has_open_position,
     )
 
@@ -171,6 +222,9 @@ def compute_period_metrics(
     open_entry_time: pd.Timestamp | None = None,
     open_entry_price: float = 0.0,
     fee_rate: float = 0.001,
+    equity_curve: pd.DataFrame | None = None,
+    benchmark_prices=None,
+    timeframe: str = "4H",
 ) -> dict | None:
     """Compute performance metrics for a period, including cross-boundary trades.
 
@@ -185,6 +239,9 @@ def compute_period_metrics(
         open_entry_time: Entry time of open position (if any).
         open_entry_price: Entry price of open position (pre-fee).
         fee_rate: Fee rate per side.
+        equity_curve: Full mark-to-market equity curve for time-based Sharpe/drawdown.
+        benchmark_prices: B&H price path for the same period.
+        timeframe: Candle timeframe used for Sharpe annualization.
 
     Returns:
         Dict with period metrics, or None if no activity in period.
@@ -259,7 +316,7 @@ def compute_period_metrics(
 
     closed_count = len(in_period) + len(cross_boundary)
 
-    # Sharpe ratio from closed trade returns
+    # Sharpe ratio from closed trade returns, unless full MTM equity is available.
     if len(returns_list) > 1:
         avg_ret = sum(returns_list) / len(returns_list)
         std_ret = (sum((r - avg_ret) ** 2 for r in returns_list) / (len(returns_list) - 1)) ** 0.5
@@ -267,7 +324,14 @@ def compute_period_metrics(
     else:
         sharpe = 0.0
 
+    if equity_curve is not None:
+        period_curve = _period_equity_curve(equity_curve, period_start)
+        if not period_curve.empty:
+            max_dd = _max_drawdown(period_curve["equity"])
+            sharpe = _annualized_sharpe_from_equity(period_curve, timeframe)
+
     buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
+    buy_hold_max_dd = _max_drawdown(benchmark_prices) * 100 if benchmark_prices is not None else 0.0
     all_closed = cross_boundary + in_period
     avg_hold = sum(t.hold_bars for t in all_closed) / closed_count if closed_count > 0 else 0.0
 
@@ -280,6 +344,7 @@ def compute_period_metrics(
         "avg_hold_bars": round(avg_hold, 1),
         "sharpe_ratio": round(sharpe, 3),
         "buy_hold_return_pct": round(buy_hold, 2),
+        "buy_hold_max_drawdown_pct": round(buy_hold_max_dd, 2),
         "has_open_position": include_open,
     }
 
@@ -302,6 +367,7 @@ def result_to_dict(result: BacktestResult) -> dict:
             "avg_hold_bars": round(result.avg_hold_bars, 1),
             "sharpe_ratio": round(result.sharpe_ratio, 3),
             "buy_hold_return_pct": round(result.buy_hold_return_pct, 2),
+            "buy_hold_max_drawdown_pct": round(result.buy_hold_max_drawdown_pct, 2),
             "has_open_position": result.has_open_position,
         },
         "period": {

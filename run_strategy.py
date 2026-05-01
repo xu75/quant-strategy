@@ -9,7 +9,7 @@ It produces:
   - data/btc_ma240_4d/charts/price_ma.png
 """
 
-import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strategies.btc_ma_trend.signal import StrategyConfig, compute_signals
-from pipeline.data_fetcher import fetch_candles, load_local_history
+from pipeline.data_fetcher import fetch_candles, fetch_historical_candles, load_local_history
 from pipeline.backtest import run_backtest, compute_period_metrics
 from pipeline.report import (
     generate_status_json,
@@ -26,15 +26,73 @@ from pipeline.report import (
     generate_price_ma_chart,
 )
 
-
 import pandas as pd
 
 OUTPUT_DIR = Path("data/btc_ma240_4d")
 CHARTS_DIR = OUTPUT_DIR / "charts"
+PUBLIC_CHARTS_DIR = Path("site/public/charts")
+FALLBACK_HISTORY_CANDLES = 6000
 
 # Fixed launch date — "Since" reference is the last signal before this date.
 # Once set per strategy, never changes.
 LAUNCH_DATE = pd.Timestamp("2026-04-30", tz="UTC")
+
+
+def load_strategy_data(config: StrategyConfig) -> pd.DataFrame:
+    """Load enough candles for reproducible backtests in local and CI environments."""
+    df_hist = None
+    try:
+        df_hist = load_local_history()
+        print(f"[MeshHub] Loaded local history: {len(df_hist)} candles, "
+              f"{df_hist.iloc[0]['timestamp']} to {df_hist.iloc[-1]['timestamp']}")
+    except Exception as e:
+        print(f"[MeshHub] Local history not available: {e}")
+
+    if df_hist is None:
+        print("[MeshHub] Fetching extended historical candles from OKX...")
+        try:
+            df_hist = fetch_historical_candles(
+                symbol=config.symbol,
+                bar=config.timeframe,
+                limit=FALLBACK_HISTORY_CANDLES,
+            )
+            print(f"[MeshHub] Got {len(df_hist)} historical candles from OKX")
+            return df_hist
+        except Exception as e:
+            print(f"[MeshHub] Historical fetch failed: {e}")
+
+    print("[MeshHub] Fetching recent candles from OKX...")
+    try:
+        df_recent = fetch_candles(symbol=config.symbol, bar=config.timeframe, limit=300)
+        print(f"[MeshHub] Got {len(df_recent)} recent candles from OKX")
+    except Exception as e:
+        print(f"[MeshHub] OKX fetch failed: {e}")
+        df_recent = None
+
+    if df_hist is not None and df_recent is not None:
+        df = pd.concat([df_hist, df_recent], ignore_index=True)
+        return df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
+    if df_hist is not None:
+        return df_hist
+    if df_recent is not None:
+        return df_recent
+
+    print("[MeshHub] ERROR: No data available")
+    sys.exit(1)
+
+
+def price_path_from_period(df: pd.DataFrame, period_start: pd.Timestamp) -> pd.Series:
+    """Return B&H price path with a baseline at or immediately before period_start."""
+    mask = df["timestamp"] <= period_start
+    start_idx = int(mask[mask].index[-1]) if mask.any() else 0
+    return df.loc[start_idx:, "close"]
+
+
+def sync_public_charts(charts_dir: Path = CHARTS_DIR, public_charts_dir: Path = PUBLIC_CHARTS_DIR) -> None:
+    """Copy generated chart assets to Astro's public directory."""
+    public_charts_dir.mkdir(parents=True, exist_ok=True)
+    for filename in ("equity.png", "price_ma.png"):
+        shutil.copyfile(charts_dir / filename, public_charts_dir / filename)
 
 
 def main():
@@ -47,47 +105,20 @@ def main():
 
     print(f"[MeshHub] Running strategy: BTC {config.timeframe} MA{config.ma_window}")
 
-    # 1. Load local historical data (resampled 1h→4h)
-    df_hist = None
-    try:
-        df_hist = load_local_history()
-        print(f"[MeshHub] Loaded local history: {len(df_hist)} candles, "
-              f"{df_hist.iloc[0]['timestamp']} to {df_hist.iloc[-1]['timestamp']}")
-    except Exception as e:
-        print(f"[MeshHub] Local history not available: {e}")
-
-    # 2. Fetch recent data from OKX (forward updates)
-    print("[MeshHub] Fetching recent candles from OKX...")
-    try:
-        df_recent = fetch_candles(symbol=config.symbol, bar=config.timeframe, limit=300)
-        print(f"[MeshHub] Got {len(df_recent)} recent candles from OKX")
-    except Exception as e:
-        print(f"[MeshHub] OKX fetch failed: {e}")
-        df_recent = None
-
-    # 3. Combine: local history + OKX recent (dedup by timestamp)
-    if df_hist is not None and df_recent is not None:
-        df = pd.concat([df_hist, df_recent], ignore_index=True)
-        df = df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
-    elif df_hist is not None:
-        df = df_hist
-    elif df_recent is not None:
-        df = df_recent
-    else:
-        print("[MeshHub] ERROR: No data available")
-        sys.exit(1)
-
+    df = load_strategy_data(config)
     print(f"[MeshHub] Combined: {len(df)} candles, {df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}")
 
     # 2. Run backtest
     print("[MeshHub] Running backtest...")
     result = run_backtest(df, config)
 
-    print(f"[MeshHub] Backtest complete:")
+    print("[MeshHub] Backtest complete:")
     print(f"  Trades: {result.total_trades}")
     print(f"  Return: {result.total_return_pct:.2f}%")
     print(f"  Max DD: {result.max_drawdown_pct:.2f}%")
+    print(f"  B&H Max DD: {result.buy_hold_max_drawdown_pct:.2f}%")
     print(f"  Win Rate: {result.win_rate:.1f}%")
+    print(f"  Sharpe: {result.sharpe_ratio:.3f}")
     print(f"  Buy & Hold: {result.buy_hold_return_pct:.2f}%")
 
     # 3. Determine current position from signal sequence
@@ -128,7 +159,8 @@ def main():
         period_boundaries["since_launch"] = since_date
     period_boundaries["1y"] = end_date - pd.DateOffset(years=1)
     period_boundaries["2y"] = end_date - pd.DateOffset(years=2)
-    period_boundaries["all"] = df_sorted.iloc[0]["timestamp"]
+    all_start_idx = config.ma_window if len(df_sorted) > config.ma_window else 0
+    period_boundaries["all"] = df_sorted.iloc[all_start_idx]["timestamp"]
 
     periods_data = {}
     for name, p_start in period_boundaries.items():
@@ -138,6 +170,9 @@ def main():
         metrics = compute_period_metrics(
             result.trades, p_start, end_price, start_price,
             open_entry_time, open_entry_price,
+            equity_curve=result.equity_curve,
+            benchmark_prices=price_path_from_period(df_sorted, p_start),
+            timeframe=config.timeframe,
         )
         if metrics:
             periods_data[name] = {
@@ -159,6 +194,7 @@ def main():
     )
     generate_equity_chart(result, CHARTS_DIR / "equity.png")
     generate_price_ma_chart(df, config, result.trades, CHARTS_DIR / "price_ma.png")
+    sync_public_charts()
 
     print(f"[MeshHub] Reports written to {OUTPUT_DIR}/")
     print("[MeshHub] Done.")
