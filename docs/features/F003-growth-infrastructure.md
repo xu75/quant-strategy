@@ -28,7 +28,7 @@ status: spec
 **代码永远 AGPL 开源，服务便利层可以分层。**
 
 - 策略代码、执行逻辑、基础数据、核心研究结论：永远公开，无需注册
-- 注册/邀请解锁的是便利服务：通知推送、偏好设置、历史搜索、精编研究报告
+- 注册/邀请解锁的是便利服务：通知推送、偏好设置、历史搜索、交互式分析
 - 任何人都可以从 GitHub clone 代码自己跑，网站提供的是"不用自己跑就能获得整理好的结果"
 
 ## 参考
@@ -47,16 +47,16 @@ status: spec
 
 - Telegram 公共信号频道：GitHub Actions 信号变化后 POST Telegram Bot API 推送
 - 网站 CTA（Call to Action）：首页和策略页添加"加入 Telegram 频道获取实时信号"入口
-- Vercel Analytics：启用免费层访问统计，了解流量来源和页面热度
-- UTM 参数追踪：推广链接带 UTM，区分渠道效果
+- Vercel Analytics：启用免费层访问统计（Hobby 限 50K events/月），了解页面热度和 referrer 来源
+- UTM 参数规范：推广链接统一带 UTM 参数；统计侧先用 Vercel referrer/page metrics，UTM 维度分析需 Analytics Plus 或自建轻量 redirect endpoint（后续评估）
 
 ### Phase 2 — 用户注册 + 通知偏好
 
 引入轻量用户系统。
 
 - Astro 切 hybrid 模式：公开页继续 SSG，`/api/*` 和 `/account` 走 SSR
-- Vercel Postgres 存储用户数据（免费层 256MB）
-- Magic link 登录（邮箱验证码，无密码）
+- Marketplace Postgres 存储用户数据（Vercel Postgres 已停止新项目接入，通过 Vercel Marketplace 接 Neon / Supabase / Prisma Postgres，具体选型 Phase 2 启动时评估）
+- Magic link 登录（邮箱验证码，无密码）。安全契约：一次性 token hash 存储、15 分钟过期、登录尝试限频（5 次/邮箱/小时）、邮件枚举防护（统一返回"已发送"）、回调域名白名单、session cookie HttpOnly + SameSite=Strict
 - 通知偏好：选择接收哪些策略的信号、通过哪个渠道（Telegram / email / webhook）
 - 个人 dashboard：订阅的策略列表、历史信号归档、搜索
 
@@ -68,7 +68,7 @@ status: spec
 - 内容分层：
   - Tier 0（无注册）：当前信号、equity curve、基础回测、核心研究结论
   - Tier 1（免费注册）：通知推送、偏好设置、历史归档搜索
-  - Tier 2（referral-gated）：精编研究报告、参数扫描交互式分析、新策略 early access
+  - Tier 2（referral-gated）：交互式参数扫描分析、个性化视图、新策略 early access 提前通知（核心研究结论和 canonical report 仍公开）
 - 最小表结构：`profiles`, `referral_events`, `entitlements`, `notification_subscriptions`
 
 ## 技术选型
@@ -76,12 +76,12 @@ status: spec
 | 组件 | 选择 | 理由 |
 |------|------|------|
 | Auth | Magic link (自建) | 最简单，无第三方依赖，Vercel Serverless Function 发邮件 |
-| 数据库 | Vercel Postgres | 免费 256MB，与 Vercel 部署零配置集成 |
+| 数据库 | Marketplace Postgres (Neon/Supabase/Prisma TBD) | Vercel Postgres 已停新项目，通过 Marketplace 接外部 Postgres provider |
 | 通知 - Telegram | Telegram Bot API | HTTPS 接口，GitHub Actions 直接调用，零成本 |
 | 通知 - Email | Resend 免费层 | 100 emails/day，够早期验证 |
 | 前端 | Astro hybrid (SSG + SSR) | 公开页静态快，动态路由按需 SSR |
 | 部署 | Vercel (现有) | 无额外成本，Serverless Functions 免费层够用 |
-| 统计 | Vercel Analytics | 免费层基础统计，无需额外集成 |
+| 统计 | Vercel Analytics (Hobby) | 免费 50K events/月，referrer + page 维度；UTM 维度需 Plus 或自建 |
 
 ## 推广渠道（Phase 1 同步启动）
 
@@ -100,7 +100,7 @@ status: spec
 - [ ] AC-1: Telegram 信号频道创建，策略信号变化时自动推送消息
 - [ ] AC-2: 网站首页和策略页有 Telegram 频道 CTA 入口
 - [ ] AC-3: Vercel Analytics 启用，能看到基础访问数据
-- [ ] AC-4: 推广链接带 UTM 参数
+- [ ] AC-4: 推广链接统一 UTM 参数规范；基础流量通过 Vercel referrer/page metrics 可观测
 
 ### Phase 2
 - [ ] AC-5: 用户可通过 magic link 注册/登录
@@ -110,13 +110,13 @@ status: spec
 ### Phase 3
 - [ ] AC-8: Referral 机制：邀请新用户解锁 Tier 2
 - [ ] AC-9: 内容分层：Tier 0/1/2 权限正确隔离
-- [ ] AC-10: 精编研究报告页面（Tier 2 专属）
+- [ ] AC-10: Tier 2 专属交互式分析页面（核心研究结论仍公开）
 
 ## Dependencies
 
 - F001 P1 ✅（MVP 已完成）
 - Telegram Bot 创建（需铲屎官操作：创建 bot + 频道）
-- Vercel Postgres 启用（需铲屎官在 Vercel dashboard 操作，Phase 2）
+- Marketplace Postgres 启用（需铲屎官在 Vercel Marketplace 选择 provider，Phase 2）
 
 ## Risk
 
@@ -141,4 +141,5 @@ status: spec
 | 2026-05-02 | 代码开源 ≠ 服务不能分层 | 三猫讨论共识：GitHub 代码永远公开，网站便利层可注册解锁 |
 | 2026-05-02 | 先通知后注册 | 砚砚 review：先验证需求（Telegram 频道），再建基础设施（注册系统） |
 | 2026-05-02 | Vercel 原生技术栈 | 铲屎官反馈：GitHub 不靠谱，前端是用户入口；Vercel 免费层够用 |
-| 2026-05-02 | 不用 Supabase | Phase 1 不需要数据库；Phase 2 用 Vercel Postgres 更轻量 |
+| 2026-05-02 | 不用 Supabase | Phase 1 不需要数据库；Phase 2 通过 Vercel Marketplace 接 Postgres provider（Vercel Postgres 已停新项目） |
+| 2026-05-02 | Tier 2 不 gate 研究结论 | 砚砚 review：核心研究结论和 canonical report 永远公开，Tier 2 只 gate 交互式分析和 early access |
