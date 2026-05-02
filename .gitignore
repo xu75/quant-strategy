@@ -40,3 +40,4 @@ site/dist/
 .kimi/
 KIMI.md
 .vercel
+\n# MCP\n.playwright-mcp/
