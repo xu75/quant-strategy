@@ -141,5 +141,5 @@ status: spec
 | 2026-05-02 | 代码开源 ≠ 服务不能分层 | 三猫讨论共识：GitHub 代码永远公开，网站便利层可注册解锁 |
 | 2026-05-02 | 先通知后注册 | 砚砚 review：先验证需求（Telegram 频道），再建基础设施（注册系统） |
 | 2026-05-02 | Vercel 原生技术栈 | 铲屎官反馈：GitHub 不靠谱，前端是用户入口；Vercel 免费层够用 |
-| 2026-05-02 | 不用 Supabase | Phase 1 不需要数据库；Phase 2 通过 Vercel Marketplace 接 Postgres provider（Vercel Postgres 已停新项目） |
+| 2026-05-02 | Phase 1 不引入 Auth/DB | Phase 1 不需要数据库；Phase 2 通过 Vercel Marketplace 接 Postgres provider（Neon/Supabase/Prisma TBD） |
 | 2026-05-02 | Tier 2 不 gate 研究结论 | 砚砚 review：核心研究结论和 canonical report 永远公开，Tier 2 只 gate 交互式分析和 early access |
