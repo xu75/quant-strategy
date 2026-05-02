@@ -2,6 +2,9 @@
 .claude/
 .codex/
 .gemini/
+.agents/
+CLAUDE.md
+AGENTS.md
 
 # Python
 __pycache__/
