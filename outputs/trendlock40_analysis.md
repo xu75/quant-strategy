@@ -6,7 +6,7 @@
 
 After running a comprehensive three-factor sweep with two signal modes:
 1. **long_close_signal**: Signal computed on signal interval, inherited by execution interval
-2. **exec_close_vs_signal_ma**: Each execution bar close compared against latest signal MA (MSTR-style "short execution")
+2. **exec_close_vs_signal_ma**: Each execution bar close compared against latest signal MA
 
 ## Key Findings
 
@@ -23,10 +23,10 @@ After running a comprehensive three-factor sweep with two signal modes:
 
 **Conclusion**: 
 - When signal and execution are the same interval (4H+4H), both modes produce nearly identical results
-- When execution is shorter than signal (4H signal + 1H exec), the "short execution advantage" does NOT materialize for BTC — performance is actually worse
+- When execution is shorter than signal (4H signal + 1H exec), performance is actually worse — shorter execution does not improve returns for BTC
 - When execution is longer than signal (4H signal + 1D exec), results can be better in some configurations (e.g., 4H+1D+2D has higher mean return than 4H+4H+2D)
 
-**This contradicts the MSTR finding** where shorter execution improved returns. For BTC, there is no systematic "short execution advantage."
+**For BTC, there is no systematic "short execution advantage."** Matching signal and execution intervals remains the most robust choice.
 
 ### 2. Freeze Period: 2D vs 4D Trade-off
 
@@ -62,6 +62,8 @@ After running a comprehensive three-factor sweep with two signal modes:
 
 **Current 4H+4H+4D ranks #15 (out of 45)** with mean return of 669.51% in the exec_close_vs_signal_ma mode.
 
+**Note on 1D vs 4H signal equivalence:** 1D MA40 and 4H MA240 cover the same 40-day lookback window (1D × 40 = 4H × 240 = 960 hours). They are the same signal at different sampling frequencies, not fundamentally different strategies. The 1D configurations appearing at the top of this ranking reflect sampling frequency differences and noise characteristics, not a different trend window.
+
 ## Comparison with Production Strategy
 
 **Important caveat**: The current production TrendLock 40 uses:
@@ -73,6 +75,16 @@ The sweep uses:
 - **Freeze**: Symmetric lock after regime flip
 
 These are different signal semantics. The sweep validates parameter sensitivity but does not directly validate the production strategy.
+
+## Historical Context: 4D Freeze Selection
+
+The current production parameter of 4D (24 bars) freeze was not chosen in isolation. It was selected through a comprehensive multi-factor optimization that swept across dimensions beyond this report's scope:
+
+- **MA periods**: 120, 150, 180, 210, 240
+- **Hold periods (bars)**: 12, 18, 24
+- **Multiple time windows** for cross-window robustness validation
+
+The 4H MA240 + 24-bar (4D) hold emerged as the most robust configuration across this full matrix. This sweep covers only one slice (signal interval × execution interval × freeze days with MA fixed at 240-equivalent), so its rankings should be interpreted as sensitivity analysis around the chosen operating point, not as a fresh global optimization.
 
 ## Recommendations
 
@@ -105,5 +117,5 @@ If the goal is:
 
 ## Execution Interval Conclusion
 
-**For BTC, execution interval does NOT provide the "short execution advantage" observed in MSTR.** When signal and execution intervals match, both signal modes produce nearly identical results. Shorter execution (1H) with longer signal (4H) actually performs worse in most windows.
+**For BTC, shorter execution intervals do not improve returns.** When signal and execution intervals match, both signal modes produce nearly identical results. Shorter execution (1H) with longer signal (4H) actually performs worse in most windows.
 
