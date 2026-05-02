@@ -109,7 +109,7 @@ def run_single_strategy(adapter):
 
     # 3. Run backtest (pass pre-computed signals)
     print(f"{LOG_PREFIX} [{manifest.id}] Running backtest...")
-    result = run_backtest(df, config, signals=signals)
+    result = run_backtest(df, config, signals=signals, fee_rate=0.001)
 
     print(f"{LOG_PREFIX} [{manifest.id}] Backtest complete:")
     print(f"  Trades: {result.total_trades}")

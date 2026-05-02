@@ -18,3 +18,9 @@ display:
 
 launch_date: "2026-04-30"
 enabled: true
+
+research:
+  paper_title: "BTC_4H_MA趋势策略研究论文"
+  website_path: "/research/btc-ma240-4d"
+  canonical_doc: "docs/research/strategies/btc_ma_trend.md"
+  source_docx: "docs/research/sources/btc_ma_trend_source_2026-05.docx"

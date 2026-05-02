@@ -28,3 +28,9 @@
 - Feature lifecycle: kickoff → discussion → implementation → review → completion
 - SOP: See docs/SOP.md for the 6-step workflow
 <!-- CAT-CAFE-GOVERNANCE-END -->
+
+## Quant Strategy Standards
+
+- **Backtests must include transaction costs**: default to `fee_rate=0.001` per side (0.1% entry + 0.1% exit, about 0.2% round trip). Zero-fee runs are only allowed for explicit fee-sensitivity analysis and must be labeled as such.
+- **Cross-strategy comparisons must use matching windows**: same start/end dates, same data source, same execution timing, same fee model, and same metric definition.
+- **Parameter recommendations must state the baseline first**: record the current production parameters and metrics before proposing an optimized variant.

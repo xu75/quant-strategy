@@ -1,0 +1,71 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const paper = {
+  title: 'BTC_4H_MA趋势策略研究论文',
+  strategyName: 'TrendLock 40',
+  canonicalUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/btc_ma_trend.md',
+  sourceDocxUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/sources/btc_ma_trend_source_2026-05.docx',
+  strategyUrl: '/strategy/btc-ma240-4d',
+};
+---
+
+<Layout title="Research - TrendLock 40" description="Research memo for TrendLock 40">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-gray-400">{paper.strategyName}</p>
+    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
+      Method, assumptions, and evidence chain behind this strategy.
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <p class="text-gray-300 leading-7">
+      本研究围绕 BTC 4H 趋势跟踪策略，验证了单均线范式在强趋势资产上的可行性，并对参数鲁棒性、
+      横盘磨损与工程化部署进行了系统性复盘。当前生产策略采用 MA240 与最小持仓 24 bars（约 4 天），
+      目标是在不引入复杂执行壳的前提下平衡长期收益与回撤。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>4H MA240 + min hold 24 bars 在历史样本中呈现稳定的风险收益特征。</li>
+      <li>1D MA40 与 4H MA240 在时间覆盖上等价（40 天窗口），差异主要来自采样与执行粒度。</li>
+      <li>更复杂的双均线组合未持续显示稳健优势，复杂度提升不必然提升泛化能力。</li>
+      <li>策略参数不应只看单窗口收益，必须结合跨周期鲁棒性与交易频率约束共同评估。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>信号与回测采用 next-bar execution 语义（信号于 N bar close 生成，N+1 bar 执行）。</li>
+      <li>默认交易成本为双边 0.1%（每侧 0.1%），与项目回测标准一致。</li>
+      <li>生产策略语义以 crossover entry + min_hold exit 为准，研究模型结论需与生产语义对齐后再上线。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>历史回测不包含未来市场结构变化，且滑点模型仍可继续完善。</li>
+      <li>任何“最优参数”都依赖评估窗口与指标定义，需要持续滚动复核。</li>
+      <li>外部对比结论若来自已知缺陷脚本，需先排除实现偏差再做策略迁移。</li>
+      <li>原始来源以仓库内 DOCX 为准，避免外部链接失效影响可追溯性。</li>
+    </ul>
+  </section>
+
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
+      <a href={paper.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.github">Canonical doc on GitHub</a>
+      <a href={paper.sourceDocxUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.source_docx">Original DOCX on GitHub</a>
+    </div>
+  </section>
+</Layout>
