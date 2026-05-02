@@ -1,6 +1,6 @@
 ---
 feature_ids: [F001]
-related_features: []
+related_features: [F003]
 topics: [quant-strategy, trendlock-40, btc-strategy, open-source, quant]
 doc_kind: spec
 created: 2026-04-30
