@@ -8,20 +8,24 @@ const strategyEntries = [
   { id: 'btc_ma40d_trend', href: '/strategy/btc-ma40d-5d' },
 ];
 
-const strategyCards = strategyEntries.map(({ id, href }) => {
+const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   const dataDir = path.resolve(process.cwd(), `../data/${id}`);
-  const latest = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf-8'));
-  const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
+  const latestPath = path.join(dataDir, 'latest.json');
+  const backtestPath = path.join(dataDir, 'backtest.json');
+
+  if (!fs.existsSync(latestPath) || !fs.existsSync(backtestPath)) {
+    return [];
+  }
+
+  const latest = JSON.parse(fs.readFileSync(latestPath, 'utf-8'));
+  const backtest = JSON.parse(fs.readFileSync(backtestPath, 'utf-8'));
   const signal = latest.current_signal;
   const strategy = latest.strategy;
   const sincePerf = backtest.periods?.since_launch?.performance;
-  const sinceDate = backtest.since_date ? new Date(backtest.since_date) : null;
-  const sinceDateStr = sinceDate
-    ? sinceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-    : '—';
+  const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
 
-  return { href, latest, signal, strategy, sinceDateStr, returnPct };
+  return [{ href, latest, signal, strategy, sinceDateIso, returnPct }];
 });
 ---
 
@@ -30,7 +34,10 @@ const strategyCards = strategyEntries.map(({ id, href }) => {
     <h1 class="text-4xl font-bold mb-3">Quant Strategy</h1>
     <p class="text-lg text-gray-400 max-w-2xl" data-i18n="home.subtitle">
       Open-source low-frequency quant research lab. We share strategy research,
-      backtests, and real-time signal status — all free, all open source.
+      backtests, and real-time signals — all free, all open source. We replace
+      emotional trading with deterministic rules to navigate market and human
+      uncertainty, delivering hands-off strategies with reliable returns and
+      controlled drawdowns.
     </p>
     <div class="flex gap-3 mt-5">
       <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer"
@@ -47,7 +54,7 @@ const strategyCards = strategyEntries.map(({ id, href }) => {
   <section class="mb-12">
     <h2 class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateStr, returnPct }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct }) => (
         <a href={href} class="block">
           <div class="border border-gray-800 rounded-xl p-6 hover:border-gray-600 transition-colors">
             <div class="flex items-center justify-between mb-4">
@@ -85,7 +92,9 @@ const strategyCards = strategyEntries.map(({ id, href }) => {
               </div>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
-                <p class="text-lg font-mono">{sinceDateStr}</p>
+                <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
+                  {sinceDateIso ?? '—'}
+                </p>
               </div>
             </div>
           </div>
@@ -129,4 +138,24 @@ const strategyCards = strategyEntries.map(({ id, href }) => {
       </a>
     </div>
   </section>
+
+  <script>
+    const dateFmt = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    document.querySelectorAll('.js-local-date[data-iso]').forEach((el) => {
+      const iso = el.getAttribute('data-iso');
+      const fallback = el.getAttribute('data-fallback') || '—';
+      if (!iso) {
+        el.textContent = fallback;
+        return;
+      }
+
+      const dt = new Date(iso);
+      el.textContent = Number.isNaN(dt.getTime()) ? fallback : dateFmt.format(dt);
+    });
+  </script>
 </Layout>

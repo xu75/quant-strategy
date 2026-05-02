@@ -6,7 +6,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Open-source low-frequency quant research lab' } = Astro.props;
+const { title, description = 'Open-source low-frequency quant research lab. We share strategy research, backtests, and real-time signals — all free, all open source.' } = Astro.props;
 ---
 
 <!doctype html>
@@ -28,6 +28,7 @@ const { title, description = 'Open-source low-frequency quant research lab' } = 
           <a href="/" class="hover:text-white transition-colors" data-i18n="nav.home">Home</a>
           <a href="/strategy/btc-ma240-4d" class="hover:text-white transition-colors" data-i18n="nav.strategy">Strategy</a>
           <a href="/backtest/btc-ma240-4d" class="hover:text-white transition-colors" data-i18n="nav.backtest">Backtest</a>
+          <a href="/research/btc-ma240-4d" class="hover:text-white transition-colors" data-i18n="nav.research">Research</a>
           <a href="https://github.com/xu75/quant-strategy" class="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">GitHub</a>
           <button id="lang-toggle" class="px-2 py-1 rounded text-xs border border-gray-700 hover:border-gray-500 transition-colors" aria-label="Switch language">
             中文

@@ -10,10 +10,6 @@ const perf = backtest.performance;
 const trades = backtest.trades;
 const period = backtest.period;
 const strategy = backtest.strategy;
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-}
 ---
 
 <Layout title="Backtest - TrendLock 40" description="Backtest results for TrendLock 40">
@@ -23,7 +19,9 @@ function fmtDate(iso: string) {
     </div>
     <h1 class="text-3xl font-bold mb-1" data-i18n="backtest.title">Backtest Results</h1>
     <p class="text-gray-400">
-      {strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} · {fmtDate(period.start)} — {fmtDate(period.end)}
+      {strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} ·
+      <span class="js-local-date" data-iso={period.start}>{period.start}</span> —
+      <span class="js-local-date" data-iso={period.end}>{period.end}</span>
     </p>
   </section>
 
@@ -111,9 +109,13 @@ function fmtDate(iso: string) {
           {trades.map((t: any, i: number) => (
             <tr class="border-b border-gray-800/50 hover:bg-gray-900/50">
               <td class="py-3 px-3 text-gray-500">{i + 1}</td>
-              <td class="py-3 px-3 font-mono text-xs">{fmtDate(t.entry_time)}</td>
+              <td class="py-3 px-3 font-mono text-xs">
+                <span class="js-local-date" data-iso={t.entry_time}>{t.entry_time}</span>
+              </td>
               <td class="py-3 px-3 font-mono text-right">${t.entry_price.toLocaleString()}</td>
-              <td class="py-3 px-3 font-mono text-xs">{fmtDate(t.exit_time)}</td>
+              <td class="py-3 px-3 font-mono text-xs">
+                <span class="js-local-date" data-iso={t.exit_time}>{t.exit_time}</span>
+              </td>
               <td class="py-3 px-3 font-mono text-right">${t.exit_price.toLocaleString()}</td>
               <td class="py-3 px-3 font-mono text-right">{t.hold_bars}b</td>
               <td class={`py-3 px-3 font-mono text-right ${t.pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -125,4 +127,21 @@ function fmtDate(iso: string) {
       </table>
     </div>
   </section>
+
+  <script>
+    const dateFmt = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    document.querySelectorAll('.js-local-date[data-iso]').forEach((el) => {
+      const iso = el.getAttribute('data-iso');
+      if (!iso) return;
+      const dt = new Date(iso);
+      if (!Number.isNaN(dt.getTime())) {
+        el.textContent = dateFmt.format(dt);
+      }
+    });
+  </script>
 </Layout>

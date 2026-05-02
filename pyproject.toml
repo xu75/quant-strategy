@@ -1,7 +1,7 @@
 [project]
 name = "quant-strategy"
 version = "0.1.0"
-description = "Quant Strategy - Open-source low-frequency quant research lab"
+description = "Quant Strategy - Open-source low-frequency quant research lab. All free, all open source."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.10"
