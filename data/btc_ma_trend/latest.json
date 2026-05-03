@@ -1,23 +1,24 @@
 {
-  "updated_at": "2026-05-03T17:03:16.753342+00:00",
+  "updated_at": "2026-05-03T17:11:26.007656+00:00",
   "strategy": {
     "name": "TrendLock 40",
     "code": "btc_ma_trend",
     "timeframe": "4H",
     "symbol": "BTC-USDT",
     "ma_window": 240,
+    "min_hold_bars": 24,
     "min_hold_days": 4.0
   },
   "current_signal": {
     "action": "hold",
     "price": 78668.9,
-    "ma_value": 72832.04,
+    "ma_value": 72832.44,
     "timestamp": "2026-05-03T12:00:00+00:00",
-    "hold_bars": 166,
+    "hold_bars": 165,
     "reason": "Holding, price above MA240"
   },
   "position": {
     "in_position": true,
-    "entry_bar_idx": 5833
+    "entry_bar_idx": 13721
   }
 }

@@ -78,6 +78,19 @@ def price_path_from_period(df: pd.DataFrame, period_start: pd.Timestamp) -> pd.S
     return df.loc[start_idx:, "close"]
 
 
+def build_performance_period_boundaries(
+    end_date: pd.Timestamp,
+    since_date: pd.Timestamp | None = None,
+) -> dict[str, pd.Timestamp]:
+    """Return the product-standard performance windows for strategy summaries."""
+    boundaries = {}
+    if since_date is not None:
+        boundaries["since_launch"] = since_date
+    for years in (1, 2, 3, 5):
+        boundaries[f"{years}y"] = end_date - pd.DateOffset(years=years)
+    return boundaries
+
+
 def sync_public_charts(strategy_id: str, charts_dir: Path) -> None:
     """Copy generated chart assets to Astro's public directory with strategy namespace."""
     public_strategy_charts = SITE_PUBLIC_CHARTS / strategy_id
@@ -152,14 +165,7 @@ def run_single_strategy(adapter):
     end_price = df_sorted.iloc[-1]["close"]
     end_date = df_sorted.iloc[-1]["timestamp"]
 
-    period_boundaries = {}
-    if since_date:
-        period_boundaries["since_launch"] = since_date
-    period_boundaries["1y"] = end_date - pd.DateOffset(years=1)
-    period_boundaries["2y"] = end_date - pd.DateOffset(years=2)
-    warmup = getattr(config, 'warmup_bars', getattr(config, 'ma_window', 0))
-    all_start_idx = warmup if len(df_sorted) > warmup else 0
-    period_boundaries["all"] = df_sorted.iloc[all_start_idx]["timestamp"]
+    period_boundaries = build_performance_period_boundaries(end_date, since_date)
 
     periods_data = {}
     for name, p_start in period_boundaries.items():

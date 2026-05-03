@@ -116,3 +116,19 @@ def test_sync_public_charts_copies_generated_outputs(tmp_path, monkeypatch):
 
     assert (public_base / "btc_ma_trend" / "equity.png").read_bytes() == b"new-equity"
     assert (public_base / "btc_ma_trend" / "price_ma.png").read_bytes() == b"new-price"
+
+
+def test_performance_period_boundaries_use_fixed_product_windows():
+    """Performance Summary should not expose strategy warmup/all-history periods."""
+    end_date = pd.Timestamp("2026-05-04 00:00", tz="UTC")
+    since_date = pd.Timestamp("2026-04-30 00:00", tz="UTC")
+
+    boundaries = runner.build_performance_period_boundaries(end_date, since_date)
+
+    assert list(boundaries.keys()) == ["since_launch", "1y", "2y", "3y", "5y"]
+    assert boundaries["since_launch"] == since_date
+    assert boundaries["1y"] == end_date - pd.DateOffset(years=1)
+    assert boundaries["2y"] == end_date - pd.DateOffset(years=2)
+    assert boundaries["3y"] == end_date - pd.DateOffset(years=3)
+    assert boundaries["5y"] == end_date - pd.DateOffset(years=5)
+    assert "all" not in boundaries
