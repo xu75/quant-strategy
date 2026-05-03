@@ -83,7 +83,11 @@ def generate_status_json(
         status["strategy"]["ma_window"] = ma_window
     min_hold_bars = getattr(config, 'min_hold_bars', None)
     if min_hold_bars is not None:
+        status["strategy"]["min_hold_bars"] = min_hold_bars
         status["strategy"]["min_hold_days"] = min_hold_bars * _hours_per_bar(config.timeframe) / 24
+    exit_confirm_bars = getattr(config, 'exit_confirm_bars', None)
+    if exit_confirm_bars is not None:
+        status["strategy"]["exit_confirm_bars"] = exit_confirm_bars
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:

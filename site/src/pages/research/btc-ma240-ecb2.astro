@@ -1,0 +1,73 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const paper = {
+  title: 'TrendLock 40 Plus 出场确认优化研究',
+  strategyName: 'TrendLock 40 Plus',
+  canonicalUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/btc_ma_trend_plus.md',
+  strategyUrl: '/strategy/btc-ma240-ecb2',
+};
+---
+
+<Layout title="Research - TrendLock 40 Plus" description="Research memo for TrendLock 40 Plus">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-gray-400">{paper.strategyName}</p>
+    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
+      Method, assumptions, and evidence chain behind this strategy.
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <p class="text-gray-300 leading-7">
+      本研究在 TrendLock 40（BTC 4H MA240 + min_hold=24）基础上，通过出场确认机制（exit_confirm_bars=2）
+      减少 MA 附近假跌破导致的错误退出。四组对照实验（Exit Confirm / Exit Buffer / Entry Confirm / Symmetric）
+      的系统 sweep 表明，exit_confirm=2 + min_hold=12 在 2y/3y/6y 三个窗口全面优于基线，
+      同时降低回撤并减少交易次数。入场确认损害表现，验证了"过强进场过滤会错过BTC主升浪"的历史经验。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>Exit Confirm (ecb=2) 三窗口均值收益 857.71%，较基线 733.74% 提升 16.9%。</li>
+      <li>6y 回撤从 -43.10% 改善至 -39.42%，交易从 163 笔减少至 153 笔。</li>
+      <li>分段验证：牛市、熊市、震荡、近期四个阶段 Plus 均优于基线。</li>
+      <li>滑点压力测试：fee=0.1%/0.2%/0.3% 三档结论稳定，Plus 始终胜出。</li>
+      <li>Entry Confirm 损害表现（均值 690.68%，低于基线 5.9%），不建议用于入场。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>入场逻辑不变：crossover 确认（prev_close &le; prev_MA AND close &gt; MA）。</li>
+      <li>出场新增：min_hold 后要求连续 2 根 K 线 close &lt; MA 才卖出。</li>
+      <li>信号与回测采用 next-bar execution 语义。</li>
+      <li>默认交易成本双边 0.1%（每侧 0.1%）。</li>
+      <li>四组实验 × 42 配置 × 3 窗口 = 126 次回测。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>参数通过历史回测选择，存在样本内优化风险（跨窗口一致性为缓解措施）。</li>
+      <li>极端快速崩盘场景下，2 根 K 线延迟（8 小时）可能增加损失。</li>
+      <li>未来 BTC 市场结构变化可能影响策略有效性。</li>
+      <li>无滑点模型，通过 fee 压力测试间接评估。</li>
+    </ul>
+  </section>
+
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300">Strategy page</a>
+      <a href={paper.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Canonical doc on GitHub</a>
+    </div>
+  </section>
+</Layout>

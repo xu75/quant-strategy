@@ -51,3 +51,45 @@ Use:
 3. Results include both performance and risk metrics.
 4. Known limitations are listed.
 5. Reproducibility paths (scripts/files) are listed.
+
+## Strategy Launch Checklist
+
+Every new strategy or strategy version must complete the following before `enabled: true`.
+
+### 1. Strategy Definition
+
+- [ ] Strategy directory: `strategies/<strategy_id>/` with `__init__.py`, `signal.py`, `manifest.yaml`
+- [ ] `manifest.yaml`: id, version, parameters, display slug, research links
+- [ ] `signal.py`: implements `StrategyConfig`, `compute_signals`, `get_current_signal`
+- [ ] Unit tests covering signal edge cases
+
+### 2. Research Documentation
+
+- [ ] Research doc: `docs/research/strategies/<strategy_id>.md` following `TEMPLATE.md`
+- [ ] Quality Checklist (above 5 items) all pass
+- [ ] Decision rationale recorded (why this config was chosen)
+
+### 3. Pre-Launch Validation
+
+- [ ] Trade-level diff vs baseline (confirm where improvement comes from)
+- [ ] Segment analysis: bull / bear / sideways periods separately
+- [ ] Slippage stress test: fee=0.1% / 0.2% / 0.3%, confirm conclusion stability
+- [ ] Production semantic alignment: either match exactly, or document execution/model differences and validate relative conclusions under both models
+
+### 4. Website & Display
+
+- [ ] Strategy page: `site/src/pages/strategy/<slug>.astro`
+- [ ] Research page: `site/src/pages/research/<slug>.astro`
+- [ ] Backtest page: `site/src/pages/backtest/<slug>.astro`
+- [ ] Homepage strategy list updated
+
+### 5. Operations
+
+- [ ] Backtest data: `data/<strategy_id>/backtest.json` generated
+- [ ] GitHub Actions: `run_strategy.yml` runs new strategy (or new workflow added)
+- [ ] `enabled: true` in manifest (final switch)
+
+### 6. Archival
+
+- [ ] Sweep scripts and raw data committed
+- [ ] Decision record in research doc (who recommended, who confirmed)
