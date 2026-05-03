@@ -18,7 +18,7 @@ display:
   short_desc: "BTC 均线趋势跟踪（出场确认优化版）"
 
 launch_date: "2026-05-04"
-enabled: false
+enabled: true
 
 research:
   paper_title: "TrendLock 40 Plus 出场确认优化研究"
