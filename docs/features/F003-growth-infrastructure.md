@@ -126,7 +126,7 @@ status: spec
 | Telegram 在部分地区受限 | 中 | Phase 2 补 email 通知；长期考虑微信/Discord |
 | Vercel 中国大陆访问不稳定 | 中 | 监控访问数据，必要时加 Cloudflare 或国内 CDN |
 | Referral 被滥用（批量注册） | 低 | Phase 3 再考虑，magic link 本身有一定防刷能力 |
-| 内容分层被误解为"不再开源" | 中 | README + 网站明确说明：代码 100% 开源，分层仅限便利服务 |
+| 内容分层被误解为"不再公开" | 中 | README + 网站明确说明：策略逻辑与核心研究结论公开，源码 private 按需授权；分层仅限便利服务 |
 
 ## Open Questions
 

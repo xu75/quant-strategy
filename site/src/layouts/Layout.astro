@@ -6,7 +6,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Open-source low-frequency quant research lab. We share strategy research, backtests, and real-time signals — all free, all open source.' } = Astro.props;
+const { title, description = 'Open strategy research for low-frequency quant trading. We share strategy rules, backtests, and real-time signals — strategy logic fully transparent.' } = Astro.props;
 ---
 
 <!doctype html>
@@ -43,10 +43,10 @@ const { title, description = 'Open-source low-frequency quant research lab. We s
 
     <footer class="border-t border-gray-800 px-6 py-6 text-center text-sm text-gray-500">
       <div class="max-w-5xl mx-auto flex flex-col gap-2">
-        <p data-i18n="footer.tagline">Quant Strategy - Open-source low-frequency quant research lab</p>
+        <p data-i18n="footer.tagline">Quant Strategy - Open strategy research for low-frequency quant trading</p>
         <div class="flex justify-center gap-4">
           <a href="/disclaimer" class="hover:text-gray-300 transition-colors" data-i18n="footer.disclaimer">Disclaimer</a>
-          <a href="https://github.com/xu75/quant-strategy" class="hover:text-gray-300 transition-colors" target="_blank" rel="noopener noreferrer" data-i18n="footer.source">Source Code</a>
+          <a href="https://github.com/xu75/quant-strategy" class="hover:text-gray-300 transition-colors" target="_blank" rel="noopener noreferrer" data-i18n="footer.source">GitHub</a>
         </div>
         <p class="text-gray-600" data-i18n="footer.notice">This is not investment advice. For research purposes only.</p>
       </div>
