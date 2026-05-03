@@ -3,8 +3,8 @@
 [![CI](https://github.com/xu75/quant-strategy/actions/workflows/run_strategy.yml/badge.svg)](https://github.com/xu75/quant-strategy/actions/workflows/run_strategy.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
 
-> **Open-source low-frequency quant research lab.**
-> Replace emotional trading with deterministic rules. All free, all open source.
+> **Open strategy research for low-frequency quant trading.**
+> Replace emotional trading with deterministic rules. Strategy logic fully transparent.
 
 This is not just another backtesting framework—it's a **live, verifiable signal pipeline**. The execution pipeline is decoupled from individual strategies, with signals automatically generated and published to a static frontend.
 
@@ -12,7 +12,7 @@ This is not just another backtesting framework—it's a **live, verifiable signa
 
 - **Fully Automated Pipeline**: GitHub Actions runs every 4 hours. Signals, charts, and backtest results are automatically committed to the repo, triggering a frontend rebuild.
 - **Strict Fee Discipline**: All backtests enforce a default 0.1%/side slippage & fee rate. This is our hard constraint for realistic, credible research.
-- **Open Knowledge**: Pure open-source model. No black-box algorithms; strategy code and execution logic are completely transparent.
+- **Open Knowledge**: No black-box algorithms; strategy rules, parameters, and execution methodology are completely transparent. Anyone can reproduce results using the published rules.
 
 ## 📈 Current Strategies
 
