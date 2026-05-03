@@ -5,6 +5,8 @@
 .agents/
 CLAUDE.md
 AGENTS.md
+BACKLOG.md
+GEMINI.md
 
 # Python
 __pycache__/
@@ -43,4 +45,6 @@ site/dist/
 .kimi/
 KIMI.md
 .vercel
-\n# MCP\n.playwright-mcp/
+
+# MCP
+.playwright-mcp/
