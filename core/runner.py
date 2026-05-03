@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Strategy runner - orchestrates data fetch, backtest, and report generation.
 
 Discovers all enabled strategies and runs them through the pipeline.
@@ -10,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from core.registry import discover_strategies, load_strategy_module
-from pipeline.data_fetcher import fetch_candles, fetch_historical_candles, load_local_history
+from pipeline.data_fetcher import fetch_candles, fetch_historical_candles, load_local_history, load_local_history_by_name
 from pipeline.backtest import run_backtest, compute_period_metrics
 from pipeline.report import (
     generate_status_json,
@@ -28,6 +30,23 @@ LOG_PREFIX = "[Quant Strategy]"
 
 def load_strategy_data(manifest, config) -> pd.DataFrame:
     """Load enough candles for reproducible backtests."""
+    # Check if manifest declares a local file for the primary symbol
+    raw = getattr(manifest, '_raw_data', None)
+    if raw:
+        data_sources = raw.get("data_sources", {})
+        primary_symbol = manifest.config.get("symbol", "")
+        for src in data_sources.values():
+            if src.get("symbol") == primary_symbol and src.get("local_file"):
+                local_file = src["local_file"]
+                timeframe = src.get("timeframe", config.timeframe)
+                print(f"{LOG_PREFIX} [{manifest.id}] Loading primary data from local file: {local_file}")
+                df = load_local_history_by_name(local_file, target_bar=timeframe)
+                print(
+                    f"{LOG_PREFIX} [{manifest.id}] Loaded {len(df)} candles, "
+                    f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
+                )
+                return df
+
     df_hist = None
     try:
         df_hist = load_local_history(target_bar=config.timeframe)
@@ -71,6 +90,37 @@ def load_strategy_data(manifest, config) -> pd.DataFrame:
     sys.exit(1)
 
 
+def load_extra_data_sources(manifest) -> dict[str, pd.DataFrame]:
+    """Load additional data sources declared in manifest.data_sources.
+
+    Returns a dict mapping source key (e.g. 'btc') to DataFrame.
+    Skips the primary source (matching config.symbol) since the runner
+    loads that via load_strategy_data.
+    """
+    raw = getattr(manifest, '_raw_data', None)
+    if raw is None:
+        return {}
+
+    data_sources = raw.get("data_sources", {})
+    if not data_sources:
+        return {}
+
+    primary_symbol = manifest.config.get("symbol", "")
+    extras = {}
+
+    for key, src in data_sources.items():
+        if src.get("symbol") == primary_symbol:
+            continue
+        local_file = src.get("local_file")
+        timeframe = src.get("timeframe", "1H")
+        if local_file:
+            print(f"{LOG_PREFIX} [{manifest.id}] Loading extra source '{key}': {local_file} @ {timeframe}")
+            extras[key] = load_local_history_by_name(local_file, target_bar=timeframe)
+            print(f"{LOG_PREFIX} [{manifest.id}]   -> {len(extras[key])} candles")
+
+    return extras
+
+
 def price_path_from_period(df: pd.DataFrame, period_start: pd.Timestamp) -> pd.Series:
     """Return B&H price path with a baseline at or immediately before period_start."""
     mask = df["timestamp"] <= period_start
@@ -112,17 +162,31 @@ def run_single_strategy(adapter):
 
     # 1. Load data
     df = load_strategy_data(manifest, config)
+    extra_data = load_extra_data_sources(manifest)
     print(
         f"{LOG_PREFIX} [{manifest.id}] Combined: {len(df)} candles, "
         f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
     )
 
     # 2. Compute signals (injected from strategy)
-    signals = adapter.compute_signals(df, config)
+    # Multi-symbol strategies receive extra data as kwargs
+    extra_kwargs = {}
+    if "btc" in extra_data:
+        extra_kwargs["btc_df"] = extra_data["btc"]
+    signals = adapter.compute_signals(df, config, **extra_kwargs)
+
+    # For strategies with data filtering (e.g. regular hours), use filtered df
+    # so backtest and index spaces are consistent with signal timestamps
+    df_backtest = df
+    if adapter.get_filtered_df is not None:
+        df_backtest = adapter.get_filtered_df(df, config)
+        print(
+            f"{LOG_PREFIX} [{manifest.id}] Filtered to {len(df_backtest)} candles for backtest"
+        )
 
     # 3. Run backtest (pass pre-computed signals)
     print(f"{LOG_PREFIX} [{manifest.id}] Running backtest...")
-    result = run_backtest(df, config, signals=signals, fee_rate=0.001)
+    result = run_backtest(df_backtest, config, signals=signals, fee_rate=0.001)
 
     print(f"{LOG_PREFIX} [{manifest.id}] Backtest complete:")
     print(f"  Trades: {result.total_trades}")
@@ -138,7 +202,7 @@ def run_single_strategy(adapter):
     entry_bar_idx = 0
     if signals and signals[-1].action == "buy":
         in_position = True
-        df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+        df_sorted = df_backtest.sort_values("timestamp").reset_index(drop=True)
         mask = df_sorted["timestamp"] == signals[-1].timestamp
         if mask.any():
             entry_bar_idx = mask.idxmax()
@@ -161,7 +225,7 @@ def run_single_strategy(adapter):
         open_entry_time = signals[-1].timestamp
         open_entry_price = signals[-1].price
 
-    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    df_sorted = df_backtest.sort_values("timestamp").reset_index(drop=True)
     end_price = df_sorted.iloc[-1]["close"]
     end_date = df_sorted.iloc[-1]["timestamp"]
 
@@ -203,8 +267,8 @@ def run_single_strategy(adapter):
     charts_dir = output_dir / "charts"
 
     generate_status_json(
-        df, config, in_position, entry_bar_idx, output_dir / "latest.json",
-        current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config),
+        df_backtest, config, in_position, entry_bar_idx, output_dir / "latest.json",
+        current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config, **extra_kwargs),
     )
     generate_backtest_json(
         result,
@@ -212,8 +276,8 @@ def run_single_strategy(adapter):
         since_date=since_date.isoformat() if since_date else None,
         periods=periods_data,
     )
-    generate_equity_chart(result, charts_dir / "equity.png")
-    generate_price_ma_chart(df, config, result.trades, charts_dir / "price_ma.png")
+    generate_equity_chart(result, charts_dir / "equity.png", benchmark_prices=df_sorted[["timestamp", "close"]])
+    generate_price_ma_chart(df_backtest, config, result.trades, charts_dir / "price_ma.png")
     sync_public_charts(manifest.id, charts_dir)
 
     print(f"{LOG_PREFIX} [{manifest.id}] Reports written to {output_dir}/")

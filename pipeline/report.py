@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Report generator - produces JSON status + PNG charts.
 
 Generates strategy status files and backtest visualization charts
@@ -120,13 +122,38 @@ def generate_backtest_json(
         json.dump(data, f, indent=2, default=str)
 
 
-def generate_equity_chart(result: BacktestResult, output_path: Path) -> None:
-    """Generate equity curve chart as PNG."""
+def generate_equity_chart(
+    result: BacktestResult,
+    output_path: Path,
+    benchmark_prices: pd.DataFrame | None = None,
+) -> None:
+    """Generate equity curve chart with optional B&H benchmark as PNG.
+
+    Args:
+        result: Backtest result with equity_curve.
+        output_path: Path to write PNG file.
+        benchmark_prices: DataFrame with ['timestamp', 'close'] for B&H overlay.
+            Normalized to match strategy's starting equity.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(12, 5))
     eq = result.equity_curve
-    ax.plot(eq["timestamp"], eq["equity"], color="#2563eb", linewidth=1.5)
+
+    # B&H benchmark: normalize price series to same starting equity
+    if benchmark_prices is not None and not benchmark_prices.empty:
+        bm = benchmark_prices.copy().sort_values("timestamp").reset_index(drop=True)
+        # Align to equity curve time range
+        eq_start = eq["timestamp"].iloc[0]
+        bm = bm[bm["timestamp"] >= eq_start].reset_index(drop=True)
+        if len(bm) > 1:
+            start_equity = float(eq["equity"].iloc[0])
+            start_price = float(bm["close"].iloc[0])
+            bm["equity"] = bm["close"].astype(float) / start_price * start_equity
+            ax.plot(bm["timestamp"], bm["equity"], color="#9ca3af", linewidth=1.0,
+                    linestyle="--", label="Buy & Hold", alpha=0.8)
+
+    ax.plot(eq["timestamp"], eq["equity"], color="#2563eb", linewidth=1.5, label="Strategy")
     ax.fill_between(eq["timestamp"], eq["equity"], alpha=0.1, color="#2563eb")
 
     ax.set_title(
@@ -134,6 +161,7 @@ def generate_equity_chart(result: BacktestResult, output_path: Path) -> None:
         fontsize=14, fontweight="bold",
     )
     ax.set_ylabel("Equity (USDT)")
+    ax.legend(loc="upper left")
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax.grid(True, alpha=0.3)
     fig.autofmt_xdate()
