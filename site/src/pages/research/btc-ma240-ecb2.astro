@@ -4,7 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 const paper = {
   title: 'TrendLock 40 Plus 出场确认优化研究',
   strategyName: 'TrendLock 40 Plus',
-  canonicalUrl: '',
+  canonicalUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/btc_ma_trend_plus.md',
   strategyUrl: '/strategy/btc-ma240-ecb2',
 };
 ---
@@ -21,52 +21,260 @@ const paper = {
     </p>
   </section>
 
+  <!-- 1. 研究目标 -->
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
-    <p class="text-gray-300 leading-7">
-      本研究在 TrendLock 40（BTC 4H MA240 + min_hold=24）基础上，通过出场确认机制（exit_confirm_bars=2）
-      减少 MA 附近假跌破导致的错误退出。四组对照实验（Exit Confirm / Exit Buffer / Entry Confirm / Symmetric）
-      的系统 sweep 表明，exit_confirm=2 + min_hold=12 在 2y/3y/6y 三个窗口全面优于基线，
-      同时降低回撤并减少交易次数。入场确认损害表现，验证了"过强进场过滤会错过BTC主升浪"的历史经验。
-    </p>
-  </section>
-
-  <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <h2 class="text-xl font-semibold mb-3">1. 研究目标</h2>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>Exit Confirm (ecb=2) 三窗口均值收益 857.71%，较基线 733.74% 提升 16.9%。</li>
-      <li>6y 回撤从 -43.10% 改善至 -39.42%，交易从 163 笔减少至 153 笔。</li>
-      <li>分段验证：牛市、熊市、震荡、近期四个阶段 Plus 均优于基线。</li>
-      <li>滑点压力测试：fee=0.1%/0.2%/0.3% 三档结论稳定，Plus 始终胜出。</li>
-      <li>Entry Confirm 损害表现（均值 690.68%，低于基线 5.9%），不建议用于入场。</li>
+      <li>在 TrendLock 40（BTC 4H MA240 + min_hold=24）基础上，通过出场确认机制减少 MA 附近假跌破导致的错误退出</li>
+      <li>不改变入场逻辑（crossover 确认），仅优化出场条件</li>
+      <li>边界：不涉及双均线、止盈止损、ADX 过滤等复杂化改造</li>
     </ul>
   </section>
 
+  <!-- 2. 策略定义 -->
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <h2 class="text-xl font-semibold mb-3">2. 策略定义</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">信号定义</h3>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>入场逻辑不变：crossover 确认（prev_close &le; prev_MA AND close &gt; MA）。</li>
-      <li>出场新增：min_hold 后要求连续 2 根 K 线 close &lt; MA 才卖出。</li>
-      <li>信号与回测采用 next-bar execution 语义。</li>
-      <li>默认交易成本双边 0.1%（每侧 0.1%）。</li>
-      <li>四组实验 × 42 配置 × 3 窗口 = 126 次回测。</li>
+      <li>入场（Buy）：与 TrendLock 40 完全一致。prev_close &le; prev_MA240 AND close &gt; MA240（crossover 确认）</li>
+      <li>出场（Sell）：持仓满 min_hold_bars 后，要求连续 exit_confirm_bars 根 K 线收盘价 &lt; MA240 才卖出</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">执行语义</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>信号在 bar N 收盘时产生，在 bar N+1 开盘执行（next-bar execution）</li>
+      <li>与 TrendLock 40 生产代码执行语义一致</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">风险控制</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>最小持仓：12 根 4H K 线（2 天），较 TrendLock 40 的 24 根（4 天）缩短</li>
+      <li>出场确认：连续 2 根 K 线收盘 &lt; MA 才触发卖出</li>
+      <li>无止损、无止盈、无加仓</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">关键设计决策</h3>
+    <p class="text-gray-300 mb-2">exit_confirm_bars 与 min_hold_bars 解决不同问题：</p>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>min_hold_bars 是一次性门控，仅保护入场后初始阶段</li>
+      <li>exit_confirm_bars 提供持续保护，在整个持仓期间过滤假跌破</li>
+      <li>当 exit_confirm 已提供防抖保护时，min_hold 可以缩短而不增加风险</li>
     </ul>
   </section>
 
+  <!-- 3. 数据与假设 -->
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <h2 class="text-xl font-semibold mb-3">3. 数据与假设</h2>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>参数通过历史回测选择，存在样本内优化风险（跨窗口一致性为缓解措施）。</li>
-      <li>极端快速崩盘场景下，2 根 K 线延迟（8 小时）可能增加损失。</li>
-      <li>未来 BTC 市场结构变化可能影响策略有效性。</li>
-      <li>无滑点模型，通过 fee 压力测试间接评估。</li>
+      <li>数据源：OKX BTC-USDT 4H K 线，通过 <code class="text-gray-200">sweep_btc_ma.load_btc_interval()</code> 加载</li>
+      <li>覆盖时间：2020-01-01 至 2026-04-30（6 年）</li>
+      <li>交易成本：双边 0.1%（fee_rate=0.001 per side）</li>
+      <li>无滑点模型（压力测试中单独评估）</li>
+      <li>无资金容量约束</li>
     </ul>
   </section>
 
+  <!-- 4. 回测设置 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">4. 回测设置</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">参数空间</h3>
+    <p class="text-gray-300 mb-2">四组实验，共 42 个配置 &times; 3 个时间窗口 = 126 次回测：</p>
+    <ol class="list-decimal pl-6 space-y-1 text-gray-300">
+      <li>Exit Confirm（最高优先级）：ecb &isin; &#123;1, 2, 3, 5&#125; &times; mh &isin; &#123;12, 18, 24&#125;</li>
+      <li>Exit Buffer：buffer &isin; &#123;0.5%, 1.0%, 1.5%, 2.0%&#125; &times; mh &isin; &#123;12, 18, 24&#125;</li>
+      <li>Entry Confirm：ecb &isin; &#123;1, 2, 3&#125; &times; mh &isin; &#123;18, 24&#125;</li>
+      <li>Symmetric Confirm：cb &isin; &#123;1, 2, 3&#125; &times; mh &isin; &#123;12, 18, 24&#125;</li>
+    </ol>
+
+    <h3 class="text-white font-medium mt-4 mb-2">对照组</h3>
+    <p class="text-gray-300">TrendLock 40 生产配置：ma_window=240, min_hold_bars=24, 无 exit_confirm</p>
+
+    <h3 class="text-white font-medium mt-4 mb-2">时间窗口</h3>
+    <div class="overflow-x-auto mt-2">
+      <table class="w-full text-sm text-gray-300">
+        <thead><tr class="border-b border-gray-700 text-left">
+          <th class="py-2 pr-4">窗口</th><th class="py-2 pr-4">起止</th><th class="py-2">用途</th>
+        </tr></thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">2y</td><td class="py-2 pr-4">2024-01-01 ~ 2026-04-30</td><td class="py-2">近期表现</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">3y</td><td class="py-2 pr-4">2023-01-01 ~ 2026-04-30</td><td class="py-2">中期稳健性</td></tr>
+          <tr><td class="py-2 pr-4">6y</td><td class="py-2 pr-4">2020-01-01 ~ 2026-04-30</td><td class="py-2">长期鲁棒性（含完整牛熊周期）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-white font-medium mt-4 mb-2">评价指标</h3>
+    <ul class="list-disc pl-6 space-y-1 text-gray-300">
+      <li>总收益率、最大回撤、交易次数</li>
+      <li>三窗口均值收益（Mean Return）作为主排序指标</li>
+      <li>跨窗口一致性作为反过拟合信号</li>
+    </ul>
+  </section>
+
+  <!-- 5. 核心结果 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">5. 核心结果</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">主结果表</h3>
+    <div class="overflow-x-auto mt-2">
+      <table class="w-full text-sm text-gray-300">
+        <thead><tr class="border-b border-gray-700 text-left">
+          <th class="py-2 pr-3">排名</th><th class="py-2 pr-3">配置</th><th class="py-2 pr-3">2y</th><th class="py-2 pr-3">3y</th><th class="py-2 pr-3">6y</th><th class="py-2 pr-3">6y 回撤</th><th class="py-2 pr-3">6y 交易</th><th class="py-2">均值</th>
+        </tr></thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-3">1</td><td class="py-2 pr-3">ecb=2, mh=12</td><td class="py-2 pr-3">73.94%</td><td class="py-2 pr-3">298.94%</td><td class="py-2 pr-3">2200.24%</td><td class="py-2 pr-3">-39.42%</td><td class="py-2 pr-3">153</td><td class="py-2 text-green-400">857.71%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-3">2</td><td class="py-2 pr-3">ecb=2, mh=18</td><td class="py-2 pr-3">74.07%</td><td class="py-2 pr-3">293.79%</td><td class="py-2 pr-3">2141.88%</td><td class="py-2 pr-3">-40.59%</td><td class="py-2 pr-3">147</td><td class="py-2">836.58%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-3">3</td><td class="py-2 pr-3">buffer=0.5%, mh=24</td><td class="py-2 pr-3">62.02%</td><td class="py-2 pr-3">275.86%</td><td class="py-2 pr-3">2114.90%</td><td class="py-2 pr-3">-37.52%</td><td class="py-2 pr-3">143</td><td class="py-2">817.59%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-3">4</td><td class="py-2 pr-3">ecb=3, mh=12</td><td class="py-2 pr-3">73.13%</td><td class="py-2 pr-3">294.16%</td><td class="py-2 pr-3">2038.69%</td><td class="py-2 pr-3">-40.53%</td><td class="py-2 pr-3">143</td><td class="py-2">801.99%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-3">5</td><td class="py-2 pr-3">sym=2, mh=12</td><td class="py-2 pr-3">87.51%</td><td class="py-2 pr-3">311.96%</td><td class="py-2 pr-3">1955.36%</td><td class="py-2 pr-3">-42.97%</td><td class="py-2 pr-3">143</td><td class="py-2">784.94%</td></tr>
+          <tr class="border-b border-gray-800 text-white font-medium"><td class="py-2 pr-3">—</td><td class="py-2 pr-3">基线 mh=24</td><td class="py-2 pr-3">69.74%</td><td class="py-2 pr-3">279.34%</td><td class="py-2 pr-3">1852.15%</td><td class="py-2 pr-3">-43.10%</td><td class="py-2 pr-3">163</td><td class="py-2">733.74%</td></tr>
+          <tr><td class="py-2 pr-3">—</td><td class="py-2 pr-3">entry=3, mh=24</td><td class="py-2 pr-3">68.13%</td><td class="py-2 pr-3">276.23%</td><td class="py-2 pr-3">1727.68%</td><td class="py-2 pr-3">-48.23%</td><td class="py-2 pr-3">—</td><td class="py-2 text-red-400">690.68%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-white font-medium mt-6 mb-2">推荐配置 vs 基线</h3>
+    <div class="overflow-x-auto mt-2">
+      <table class="w-full text-sm text-gray-300">
+        <thead><tr class="border-b border-gray-700 text-left">
+          <th class="py-2 pr-4">指标</th><th class="py-2 pr-4">基线 (mh=24)</th><th class="py-2 pr-4">Plus (ecb=2, mh=12)</th><th class="py-2">变化</th>
+        </tr></thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">2y 收益</td><td class="py-2 pr-4">69.74%</td><td class="py-2 pr-4">73.94%</td><td class="py-2 text-green-400">+4.2pp</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">3y 收益</td><td class="py-2 pr-4">279.34%</td><td class="py-2 pr-4">298.94%</td><td class="py-2 text-green-400">+19.6pp</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">6y 收益</td><td class="py-2 pr-4">1852.15%</td><td class="py-2 pr-4">2200.24%</td><td class="py-2 text-green-400">+348pp</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">6y 回撤</td><td class="py-2 pr-4">-43.10%</td><td class="py-2 pr-4">-39.42%</td><td class="py-2 text-green-400">改善 3.7pp</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">6y 交易</td><td class="py-2 pr-4">163</td><td class="py-2 pr-4">153</td><td class="py-2 text-green-400">减少 10 笔</td></tr>
+          <tr><td class="py-2 pr-4">均值收益</td><td class="py-2 pr-4">733.74%</td><td class="py-2 pr-4">857.71%</td><td class="py-2 text-green-400">+16.9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-white font-medium mt-6 mb-2">关键发现</h3>
+    <ol class="list-decimal pl-6 space-y-2 text-gray-300">
+      <li><span class="text-white">Exit Confirm (ecb=2) 是明确赢家</span>：三窗口全面优于基线，回撤改善，交易更少</li>
+      <li><span class="text-white">Exit Buffer (0.5%) 是次优选择</span>：回撤控制最好（-37.52%），但 2y 表现较弱</li>
+      <li><span class="text-white">Entry Confirm 损害表现</span>：确认研究论文发现——"过强的进场过滤会错过BTC主升浪"</li>
+      <li><span class="text-white">Symmetric Confirm 不如纯 Exit Confirm</span>：入场过滤抵消了出场改善的收益</li>
+      <li><span class="text-white">min_hold 在有 exit_confirm 时可以缩短</span>：ecb=2 已提供防抖保护，mh=12 优于 mh=24</li>
+    </ol>
+
+    <h3 class="text-white font-medium mt-6 mb-2">跨窗口一致性（反过拟合）</h3>
+    <p class="text-gray-300">ecb=2 mh=12 在所有三个窗口都优于基线，不存在"某个窗口好、其他窗口差"的过拟合特征。三窗口改善方向一致：收益提升 + 回撤降低 + 交易减少。</p>
+  </section>
+
+  <!-- 6. 风险与限制 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">6. 风险与限制</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">失效场景</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>BTC 市场结构发生根本变化（如波动率持续压缩至传统资产水平）</li>
+      <li>极端快速崩盘场景下，exit_confirm 的 2 根 K 线延迟（8 小时）可能增加损失</li>
+      <li>如果未来假跌破频率大幅降低，exit_confirm 的价值会减弱</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">统计偏差</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>参数通过历史回测选择，存在样本内优化风险</li>
+      <li>缓解措施：跨窗口一致性验证、分段表现验证、滑点压力测试</li>
+      <li>6 年样本包含完整牛熊周期，但仅覆盖 BTC 历史的一部分</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">备选配置</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li><span class="text-white">震荡行情版 (sym=2, mh=12)</span>：2y/3y 表现最好，适合"未来 BTC 更温和"的假设</li>
+      <li><span class="text-white">研究上限版 (ecb=2, mh=0)</span>：理论最优但交易多（197），不建议直接上线</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">决策记录</h3>
+    <p class="text-gray-300">两猫（opus + gpt52）独立评审后达成共识：推荐 ecb=2 mh=12。铲屎官确认（2026-05-04）。</p>
+  </section>
+
+  <!-- 7. 生产语义对齐 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">7. 生产语义对齐</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">研究模型 vs 生产代码</h3>
+    <div class="overflow-x-auto mt-2">
+      <table class="w-full text-sm text-gray-300">
+        <thead><tr class="border-b border-gray-700 text-left">
+          <th class="py-2 pr-4">项目</th><th class="py-2 pr-4">研究（sweep）</th><th class="py-2">生产（signal.py + pipeline）</th>
+        </tr></thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">入场</td><td class="py-2 pr-4">crossover: prev_close &le; prev_ma AND close &gt; ma</td><td class="py-2">相同</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">出场</td><td class="py-2 pr-4">min_hold 后连续 ecb 根 close &lt; ma</td><td class="py-2">相同</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">执行</td><td class="py-2 pr-4">next-bar execution（bar N+1 开盘执行）</td><td class="py-2">close execution（bar N 收盘价执行）</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">费率</td><td class="py-2 pr-4">0.001 per side</td><td class="py-2">0.001 per side</td></tr>
+          <tr><td class="py-2 pr-4">MA 计算</td><td class="py-2 pr-4">rolling(240).mean()</td><td class="py-2">rolling(240).mean()</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-white font-medium mt-6 mb-2">执行语义差异</h3>
+    <p class="text-gray-300 mb-2">研究 sweep 和生产 pipeline 的执行价格模型不同：</p>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li><span class="text-white">研究（sweep）</span>：pending_buy = True → 下一根 K 线以 opens[i] 执行（next-bar open execution）</li>
+      <li><span class="text-white">生产（pipeline）</span>：信号价格 = close，pipeline 直接以 sig.price 执行（same-bar close execution）</li>
+    </ul>
+    <p class="text-gray-300 mt-2">这导致绝对收益数字存在差异（6y sweep: 2200.24% vs pipeline: ~2119%），因为 open 和 close 价格不同。</p>
+
+    <h3 class="text-white font-medium mt-6 mb-2">为什么相对比较仍然有效</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>在 sweep 中，baseline 和 Plus 使用相同的 next-bar open 执行模型</li>
+      <li>在 pipeline 中，baseline 和 Plus 使用相同的 close 执行模型</li>
+      <li>因此 Plus vs baseline 的<span class="text-white">相对优势</span>在两种模型下方向一致</li>
+      <li>分段验证和滑点压力测试均在同一执行模型内进行，结论不受影响</li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-6 mb-2">实现差异</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>研究脚本使用 numpy 数组遍历，生产代码使用 pandas DataFrame 遍历</li>
+      <li>入场/出场信号逻辑语义一致，仅执行价格取值点不同</li>
+    </ul>
+  </section>
+
+  <!-- 8. 复现路径 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">8. 复现路径</h2>
+
+    <h3 class="text-white font-medium mt-4 mb-2">脚本</h3>
+    <ul class="list-disc pl-6 space-y-1 text-gray-300">
+      <li>Sweep 脚本：<code class="text-gray-200">sweep_exit_optimization.py</code></li>
+      <li>生产信号：<code class="text-gray-200">strategies/btc_ma_trend_plus/signal.py</code></li>
+      <li>验证脚本：<code class="text-gray-200">scripts/validate_trendlock40_plus.py</code></li>
+    </ul>
+
+    <h3 class="text-white font-medium mt-4 mb-2">命令</h3>
+    <div class="bg-gray-900 rounded-lg p-4 text-sm font-mono text-gray-300 mt-2">
+      <p># 运行四组 sweep</p>
+      <p>python3 sweep_exit_optimization.py</p>
+      <p class="mt-2"># 运行验证</p>
+      <p>python3 scripts/validate_trendlock40_plus.py</p>
+    </div>
+
+    <h3 class="text-white font-medium mt-4 mb-2">输出文件</h3>
+    <ul class="list-disc pl-6 space-y-1 text-gray-300">
+      <li><code class="text-gray-200">outputs/sweep_exit_optimization.csv</code>：完整 sweep 结果（126 行）</li>
+      <li><code class="text-gray-200">outputs/sweep_exit_optimization_report.md</code>：分析报告</li>
+      <li><code class="text-gray-200">outputs/validate_trendlock40_plus.txt</code>：验证结果</li>
+    </ul>
+  </section>
+
+  <!-- 9. 变更记录 -->
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">9. 变更记录</h2>
+    <p class="text-gray-300">2026-05-04: 初始版本。基于四组 sweep 实验，选定 ecb=2 mh=12 作为 TrendLock 40 Plus 默认配置。</p>
+  </section>
+
+  <!-- Source Links -->
   <section class="border border-gray-800 rounded-xl p-6">
     <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
     <div class="flex flex-wrap gap-4 text-sm">
-      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300">Strategy page</a>
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
+      <a href={paper.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.github">Canonical doc on GitHub</a>
     </div>
   </section>
 </Layout>
