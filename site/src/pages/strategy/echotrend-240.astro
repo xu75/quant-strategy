@@ -237,7 +237,6 @@ const research = {
         <p class="text-white font-medium mb-1">{research.title}</p>
         <div class="flex flex-wrap gap-3 text-sm">
           <a href={research.route} class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_open">Read research summary</a>
-          <a href={research.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_canonical">View canonical doc on GitHub</a>
           <a href={research.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_source">Source research project</a>
         </div>
       </div>
@@ -246,11 +245,12 @@ const research = {
 
   <section>
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
-    <p class="text-gray-400 text-sm mb-2" data-i18n="strategy.datasource_et240">
-      BTC data from OKX public API. MSTR data from Yahoo Finance (free, 15-min delayed). Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
+    <p class="text-gray-400 text-sm mb-2">
+      BTC data from OKX public API. MSTR data from local normalized history.
+      Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
     </p>
     <p class="text-gray-500 text-xs" data-i18n="strategy.datasource_note">
-      Note: MSTR 1H data is sourced from Yahoo Finance (free, ~15-min delayed, max 730 days history). BTC data from OKX public API. For this low-frequency strategy (regime gate on 4H SMA240), the 15-minute delay has negligible impact on signal accuracy.
+      Note: MSTR data currently relies on locally maintained CSV files. Automated updates via GitHub Actions are planned but depend on finding a suitable free data source for US equity 1H bars. BTC data (OKX) can be fetched automatically. Signal updates may lag until automation is in place.
     </p>
   </section>
 </Layout>

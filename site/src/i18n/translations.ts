@@ -58,12 +58,9 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.research': 'Research Source',
     'strategy.research_desc': 'Every live strategy must have a versioned research memo and a public summary page.',
     'strategy.research_open': 'Read summary on this site',
-    'strategy.research_canonical': 'View canonical doc on GitHub',
-    'strategy.research_source_docx': 'View original DOCX on GitHub',
     'strategy.datasource': 'Data Source',
     'strategy.datasource_desc': 'All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used. Signals are generated automatically every 4 hours via GitHub Actions.',
-    'strategy.datasource_note': 'Note: MSTR 1H data is sourced from Yahoo Finance (free, ~15-min delayed, max 730 days history). BTC data from OKX public API. For this low-frequency strategy (regime gate on 4H SMA240), the 15-minute delay has negligible impact on signal accuracy.',
-    'strategy.datasource_et240': 'BTC data from OKX public API. MSTR data from Yahoo Finance (free, 15-min delayed). Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).',
+    'strategy.datasource_note': 'Note: MSTR data currently relies on locally maintained CSV files. Automated updates via GitHub Actions are planned but depend on finding a suitable free data source for US equity 1H bars. BTC data (OKX) can be fetched automatically. Signal updates may lag until automation is in place.',
     'strategy.viewsource': 'GitHub',
     'strategy.mtm_note': '* MTM return includes unrealized P&L from the current open position.',
     // EchoTrend 240 specific
@@ -77,7 +74,6 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.et240.design_desc': 'Binary regime gate: fully in during bull, fully out during bear. Execution at next regular-hours bar open after regime flip. No position sizing or stop loss.',
     'strategy.et240.research_desc': 'Strategy developed in mstr-strategy-clowder, validated with 4-window backtest, RD-8 parameter sensitivity, and walk-forward analysis.',
     'strategy.et240.research_open': 'Read research summary',
-    'strategy.et240.research_canonical': 'View canonical doc on GitHub',
     'strategy.et240.research_source': 'Source research project',
     // Backtest page
     'backtest.back': 'Strategy',
@@ -176,12 +172,9 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.research': '研究来源',
     'strategy.research_desc': '每个上线策略都必须有一份版本化研究文档和一个公开摘要页面。',
     'strategy.research_open': '阅读站内摘要',
-    'strategy.research_canonical': '查看 GitHub 正文',
-    'strategy.research_source_docx': '查看 GitHub 原始 DOCX',
     'strategy.datasource': '数据来源',
     'strategy.datasource_desc': '所有数据来自 OKX 公开 API（无需认证）。仅使用已确认闭合的K线。信号由 GitHub Actions 每4小时自动生成。',
-    'strategy.datasource_note': '注意：MSTR 1H 数据来自 Yahoo Finance（免费，延迟约15分钟，最多730天历史）。BTC 数据来自 OKX 公开 API。对于本低频策略（4H SMA240 regime gate），15分钟延迟对信号准确性影响可忽略。',
-    'strategy.datasource_et240': 'BTC 数据来自 OKX 公开 API，MSTR 数据来自 Yahoo Finance（免费，延迟约15分钟）。信号由双数据源管道生成（BTC 1H → 4H regime + MSTR 1H 执行）。',
+    'strategy.datasource_note': '注意：MSTR 数据目前依赖本地维护的 CSV 文件。通过 GitHub Actions 自动更新的方案正在规划中，取决于找到合适的免费美股1H数据源。BTC 数据（OKX）可自动获取。在自动化就绪前，信号更新可能有延迟。',
     'strategy.viewsource': 'GitHub',
     'strategy.mtm_note': '* MTM 收益率包含当前持仓的未实现盈亏。',
     // EchoTrend 240 specific
@@ -195,7 +188,6 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.et240.design_desc': '二元 regime gate：牛市全仓持有，熊市完全空仓。Regime 翻转后在下一根常规时段K线开盘价执行。无仓位管理，无止损。',
     'strategy.et240.research_desc': '策略在 mstr-strategy-clowder 项目中开发，经过4窗口回测、RD-8 参数敏感性测试和 walk-forward 分析验证。',
     'strategy.et240.research_open': '阅读站内研究摘要',
-    'strategy.et240.research_canonical': '查看 GitHub 正文',
     'strategy.et240.research_source': '源研究项目',
     // Backtest page
     'backtest.back': '策略',
