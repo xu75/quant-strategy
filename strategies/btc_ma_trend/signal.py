@@ -43,7 +43,7 @@ class Signal:
     reason: str = ""
 
 
-def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None) -> list[Signal]:
+def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None, **kwargs) -> list[Signal]:
     """Compute trading signals from OHLCV data.
 
     Args:
@@ -113,7 +113,7 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None) -> l
 
 def get_current_signal(df: pd.DataFrame, in_position: bool,
                        entry_bar_idx: int = 0,
-                       config: StrategyConfig | None = None) -> Signal:
+                       config: StrategyConfig | None = None, **kwargs) -> Signal:
     """Get the signal for the latest bar only.
 
     Used for live strategy status display.

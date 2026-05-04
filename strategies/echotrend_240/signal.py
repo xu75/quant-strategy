@@ -180,7 +180,7 @@ def compute_signals(
     df: pd.DataFrame,
     config: StrategyConfig | None = None,
     *,
-    btc_df: pd.DataFrame | None = None,
+    extra_data: dict | None = None,
 ) -> list[Signal]:
     """Compute trading signals from MSTR 1H + BTC 1H data.
 
@@ -191,6 +191,8 @@ def compute_signals(
     if config is None:
         config = StrategyConfig()
 
+    extra_data = extra_data or {}
+    btc_df = extra_data.get("btc")
     if btc_df is None:
         raise ValueError("btc_df is required for EchoTrend 240 (dual-feed strategy)")
 
@@ -254,7 +256,7 @@ def get_current_signal(
     entry_bar_idx: int = 0,
     config: StrategyConfig | None = None,
     *,
-    btc_df: pd.DataFrame | None = None,
+    extra_data: dict | None = None,
 ) -> Signal:
     """Get the signal for the latest bar.
 
@@ -263,6 +265,8 @@ def get_current_signal(
     if config is None:
         config = StrategyConfig()
 
+    extra_data = extra_data or {}
+    btc_df = extra_data.get("btc")
     if btc_df is None:
         raise ValueError("btc_df is required for EchoTrend 240 (dual-feed strategy)")
 
@@ -317,7 +321,7 @@ def get_current_signal(
         )
 
     # Recompute hold_bars from signals in filtered space
-    all_signals = compute_signals(df, config, btc_df=btc_df)
+    all_signals = compute_signals(df, config, extra_data=extra_data)
     last_buy = None
     for s in all_signals:
         if s.action == "buy":

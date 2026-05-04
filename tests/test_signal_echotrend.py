@@ -250,14 +250,14 @@ class TestComputeSignals:
         config = StrategyConfig()
         btc_df = make_btc_1h([50000.0] * 10)
         mstr_df = make_mstr_rth([300.0] * 10)
-        signals = compute_signals(mstr_df, config, btc_df=btc_df)
+        signals = compute_signals(mstr_df, config, extra_data={"btc": btc_df})
         assert signals == []
 
     def test_requires_btc_df(self):
         config = StrategyConfig()
         mstr_df = make_mstr_rth([300.0] * 10)
         with pytest.raises(ValueError, match="btc_df is required"):
-            compute_signals(mstr_df, config, btc_df=None)
+            compute_signals(mstr_df, config, extra_data={})
 
     def test_next_bar_execution_gap(self):
         """Signal detection and execution must be on different bars.
@@ -278,7 +278,7 @@ class TestComputeSignals:
         mstr_count = 300
         mstr_df = make_mstr_rth([300.0 + i * 0.5 for i in range(mstr_count)])
 
-        signals = compute_signals(mstr_df, config, btc_df=btc_df)
+        signals = compute_signals(mstr_df, config, extra_data={"btc": btc_df})
         if len(signals) >= 1:
             mstr_prepared = _prepare_mstr(mstr_df, btc_df, config)
             for sig in signals:
@@ -305,7 +305,7 @@ class TestComputeSignals:
         mstr_count = 300
         mstr_df = make_mstr_rth([300.0] * mstr_count)
 
-        signals = compute_signals(mstr_df, config, btc_df=btc_df)
+        signals = compute_signals(mstr_df, config, extra_data={"btc": btc_df})
         for i in range(len(signals) - 1):
             assert signals[i].action != signals[i + 1].action
 
@@ -327,7 +327,7 @@ class TestComputeSignals:
         mstr_df = make_mstr_rth(opens)
         mstr_df["close"] = closes[:len(mstr_df)]
 
-        signals = compute_signals(mstr_df, config, btc_df=btc_df)
+        signals = compute_signals(mstr_df, config, extra_data={"btc": btc_df})
         mstr_prepared = _prepare_mstr(mstr_df, btc_df, config)
         for sig in signals:
             mask = mstr_prepared["timestamp"] == sig.timestamp
@@ -343,7 +343,7 @@ class TestGetCurrentSignal:
         config = StrategyConfig()
         mstr_df = make_mstr_rth([300.0] * 100)
         with pytest.raises(ValueError, match="btc_df is required"):
-            get_current_signal(mstr_df, in_position=False, config=config, btc_df=None)
+            get_current_signal(mstr_df, in_position=False, config=config, extra_data={})
 
     def test_hold_when_no_position_no_flip(self):
         config = StrategyConfig(ma_window=5, bull_confirm_bars=1, bear_confirm_bars=1)
@@ -355,7 +355,7 @@ class TestGetCurrentSignal:
 
         mstr_df = make_mstr_rth([300.0] * 200)
 
-        signal = get_current_signal(mstr_df, in_position=False, config=config, btc_df=btc_df)
+        signal = get_current_signal(mstr_df, in_position=False, config=config, extra_data={"btc": btc_df})
         assert signal.action == "hold"
 
 

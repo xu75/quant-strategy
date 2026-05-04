@@ -44,7 +44,7 @@ class Signal:
     reason: str = ""
 
 
-def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None) -> list[Signal]:
+def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None, **kwargs) -> list[Signal]:
     if config is None:
         config = StrategyConfig()
 
@@ -110,7 +110,7 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig | None = None) -> l
 
 def get_current_signal(df: pd.DataFrame, in_position: bool,
                        entry_bar_idx: int = 0,
-                       config: StrategyConfig | None = None) -> Signal:
+                       config: StrategyConfig | None = None, **kwargs) -> Signal:
     if config is None:
         config = StrategyConfig()
 

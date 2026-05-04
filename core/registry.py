@@ -7,12 +7,16 @@ and provides StrategyAdapter objects for the runner.
 """
 
 import importlib.util
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
 import yaml
+
+_SAFE_ID_RE = re.compile(r"^[a-z0-9_]+$")
+_SAFE_SLUG_RE = re.compile(r"^[a-z0-9-]+$")
 
 
 @dataclass
@@ -52,6 +56,7 @@ class StrategyAdapter:
     compute_signals: Callable
     get_current_signal: Callable
     get_filtered_df: Callable | None = None
+    run_backtest: Callable | None = None
 
 
 def validate_manifest(manifest_path: Path) -> StrategyManifest:
@@ -73,6 +78,24 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
     missing = [k for k in required if k not in data]
     if missing:
         raise ValueError(f"manifest {manifest_path} missing required fields: {missing}")
+
+    strategy_id = data["id"]
+    if not _SAFE_ID_RE.match(strategy_id):
+        raise ValueError(
+            f"manifest {manifest_path}: id '{strategy_id}' must match [a-z0-9_]+"
+        )
+
+    dir_name = manifest_path.parent.name
+    if strategy_id != dir_name:
+        raise ValueError(
+            f"manifest {manifest_path}: id '{strategy_id}' must match directory name '{dir_name}'"
+        )
+
+    slug = data["display"].get("slug", strategy_id)
+    if not _SAFE_SLUG_RE.match(slug):
+        raise ValueError(
+            f"manifest {manifest_path}: slug '{slug}' must match [a-z0-9-]+"
+        )
 
     config = data["config"]
     config_required = ["timeframe", "symbol"]
@@ -141,17 +164,22 @@ def load_strategy_module(manifest: StrategyManifest) -> StrategyAdapter:
         compute_signals=module.compute_signals,
         get_current_signal=module.get_current_signal,
         get_filtered_df=getattr(module, "get_filtered_df", None),
+        run_backtest=getattr(module, "run_backtest", None),
     )
 
 
 def discover_strategies(
     strategies_dir: Path | None = None,
+    *,
+    strict: bool = True,
 ) -> list[StrategyManifest]:
     """Scan strategies directory for enabled strategy manifests.
 
     Args:
         strategies_dir: Path to strategies/ directory.
             Defaults to <project_root>/strategies/.
+        strict: If True (default), raise on any validation error.
+            If False, skip invalid manifests with a warning.
 
     Returns:
         List of validated, enabled StrategyManifest objects.
@@ -160,12 +188,31 @@ def discover_strategies(
         strategies_dir = Path(__file__).parent.parent / "strategies"
 
     manifests = []
+    errors = []
+    seen_ids: set[str] = set()
+    seen_slugs: set[str] = set()
     for manifest_path in sorted(strategies_dir.glob("*/manifest.yaml")):
         try:
             manifest = validate_manifest(manifest_path)
-            if manifest.enabled:
-                manifests.append(manifest)
+            if not manifest.enabled:
+                continue
+            if manifest.id in seen_ids:
+                raise ValueError(f"duplicate strategy id: '{manifest.id}'")
+            if manifest.slug in seen_slugs:
+                raise ValueError(f"duplicate strategy slug: '{manifest.slug}'")
+            seen_ids.add(manifest.id)
+            seen_slugs.add(manifest.slug)
+            manifests.append(manifest)
         except (ValueError, yaml.YAMLError) as e:
-            print(f"[Registry] Skipping {manifest_path}: {e}")
+            if strict:
+                errors.append(str(e))
+            else:
+                print(f"[Registry] Skipping {manifest_path}: {e}")
+
+    if errors:
+        raise ValueError(
+            f"Strategy discovery failed with {len(errors)} error(s):\n"
+            + "\n".join(f"  - {e}" for e in errors)
+        )
 
     return manifests

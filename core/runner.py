@@ -169,11 +169,7 @@ def run_single_strategy(adapter):
     )
 
     # 2. Compute signals (injected from strategy)
-    # Multi-symbol strategies receive extra data as kwargs
-    extra_kwargs = {}
-    if "btc" in extra_data:
-        extra_kwargs["btc_df"] = extra_data["btc"]
-    signals = adapter.compute_signals(df, config, **extra_kwargs)
+    signals = adapter.compute_signals(df, config, extra_data=extra_data)
 
     # For strategies with data filtering (e.g. regular hours), use filtered df
     # so backtest and index spaces are consistent with signal timestamps
@@ -268,7 +264,7 @@ def run_single_strategy(adapter):
 
     generate_status_json(
         df_backtest, config, in_position, entry_bar_idx, output_dir / "latest.json",
-        current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config, **extra_kwargs),
+        current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config, extra_data=extra_data),
     )
     generate_backtest_json(
         result,
