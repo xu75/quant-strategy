@@ -25,7 +25,7 @@ strategy_name: "TrendLock 40 Plus"
 ### 执行语义
 
 - 信号在 bar N 收盘时产生，在 bar N+1 开盘执行（next-bar execution）
-- 与 TrendLock 40 生产代码执行语义一致
+- 生产代码执行价格模型略有不同，详见第 7 节"生产语义对齐"
 
 ### 风险控制
 
