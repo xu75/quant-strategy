@@ -232,15 +232,15 @@ const research = {
     <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
       <div>
         <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
-        <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+        <p data-i18n="strategy.plus.entry_desc">Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
       </div>
       <div>
         <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
-        <p>After minimum hold of {strategy.min_hold_days} days ({strategy.min_hold_bars} bars), require {strategy.exit_confirm_bars} consecutive bars with close &lt; MA{strategy.ma_window}.</p>
+        <p data-i18n="strategy.plus.exit_desc">After minimum hold of {strategy.min_hold_days} days ({strategy.min_hold_bars} bars), require {strategy.exit_confirm_bars} consecutive bars with close &lt; MA{strategy.ma_window}.</p>
       </div>
       <div>
         <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
-        <p>Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime.</p>
+        <p data-i18n="strategy.plus.design_desc">Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime.</p>
       </div>
     </div>
   </section>
@@ -248,11 +248,12 @@ const research = {
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.research">Research Source</h2>
     <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-4">
-      <p data-i18n="strategy.research_desc">Every live strategy must have a versioned research memo and a public summary page.</p>
+      <p data-i18n="strategy.plus.research_desc">Every live strategy must have a versioned research memo and a public summary page.</p>
       <div>
         <p class="text-white font-medium mb-1">{research.title}</p>
         <div class="flex flex-wrap gap-3 text-sm">
-          <a href={research.route} class="text-blue-400 hover:text-blue-300">Read summary on this site</a>
+          <a href={research.route} class="text-blue-400 hover:text-blue-300" data-i18n="strategy.research_open">Read summary on this site</a>
+          <a href={research.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.research_canonical">View canonical doc on GitHub</a>
         </div>
       </div>
     </div>
@@ -261,8 +262,8 @@ const research = {
   <section>
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
     <p class="text-gray-400 text-sm">
-      All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
-      Signals are generated automatically every 4 hours via GitHub Actions.
+      <span data-i18n="strategy.datasource_desc">All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
+      Signals are generated automatically every 4 hours via GitHub Actions.</span>
       <a href="https://github.com/xu75" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.viewsource">GitHub</a>.
     </p>
   </section>

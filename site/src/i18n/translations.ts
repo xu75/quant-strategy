@@ -63,6 +63,13 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.datasource_note': 'Note: MSTR data currently relies on locally maintained CSV files. Automated updates via GitHub Actions are planned but depend on finding a suitable free data source for US equity 1H bars. BTC data (OKX) can be fetched automatically. Signal updates may lag until automation is in place.',
     'strategy.viewsource': 'GitHub',
     'strategy.mtm_note': '* MTM return includes unrealized P&L from the current open position.',
+    'strategy.research_open': 'Read summary on this site',
+    'strategy.research_canonical': 'View canonical doc on GitHub',
+    // TrendLock 40 Plus specific
+    'strategy.plus.entry_desc': 'Crossover confirmation: previous close ≤ previous MA, current close > MA.',
+    'strategy.plus.exit_desc': 'After minimum hold, require consecutive bars with close < MA to confirm exit.',
+    'strategy.plus.design_desc': 'Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime.',
+    'strategy.plus.research_desc': 'Every live strategy must have a versioned research memo and a public summary page.',
     // EchoTrend 240 specific
     'strategy.et240.regime_gate': 'Regime Gate (BTC 4H SMA240)',
     'strategy.et240.regime_gate_desc': 'BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close > SMA240 for 3 consecutive bars. Bear regime when close < SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead.',
@@ -177,6 +184,13 @@ export const translations: Record<string, Record<string, string>> = {
     'strategy.datasource_note': '注意：MSTR 数据目前依赖本地维护的 CSV 文件。通过 GitHub Actions 自动更新的方案正在规划中，取决于找到合适的免费美股1H数据源。BTC 数据（OKX）可自动获取。在自动化就绪前，信号更新可能有延迟。',
     'strategy.viewsource': 'GitHub',
     'strategy.mtm_note': '* MTM 收益率包含当前持仓的未实现盈亏。',
+    'strategy.research_open': '阅读站内摘要',
+    'strategy.research_canonical': '查看 GitHub 原文',
+    // TrendLock 40 Plus specific
+    'strategy.plus.entry_desc': '交叉确认：前一根K线收盘价 ≤ 前一根MA，当前收盘价 > 当前MA。',
+    'strategy.plus.exit_desc': '最小持仓期满后，需连续多根K线收盘价 < MA 才确认出场。',
+    'strategy.plus.design_desc': '出场确认机制过滤MA附近的假跌破，同时不延迟真正的趋势反转退出。配合更短的最小持仓期（2天 vs 4天），策略响应更快，同时在整个持仓期间保持防抖保护。',
+    'strategy.plus.research_desc': '每个上线策略都必须有一份版本化研究文档和一个公开摘要页面。',
     // EchoTrend 240 specific
     'strategy.et240.regime_gate': 'Regime Gate（BTC 4H SMA240）',
     'strategy.et240.regime_gate_desc': 'BTC 1H 数据重采样为 4H，计算 SMA240。收盘价连续3根4H K线高于 SMA240 进入牛市 regime，连续3根低于则进入熊市 regime。信号延迟1根K线以避免前视偏差。',
