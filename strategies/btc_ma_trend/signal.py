@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """BTC MA Trend Strategy - Signal Logic
 
 Extracted from the live 4H_MA120_4D_Trader bot.

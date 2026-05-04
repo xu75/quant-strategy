@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Tests for the BTC MA/freeze sweep research script."""
 
 import pandas as pd

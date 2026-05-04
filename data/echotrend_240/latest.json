@@ -1,0 +1,22 @@
+{
+  "updated_at": "2026-05-04T10:23:12.042690+00:00",
+  "strategy": {
+    "name": "EchoTrend 240",
+    "code": "echotrend_240",
+    "timeframe": "1H",
+    "symbol": "MSTR",
+    "ma_window": 240
+  },
+  "current_signal": {
+    "action": "hold",
+    "price": 166.12,
+    "ma_value": 72222.85,
+    "timestamp": "2026-04-30T19:30:00+00:00",
+    "hold_bars": 117,
+    "reason": "Holding, regime is bull"
+  },
+  "position": {
+    "in_position": true,
+    "entry_bar_idx": 11012
+  }
+}

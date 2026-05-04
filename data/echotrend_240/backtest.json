@@ -1,0 +1,588 @@
+{
+  "strategy": {
+    "display_name": "EchoTrend 240",
+    "internal_code": "echotrend_240",
+    "ma_window": 240,
+    "bear_confirm_bars": 3,
+    "bull_confirm_bars": 3,
+    "bear_ceiling": 0.0,
+    "bull_ceiling": 1.1,
+    "hysteresis_pct": 0.0,
+    "freeze_bars": 0,
+    "commission_rate": 0.0002,
+    "slippage_rate": 0.0003,
+    "timeframe": "1H",
+    "exec_timeframe": "1H",
+    "regime_timeframe": "4H",
+    "symbol": "MSTR",
+    "regime_symbol": "BTC-USDT",
+    "data_source": "local",
+    "regular_hours_only": true,
+    "warmup_bars": 960
+  },
+  "performance": {
+    "total_return_pct": 1575.25,
+    "realized_return_pct": 1250.69,
+    "max_drawdown_pct": 79.99,
+    "win_rate_pct": 36.21,
+    "total_trades": 58,
+    "avg_hold_bars": 98.9,
+    "sharpe_ratio": 1.025,
+    "buy_hold_return_pct": 1284.41,
+    "buy_hold_max_drawdown_pct": 89.56,
+    "has_open_position": true
+  },
+  "period": {
+    "start": "2020-01-02T14:30:00+00:00",
+    "end": "2026-04-30T19:30:00+00:00"
+  },
+  "trades": [
+    {
+      "entry_time": "2020-04-07T14:30:00+00:00",
+      "entry_price": 11.78,
+      "exit_time": "2020-06-12T14:30:00+00:00",
+      "exit_price": 12.03,
+      "hold_bars": 322,
+      "pnl_pct": 1.93
+    },
+    {
+      "entry_time": "2020-06-12T17:30:00+00:00",
+      "entry_price": 11.82,
+      "exit_time": "2020-06-15T14:30:00+00:00",
+      "exit_price": 11.58,
+      "hold_bars": 4,
+      "pnl_pct": -2.25
+    },
+    {
+      "entry_time": "2020-06-16T14:30:00+00:00",
+      "entry_price": 12.58,
+      "exit_time": "2020-06-19T14:30:00+00:00",
+      "exit_price": 12.09,
+      "hold_bars": 21,
+      "pnl_pct": -4.11
+    },
+    {
+      "entry_time": "2020-06-23T14:30:00+00:00",
+      "entry_price": 11.93,
+      "exit_time": "2020-06-25T14:30:00+00:00",
+      "exit_price": 11.38,
+      "hold_bars": 14,
+      "pnl_pct": -4.75
+    },
+    {
+      "entry_time": "2020-07-21T17:30:00+00:00",
+      "entry_price": 12.06,
+      "exit_time": "2020-09-03T14:30:00+00:00",
+      "exit_price": 14.88,
+      "hold_bars": 221,
+      "pnl_pct": 23.14
+    },
+    {
+      "entry_time": "2020-10-09T14:30:00+00:00",
+      "entry_price": 16.46,
+      "exit_time": "2021-01-28T14:30:00+00:00",
+      "exit_price": 54.84,
+      "hold_bars": 524,
+      "pnl_pct": 232.51
+    },
+    {
+      "entry_time": "2021-01-29T15:30:00+00:00",
+      "entry_price": 68.0,
+      "exit_time": "2021-03-25T14:30:00+00:00",
+      "exit_price": 58.07,
+      "hold_bars": 266,
+      "pnl_pct": -14.77
+    },
+    {
+      "entry_time": "2021-03-29T14:30:00+00:00",
+      "entry_price": 65.89,
+      "exit_time": "2021-04-19T14:30:00+00:00",
+      "exit_price": 65.0,
+      "hold_bars": 98,
+      "pnl_pct": -1.54
+    },
+    {
+      "entry_time": "2021-05-03T14:30:00+00:00",
+      "entry_price": 67.4,
+      "exit_time": "2021-05-04T14:30:00+00:00",
+      "exit_price": 61.95,
+      "hold_bars": 7,
+      "pnl_pct": -8.26
+    },
+    {
+      "entry_time": "2021-05-06T14:30:00+00:00",
+      "entry_price": 61.29,
+      "exit_time": "2021-05-07T14:30:00+00:00",
+      "exit_price": 60.9,
+      "hold_bars": 7,
+      "pnl_pct": -0.84
+    },
+    {
+      "entry_time": "2021-05-10T14:30:00+00:00",
+      "entry_price": 61.59,
+      "exit_time": "2021-05-11T14:30:00+00:00",
+      "exit_price": 53.5,
+      "hold_bars": 7,
+      "pnl_pct": -13.3
+    },
+    {
+      "entry_time": "2021-07-26T14:30:00+00:00",
+      "entry_price": 62.1,
+      "exit_time": "2021-09-10T17:30:00+00:00",
+      "exit_price": 62.68,
+      "hold_bars": 234,
+      "pnl_pct": 0.73
+    },
+    {
+      "entry_time": "2021-09-15T17:30:00+00:00",
+      "entry_price": 63.67,
+      "exit_time": "2021-09-20T14:30:00+00:00",
+      "exit_price": 57.44,
+      "hold_bars": 18,
+      "pnl_pct": -9.96
+    },
+    {
+      "entry_time": "2021-10-04T14:30:00+00:00",
+      "entry_price": 61.15,
+      "exit_time": "2021-11-16T15:30:00+00:00",
+      "exit_price": 76.85,
+      "hold_bars": 217,
+      "pnl_pct": 25.43
+    },
+    {
+      "entry_time": "2022-02-07T15:30:00+00:00",
+      "entry_price": 40.45,
+      "exit_time": "2022-02-22T14:30:00+00:00",
+      "exit_price": 37.63,
+      "hold_bars": 69,
+      "pnl_pct": -7.17
+    },
+    {
+      "entry_time": "2022-03-01T15:30:00+00:00",
+      "entry_price": 46.51,
+      "exit_time": "2022-03-07T15:30:00+00:00",
+      "exit_price": 41.51,
+      "hold_bars": 28,
+      "pnl_pct": -10.93
+    },
+    {
+      "entry_time": "2022-03-09T15:30:00+00:00",
+      "entry_price": 44.2,
+      "exit_time": "2022-03-10T17:30:00+00:00",
+      "exit_price": 40.82,
+      "hold_bars": 9,
+      "pnl_pct": -7.83
+    },
+    {
+      "entry_time": "2022-03-17T14:30:00+00:00",
+      "entry_price": 42.8,
+      "exit_time": "2022-03-18T14:30:00+00:00",
+      "exit_price": 43.58,
+      "hold_bars": 7,
+      "pnl_pct": 1.63
+    },
+    {
+      "entry_time": "2022-03-21T14:30:00+00:00",
+      "entry_price": 45.11,
+      "exit_time": "2022-04-11T14:30:00+00:00",
+      "exit_price": 44.12,
+      "hold_bars": 105,
+      "pnl_pct": -2.38
+    },
+    {
+      "entry_time": "2022-07-18T17:30:00+00:00",
+      "entry_price": 24.58,
+      "exit_time": "2022-08-19T17:30:00+00:00",
+      "exit_price": 28.94,
+      "hold_bars": 168,
+      "pnl_pct": 17.51
+    },
+    {
+      "entry_time": "2022-09-12T17:30:00+00:00",
+      "entry_price": 25.65,
+      "exit_time": "2022-09-14T14:30:00+00:00",
+      "exit_price": 23.01,
+      "hold_bars": 11,
+      "pnl_pct": -10.46
+    },
+    {
+      "entry_time": "2022-10-04T17:30:00+00:00",
+      "entry_price": 23.9,
+      "exit_time": "2022-10-10T14:30:00+00:00",
+      "exit_price": 21.96,
+      "hold_bars": 25,
+      "pnl_pct": -8.29
+    },
+    {
+      "entry_time": "2022-10-26T14:30:00+00:00",
+      "entry_price": 26.96,
+      "exit_time": "2022-11-08T17:30:00+00:00",
+      "exit_price": 25.5,
+      "hold_bars": 65,
+      "pnl_pct": -5.58
+    },
+    {
+      "entry_time": "2022-12-14T14:30:00+00:00",
+      "entry_price": 20.29,
+      "exit_time": "2022-12-19T14:30:00+00:00",
+      "exit_price": 17.1,
+      "hold_bars": 21,
+      "pnl_pct": -15.89
+    },
+    {
+      "entry_time": "2022-12-21T15:30:00+00:00",
+      "entry_price": 16.9,
+      "exit_time": "2022-12-28T15:30:00+00:00",
+      "exit_price": 14.7,
+      "hold_bars": 28,
+      "pnl_pct": -13.2
+    },
+    {
+      "entry_time": "2023-01-09T15:30:00+00:00",
+      "entry_price": 17.0,
+      "exit_time": "2023-03-03T15:30:00+00:00",
+      "exit_price": 24.02,
+      "hold_bars": 259,
+      "pnl_pct": 41.01
+    },
+    {
+      "entry_time": "2023-03-14T14:30:00+00:00",
+      "entry_price": 23.91,
+      "exit_time": "2023-04-24T14:30:00+00:00",
+      "exit_price": 29.1,
+      "hold_bars": 196,
+      "pnl_pct": 21.49
+    },
+    {
+      "entry_time": "2023-04-27T14:30:00+00:00",
+      "entry_price": 30.65,
+      "exit_time": "2023-05-02T14:30:00+00:00",
+      "exit_price": 31.01,
+      "hold_bars": 21,
+      "pnl_pct": 0.98
+    },
+    {
+      "entry_time": "2023-05-04T14:30:00+00:00",
+      "entry_price": 31.11,
+      "exit_time": "2023-05-08T14:30:00+00:00",
+      "exit_price": 31.11,
+      "hold_bars": 14,
+      "pnl_pct": -0.2
+    },
+    {
+      "entry_time": "2023-05-30T14:30:00+00:00",
+      "entry_price": 30.01,
+      "exit_time": "2023-05-31T14:30:00+00:00",
+      "exit_price": 29.4,
+      "hold_bars": 7,
+      "pnl_pct": -2.23
+    },
+    {
+      "entry_time": "2023-06-20T14:30:00+00:00",
+      "entry_price": 30.0,
+      "exit_time": "2023-07-25T14:30:00+00:00",
+      "exit_price": 43.09,
+      "hold_bars": 168,
+      "pnl_pct": 43.36
+    },
+    {
+      "entry_time": "2023-09-19T14:30:00+00:00",
+      "entry_price": 34.41,
+      "exit_time": "2023-09-25T14:30:00+00:00",
+      "exit_price": 31.95,
+      "hold_bars": 28,
+      "pnl_pct": -7.34
+    },
+    {
+      "entry_time": "2023-09-26T14:30:00+00:00",
+      "entry_price": 32.4,
+      "exit_time": "2023-09-27T14:30:00+00:00",
+      "exit_price": 32.26,
+      "hold_bars": 7,
+      "pnl_pct": -0.62
+    },
+    {
+      "entry_time": "2023-09-28T14:30:00+00:00",
+      "entry_price": 31.98,
+      "exit_time": "2024-01-16T15:30:00+00:00",
+      "exit_price": 47.9,
+      "hold_bars": 518,
+      "pnl_pct": 49.48
+    },
+    {
+      "entry_time": "2024-01-30T15:30:00+00:00",
+      "entry_price": 51.7,
+      "exit_time": "2024-02-01T15:30:00+00:00",
+      "exit_price": 50.18,
+      "hold_bars": 14,
+      "pnl_pct": -3.13
+    },
+    {
+      "entry_time": "2024-02-02T15:30:00+00:00",
+      "entry_price": 49.72,
+      "exit_time": "2024-02-05T15:30:00+00:00",
+      "exit_price": 50.2,
+      "hold_bars": 7,
+      "pnl_pct": 0.75
+    },
+    {
+      "entry_time": "2024-02-07T15:30:00+00:00",
+      "entry_price": 49.95,
+      "exit_time": "2024-04-15T14:30:00+00:00",
+      "exit_price": 147.0,
+      "hold_bars": 322,
+      "pnl_pct": 193.72
+    },
+    {
+      "entry_time": "2024-05-16T14:30:00+00:00",
+      "entry_price": 149.41,
+      "exit_time": "2024-06-14T14:30:00+00:00",
+      "exit_price": 150.5,
+      "hold_bars": 140,
+      "pnl_pct": 0.53
+    },
+    {
+      "entry_time": "2024-07-16T14:30:00+00:00",
+      "entry_price": 161.5,
+      "exit_time": "2024-08-05T14:30:00+00:00",
+      "exit_price": 105.16,
+      "hold_bars": 98,
+      "pnl_pct": -35.01
+    },
+    {
+      "entry_time": "2024-08-26T14:30:00+00:00",
+      "entry_price": 148.12,
+      "exit_time": "2024-08-28T14:30:00+00:00",
+      "exit_price": 138.16,
+      "hold_bars": 14,
+      "pnl_pct": -6.91
+    },
+    {
+      "entry_time": "2024-09-18T14:30:00+00:00",
+      "entry_price": 130.44,
+      "exit_time": "2024-10-11T14:30:00+00:00",
+      "exit_price": 188.5,
+      "hold_bars": 119,
+      "pnl_pct": 44.22
+    },
+    {
+      "entry_time": "2024-10-14T14:30:00+00:00",
+      "entry_price": 224.48,
+      "exit_time": "2024-12-23T15:30:00+00:00",
+      "exit_price": 358.0,
+      "hold_bars": 343,
+      "pnl_pct": 59.16
+    },
+    {
+      "entry_time": "2024-12-26T15:30:00+00:00",
+      "entry_price": 350.3,
+      "exit_time": "2024-12-27T14:30:00+00:00",
+      "exit_price": 344.5,
+      "hold_bars": 6,
+      "pnl_pct": -1.85
+    },
+    {
+      "entry_time": "2025-01-06T15:30:00+00:00",
+      "entry_price": 349.85,
+      "exit_time": "2025-01-08T15:30:00+00:00",
+      "exit_price": 335.24,
+      "hold_bars": 14,
+      "pnl_pct": -4.37
+    },
+    {
+      "entry_time": "2025-01-16T15:30:00+00:00",
+      "entry_price": 357.89,
+      "exit_time": "2025-02-03T15:30:00+00:00",
+      "exit_price": 310.0,
+      "hold_bars": 77,
+      "pnl_pct": -13.55
+    },
+    {
+      "entry_time": "2025-02-04T15:30:00+00:00",
+      "entry_price": 341.2,
+      "exit_time": "2025-02-05T15:30:00+00:00",
+      "exit_price": 349.0,
+      "hold_bars": 7,
+      "pnl_pct": 2.08
+    },
+    {
+      "entry_time": "2025-04-14T14:30:00+00:00",
+      "entry_price": 309.8,
+      "exit_time": "2025-06-06T14:30:00+00:00",
+      "exit_price": 377.4,
+      "hold_bars": 259,
+      "pnl_pct": 21.58
+    },
+    {
+      "entry_time": "2025-06-06T17:30:00+00:00",
+      "entry_price": 379.25,
+      "exit_time": "2025-06-18T14:30:00+00:00",
+      "exit_price": 371.43,
+      "hold_bars": 53,
+      "pnl_pct": -2.26
+    },
+    {
+      "entry_time": "2025-06-25T14:30:00+00:00",
+      "entry_price": 384.83,
+      "exit_time": "2025-08-06T14:30:00+00:00",
+      "exit_price": 374.75,
+      "hold_bars": 203,
+      "pnl_pct": -2.81
+    },
+    {
+      "entry_time": "2025-08-07T14:30:00+00:00",
+      "entry_price": 388.4,
+      "exit_time": "2025-08-18T14:30:00+00:00",
+      "exit_price": 359.94,
+      "hold_bars": 49,
+      "pnl_pct": -7.51
+    },
+    {
+      "entry_time": "2025-09-11T14:30:00+00:00",
+      "entry_price": 326.87,
+      "exit_time": "2025-09-22T17:30:00+00:00",
+      "exit_price": 337.22,
+      "hold_bars": 52,
+      "pnl_pct": 2.96
+    },
+    {
+      "entry_time": "2025-09-30T14:30:00+00:00",
+      "entry_price": 320.83,
+      "exit_time": "2025-10-13T14:30:00+00:00",
+      "exit_price": 306.67,
+      "hold_bars": 63,
+      "pnl_pct": -4.61
+    },
+    {
+      "entry_time": "2025-10-27T14:30:00+00:00",
+      "entry_price": 299.5,
+      "exit_time": "2025-10-28T14:30:00+00:00",
+      "exit_price": 295.14,
+      "hold_bars": 7,
+      "pnl_pct": -1.65
+    },
+    {
+      "entry_time": "2026-01-05T14:30:00+00:00",
+      "entry_price": 163.52,
+      "exit_time": "2026-01-21T15:30:00+00:00",
+      "exit_price": 161.27,
+      "hold_bars": 78,
+      "pnl_pct": -1.57
+    },
+    {
+      "entry_time": "2026-03-05T15:30:00+00:00",
+      "entry_price": 145.04,
+      "exit_time": "2026-03-06T15:30:00+00:00",
+      "exit_price": 134.9,
+      "hold_bars": 7,
+      "pnl_pct": -7.18
+    },
+    {
+      "entry_time": "2026-03-10T17:30:00+00:00",
+      "entry_price": 141.05,
+      "exit_time": "2026-03-23T14:30:00+00:00",
+      "exit_price": 138.6,
+      "hold_bars": 60,
+      "pnl_pct": -1.93
+    },
+    {
+      "entry_time": "2026-03-24T14:30:00+00:00",
+      "entry_price": 138.73,
+      "exit_time": "2026-03-27T14:30:00+00:00",
+      "exit_price": 129.88,
+      "hold_bars": 21,
+      "pnl_pct": -6.57
+    },
+    {
+      "entry_time": "2026-04-06T14:30:00+00:00",
+      "entry_price": 124.57,
+      "exit_time": "2026-04-07T14:30:00+00:00",
+      "exit_price": 125.32,
+      "hold_bars": 7,
+      "pnl_pct": 0.4
+    }
+  ],
+  "since_date": "2026-04-08T14:30:00+00:00",
+  "periods": {
+    "since_launch": {
+      "start": "2026-04-08T14:30:00+00:00",
+      "end": "2026-04-30T19:30:00+00:00",
+      "performance": {
+        "total_return_pct": 24.03,
+        "realized_return_pct": 0.0,
+        "max_drawdown_pct": 12.7,
+        "win_rate_pct": 0.0,
+        "total_trades": 0,
+        "avg_hold_bars": 0.0,
+        "sharpe_ratio": 5.807,
+        "buy_hold_return_pct": 28.16,
+        "buy_hold_max_drawdown_pct": 12.7,
+        "has_open_position": true
+      }
+    },
+    "1y": {
+      "start": "2025-04-30T19:30:00+00:00",
+      "end": "2026-04-30T19:30:00+00:00",
+      "performance": {
+        "total_return_pct": -11.72,
+        "realized_return_pct": -28.83,
+        "max_drawdown_pct": 41.85,
+        "win_rate_pct": 16.67,
+        "total_trades": 12,
+        "avg_hold_bars": 71.6,
+        "sharpe_ratio": -0.106,
+        "buy_hold_return_pct": -56.04,
+        "buy_hold_max_drawdown_pct": 76.61,
+        "has_open_position": true
+      }
+    },
+    "2y": {
+      "start": "2024-04-30T19:30:00+00:00",
+      "end": "2026-04-30T19:30:00+00:00",
+      "performance": {
+        "total_return_pct": 24.37,
+        "realized_return_pct": 0.27,
+        "max_drawdown_pct": 54.88,
+        "win_rate_pct": 33.33,
+        "total_trades": 21,
+        "avg_hold_bars": 79.9,
+        "sharpe_ratio": 0.485,
+        "buy_hold_return_pct": 52.05,
+        "buy_hold_max_drawdown_pct": 80.14,
+        "has_open_position": true
+      }
+    },
+    "3y": {
+      "start": "2023-04-30T19:30:00+00:00",
+      "end": "2026-04-30T19:30:00+00:00",
+      "performance": {
+        "total_return_pct": 551.39,
+        "realized_return_pct": 425.19,
+        "max_drawdown_pct": 54.88,
+        "win_rate_pct": 35.48,
+        "total_trades": 31,
+        "avg_hold_bars": 89.8,
+        "sharpe_ratio": 1.301,
+        "buy_hold_return_pct": 408.71,
+        "buy_hold_max_drawdown_pct": 80.14,
+        "has_open_position": true
+      }
+    },
+    "5y": {
+      "start": "2021-04-30T19:30:00+00:00",
+      "end": "2026-04-30T19:30:00+00:00",
+      "performance": {
+        "total_return_pct": 435.82,
+        "realized_return_pct": 332.01,
+        "max_drawdown_pct": 56.52,
+        "win_rate_pct": 36.0,
+        "total_trades": 50,
+        "avg_hold_bars": 85.3,
+        "sharpe_ratio": 0.862,
+        "buy_hold_return_pct": 152.01,
+        "buy_hold_max_drawdown_pct": 84.86,
+        "has_open_position": true
+      }
+    }
+  }
+}

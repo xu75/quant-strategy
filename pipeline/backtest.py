@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Backtesting engine - strategy-agnostic.
 
 Simulates trading over historical data and computes performance metrics.
@@ -73,8 +75,29 @@ def _max_drawdown(values) -> float:
     return max_dd
 
 
+def _infer_bars_per_year(equity_curve: pd.DataFrame) -> float:
+    """Derive annualization factor from actual equity curve bar density.
+
+    Uses total bars / elapsed years. Works correctly for both full-history
+    and short-window (period) equity curves, and for session-filtered data.
+    """
+    ts = pd.to_datetime(equity_curve["timestamp"])
+    if len(ts) < 2:
+        return 365.0
+    span_seconds = (ts.iloc[-1] - ts.iloc[0]).total_seconds()
+    if span_seconds <= 0:
+        return 365.0
+    elapsed_years = span_seconds / (365.25 * 24 * 3600)
+    return (len(ts) - 1) / elapsed_years
+
+
 def _annualized_sharpe_from_equity(equity_curve: pd.DataFrame, timeframe: str) -> float:
-    """Compute annualized Sharpe from mark-to-market equity returns."""
+    """Compute annualized Sharpe from mark-to-market equity returns.
+
+    Annualization factor is derived from the actual equity curve timestamp
+    cadence rather than the nominal timeframe, so session-filtered strategies
+    (e.g. NYSE regular hours only) get the correct factor automatically.
+    """
     if len(equity_curve) < 3:
         return 0.0
 
@@ -87,7 +110,8 @@ def _annualized_sharpe_from_equity(equity_curve: pd.DataFrame, timeframe: str) -
     if std_ret <= 0:
         return 0.0
 
-    return avg_ret / std_ret * sqrt(_bars_per_year(timeframe))
+    bars_yr = _infer_bars_per_year(equity_curve)
+    return avg_ret / std_ret * sqrt(bars_yr)
 
 
 def _period_equity_curve(equity_curve: pd.DataFrame, period_start: pd.Timestamp) -> pd.DataFrame:

@@ -1,0 +1,49 @@
+# strategies/echotrend_240/manifest.yaml
+id: echotrend_240
+name: "EchoTrend 240"
+version: "1.0.0"
+description: "BTC 4H SMA240 regime gate + MSTR 常规时段执行，二元持仓"
+
+config:
+  ma_window: 240
+  bear_confirm_bars: 3
+  bull_confirm_bars: 3
+  bear_ceiling: 0.0
+  bull_ceiling: 1.10
+  hysteresis_pct: 0.0
+  freeze_bars: 0
+  commission_rate: 0.0002
+  slippage_rate: 0.0003
+  timeframe: "1H"
+  exec_timeframe: "1H"
+  regime_timeframe: "4H"
+  symbol: "MSTR"
+  regime_symbol: "BTC-USDT"
+  data_source: "local"
+  regular_hours_only: true
+
+data_sources:
+  mstr:
+    symbol: "MSTR"
+    timeframe: "1H"
+    source: "local"
+    local_file: "MSTR_1h.csv"
+  btc:
+    symbol: "BTC-USDT"
+    timeframe: "1H"
+    source: "local"
+    local_file: "BTC-USD_1h.csv"
+
+display:
+  slug: "echotrend-240"
+  category: "trend-following"
+  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate，二元持仓）"
+
+launch_date: "2026-05-04"
+enabled: true
+
+research:
+  paper_title: "EchoTrend 240: BTC 4H SMA240 Regime Gate 策略研究"
+  website_path: "/research/echotrend-240"
+  canonical_doc: "docs/research/strategies/echotrend_240.md"
+  source_project: "https://github.com/xu75/mstr-strategy-clowder"

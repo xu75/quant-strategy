@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Strategy registry - discovers and loads strategy plugins.
 
 Scans strategies/*/manifest.yaml, validates interface compliance,
@@ -26,6 +28,7 @@ class StrategyManifest:
     launch_date: str
     enabled: bool = True
     manifest_path: Path = field(default_factory=lambda: Path("."))
+    _raw_data: dict = field(default_factory=dict, repr=False)
 
     @property
     def slug(self) -> str:
@@ -48,6 +51,7 @@ class StrategyAdapter:
     config: Any  # Strategy-specific StrategyConfig instance
     compute_signals: Callable
     get_current_signal: Callable
+    get_filtered_df: Callable | None = None
 
 
 def validate_manifest(manifest_path: Path) -> StrategyManifest:
@@ -86,6 +90,7 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
         launch_date=data["launch_date"],
         enabled=data.get("enabled", True),
         manifest_path=manifest_path,
+        _raw_data=data,
     )
 
 
@@ -135,6 +140,7 @@ def load_strategy_module(manifest: StrategyManifest) -> StrategyAdapter:
         config=config,
         compute_signals=module.compute_signals,
         get_current_signal=module.get_current_signal,
+        get_filtered_df=getattr(module, "get_filtered_df", None),
     )
 
 

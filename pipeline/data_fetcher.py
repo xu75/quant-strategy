@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Market data fetcher.
 
 Loads local historical data and fetches recent candles from OKX public API.
@@ -17,15 +19,36 @@ MAX_CANDLES_PER_REQUEST = 100  # OKX limit per request
 LOCAL_HISTORY_PATH = Path.home() / "VSCode/SynologyDrive/backtest/history_data/normalized/BTC-USD_1h.csv"
 
 
+def load_local_history_by_name(
+    filename: str,
+    target_bar: str = "1H",
+) -> pd.DataFrame:
+    """Load a named local history CSV from the normalized data directory.
+
+    Args:
+        filename: CSV filename (e.g., "MSTR_1h.csv", "BTC-USD_1h.csv").
+        target_bar: Target candle interval for resampling.
+
+    Returns:
+        DataFrame with ['timestamp', 'open', 'high', 'low', 'close', 'volume'].
+    """
+    path = LOCAL_HISTORY_PATH.parent / filename
+    return load_local_history(path=path, target_bar=target_bar)
+
+
 def load_local_history(
     path: str | Path = LOCAL_HISTORY_PATH,
     target_bar: str = "4H",
 ) -> pd.DataFrame:
-    """Load local historical CSV and resample to target timeframe.
+    """Load local historical CSV and optionally resample to target timeframe.
+
+    For 1H target_bar, data is returned as-is (preserving original timestamps
+    like 09:30 ET market open bars). Resampling only applies when aggregating
+    to coarser timeframes (4H, 1D).
 
     Args:
         path: Path to normalized 1h CSV (columns: datetime,open,high,low,close,volume).
-        target_bar: Target candle interval (e.g., "4H").
+        target_bar: Target candle interval (e.g., "4H", "1H").
 
     Returns:
         DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume'],
@@ -37,6 +60,11 @@ def load_local_history(
 
     resample_map = {"4H": "4h", "1H": "1h", "1D": "1D"}
     freq = resample_map.get(target_bar, target_bar.lower())
+
+    if freq == "1h":
+        # 1H source data: preserve original timestamps (including half-hour bars)
+        resampled = df.reset_index().rename(columns={"datetime": "timestamp"})
+        return resampled[["timestamp", "open", "high", "low", "close", "volume"]]
 
     resampled = df.resample(freq, offset="0h").agg({
         "open": "first",

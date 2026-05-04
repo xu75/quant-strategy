@@ -1,0 +1,76 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const paper = {
+  title: 'EchoTrend 240: BTC 4H SMA240 Regime Gate 策略研究',
+  strategyName: 'EchoTrend 240',
+  canonicalUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/echotrend_240.md',
+  sourceProject: 'https://github.com/xu75/mstr-strategy-clowder',
+  strategyUrl: '/strategy/echotrend-240',
+};
+---
+
+<Layout title="Research - EchoTrend 240" description="Research memo for EchoTrend 240">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-gray-400">{paper.strategyName}</p>
+    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
+      Method, assumptions, and evidence chain behind this strategy.
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <p class="text-gray-300 leading-7">
+      EchoTrend 240 是一个跨资产趋势跟踪策略：利用 BTC 4H SMA240 作为 regime gate，
+      在牛市持有 MSTR、熊市清仓。核心假设是 MSTR 作为 BTC 的杠杆代理，其趋势方向
+      可由 BTC 均线信号有效预测。策略仅在美股常规交易时段执行，使用 next-bar open 语义。
+      在 2020-2026 回测中实现 +1575.3% 总收益（vs B&H +1284.4%），超额 +290.8%，Sharpe 1.025。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>BTC 4H SMA240 regime gate 在 MSTR 上产生显著超额收益（+290.8% excess over 5Y）。</li>
+      <li>confirm_bars=3 有效过滤假突破，减少无效交易（58 trades over 5Y）。</li>
+      <li>源项目 RD-8 参数敏感性测试 25/26 pass，walk-forward Sharpe stability 0.87。</li>
+      <li>成本敏感性：1x/2x/5x 全部 12/12 pass，策略对交易成本不敏感。</li>
+      <li>仅使用美股常规交易时段数据，next-bar open 执行，与源项目语义一致。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>双数据源：BTC 1H（OKX）重采样为 4H 计算 SMA240，MSTR 1H 作为执行标的。</li>
+      <li>MSTR 数据过滤至美股常规交易时段（US/Eastern 09:30-16:00），排除盘前盘后。</li>
+      <li>信号延迟：shift(1) 确保信号在 4H bar 收盘后才可用，避免前视偏差。</li>
+      <li>执行语义：regime 翻转后在下一根常规时段 bar 的 open 价执行。</li>
+      <li>交易成本：双边 0.2%（fee_rate=0.001/side），与项目标准一致。</li>
+      <li>二元持仓（全仓/空仓），无仓位管理。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>MSTR-BTC 结构性风险：若 MicroStrategy 改变 BTC 持仓策略，相关性可能断裂。</li>
+      <li>参数在 2020-2026 数据上优化，未来市场结构可能变化。</li>
+      <li>MSTR 在非美股交易时段流动性较低，1H 执行可能面临额外滑点。</li>
+      <li>回测使用 next-bar open 执行，实际交易可能有额外延迟或滑点。</li>
+    </ul>
+  </section>
+
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300">Strategy page</a>
+      <a href={paper.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Canonical doc on GitHub</a>
+      <a href={paper.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Source research project</a>
+    </div>
+  </section>
+</Layout>

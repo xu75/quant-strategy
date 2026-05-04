@@ -1,10 +1,11 @@
 """Tests for backtest engine — regression tests for P1 issues."""
 
 import pandas as pd
+import numpy as np
 import pytest
 
 from strategies.btc_ma_trend.signal import StrategyConfig, compute_signals
-from pipeline.backtest import run_backtest, compute_period_metrics, Trade
+from pipeline.backtest import run_backtest, compute_period_metrics, Trade, _infer_bars_per_year, _annualized_sharpe_from_equity
 
 
 def make_candles(prices: list[float], start: str = "2024-01-01") -> pd.DataFrame:
@@ -230,3 +231,88 @@ class TestPeriodMetricsCrossBoundary:
         )
 
         assert result is None
+
+
+class TestSharpeAnnualization:
+    """P1 regression: Sharpe must use actual equity cadence, not nominal timeframe."""
+
+    def test_24h_crypto_cadence(self):
+        """24/7 crypto with 1H bars → ~8766 bars/year."""
+        ts = pd.date_range("2023-01-01", periods=8766 * 2, freq="1h", tz="UTC")
+        curve = pd.DataFrame({"timestamp": ts, "equity": np.linspace(100, 120, len(ts))})
+        bpy = _infer_bars_per_year(curve)
+        assert 8700 < bpy < 8800
+
+    def test_session_filtered_cadence(self):
+        """NYSE regular hours (7 bars/day, weekdays) → ~1750-1850 bars/year."""
+        timestamps = []
+        base = pd.Timestamp("2023-01-02", tz="US/Eastern")
+        for day_offset in range(750):
+            day = base + pd.Timedelta(days=day_offset)
+            if day.weekday() >= 5:
+                continue
+            for h in [9, 10, 11, 12, 13, 14, 15]:
+                timestamps.append(day.replace(hour=h, minute=30).tz_convert("UTC"))
+
+        curve = pd.DataFrame({
+            "timestamp": timestamps,
+            "equity": np.linspace(100, 200, len(timestamps)),
+        })
+        bpy = _infer_bars_per_year(curve)
+        assert 1750 < bpy < 1900
+
+    def test_4h_crypto_cadence(self):
+        """24/7 crypto with 4H bars → ~2190 bars/year."""
+        ts = pd.date_range("2023-01-01", periods=2190 * 2, freq="4h", tz="UTC")
+        curve = pd.DataFrame({"timestamp": ts, "equity": np.linspace(100, 150, len(ts))})
+        bpy = _infer_bars_per_year(curve)
+        assert 2150 < bpy < 2250
+
+    def test_short_window_not_collapsed(self):
+        """A 22-day session-filtered window must not return raw bar count."""
+        timestamps = []
+        base = pd.Timestamp("2024-12-02", tz="US/Eastern")
+        for day_offset in range(22):
+            day = base + pd.Timedelta(days=day_offset)
+            if day.weekday() >= 5:
+                continue
+            for h in [9, 10, 11, 12, 13, 14, 15]:
+                timestamps.append(day.replace(hour=h, minute=30).tz_convert("UTC"))
+
+        curve = pd.DataFrame({
+            "timestamp": timestamps,
+            "equity": np.linspace(100, 105, len(timestamps)),
+        })
+        bpy = _infer_bars_per_year(curve)
+        # Must extrapolate to annual rate (~1800-2200), not return raw count (~105)
+        assert bpy > 1500
+        assert bpy < 2500
+
+    def test_sharpe_session_filtered_lower_than_naive(self):
+        """Session-filtered Sharpe must be lower than naive 8766-factor Sharpe."""
+        np.random.seed(42)
+        timestamps = []
+        base = pd.Timestamp("2023-01-02", tz="US/Eastern")
+        for day_offset in range(750):
+            day = base + pd.Timedelta(days=day_offset)
+            if day.weekday() >= 5:
+                continue
+            for h in [9, 10, 11, 12, 13, 14, 15]:
+                timestamps.append(day.replace(hour=h, minute=30).tz_convert("UTC"))
+
+        n = len(timestamps)
+        returns = np.random.normal(0.0005, 0.01, n - 1)
+        equity = [100.0]
+        for r in returns:
+            equity.append(equity[-1] * (1 + r))
+
+        curve = pd.DataFrame({"timestamp": timestamps, "equity": equity})
+        sharpe_correct = _annualized_sharpe_from_equity(curve, "1H")
+
+        # Naive: use sqrt(8766) instead of sqrt(~1829)
+        rets = pd.Series(equity).pct_change().dropna()
+        sharpe_naive = float(rets.mean()) / float(rets.std(ddof=1)) * np.sqrt(8766)
+
+        # Correct Sharpe should be ~sqrt(1829/8766) ≈ 0.46x of naive
+        ratio = sharpe_correct / sharpe_naive if sharpe_naive != 0 else 0
+        assert 0.35 < ratio < 0.55
