@@ -106,10 +106,11 @@ def load_extra_data_sources(manifest) -> dict[str, pd.DataFrame]:
         return {}
 
     primary_symbol = manifest.config.get("symbol", "")
+    primary_timeframe = manifest.config.get("timeframe", "1H")
     extras = {}
 
     for key, src in data_sources.items():
-        if src.get("symbol") == primary_symbol:
+        if src.get("symbol") == primary_symbol and src.get("timeframe", "1H") == primary_timeframe:
             continue
         local_file = src.get("local_file")
         timeframe = src.get("timeframe", "1H")
@@ -168,21 +169,32 @@ def run_single_strategy(adapter):
         f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
     )
 
-    # 2. Compute signals (injected from strategy)
-    signals = adapter.compute_signals(df, config, extra_data=extra_data)
+    # 2. Compute signals and run backtest
+    # Strategies with run_backtest use their own engine (e.g. continuous exposure).
+    # Others use the platform's binary buy/sell backtest.
+    if adapter.run_backtest is not None:
+        print(f"{LOG_PREFIX} [{manifest.id}] Running engine-native backtest...")
+        result = adapter.run_backtest(df, config, extra_data=extra_data)
+        signals = adapter.compute_signals(df, config, extra_data=extra_data)
 
-    # For strategies with data filtering (e.g. regular hours), use filtered df
-    # so backtest and index spaces are consistent with signal timestamps
-    df_backtest = df
-    if adapter.get_filtered_df is not None:
-        df_backtest = adapter.get_filtered_df(df, config)
-        print(
-            f"{LOG_PREFIX} [{manifest.id}] Filtered to {len(df_backtest)} candles for backtest"
-        )
+        df_backtest = df
+        if adapter.get_filtered_df is not None:
+            df_backtest = adapter.get_filtered_df(df, config)
+            print(
+                f"{LOG_PREFIX} [{manifest.id}] Filtered to {len(df_backtest)} candles for backtest"
+            )
+    else:
+        signals = adapter.compute_signals(df, config, extra_data=extra_data)
 
-    # 3. Run backtest (pass pre-computed signals)
-    print(f"{LOG_PREFIX} [{manifest.id}] Running backtest...")
-    result = run_backtest(df_backtest, config, signals=signals, fee_rate=0.001)
+        df_backtest = df
+        if adapter.get_filtered_df is not None:
+            df_backtest = adapter.get_filtered_df(df, config)
+            print(
+                f"{LOG_PREFIX} [{manifest.id}] Filtered to {len(df_backtest)} candles for backtest"
+            )
+
+        print(f"{LOG_PREFIX} [{manifest.id}] Running backtest...")
+        result = run_backtest(df_backtest, config, signals=signals, fee_rate=0.001)
 
     print(f"{LOG_PREFIX} [{manifest.id}] Backtest complete:")
     print(f"  Trades: {result.total_trades}")
@@ -193,15 +205,19 @@ def run_single_strategy(adapter):
     print(f"  Sharpe: {result.sharpe_ratio:.3f}")
     print(f"  Buy & Hold: {result.buy_hold_return_pct:.2f}%")
 
-    # 4. Determine current position from signal sequence
-    in_position = False
-    entry_bar_idx = 0
-    if signals and signals[-1].action == "buy":
-        in_position = True
-        df_sorted = df_backtest.sort_values("timestamp").reset_index(drop=True)
-        mask = df_sorted["timestamp"] == signals[-1].timestamp
-        if mask.any():
-            entry_bar_idx = mask.idxmax()
+    # 4. Determine current position state
+    if adapter.run_backtest is not None:
+        in_position = result.has_open_position
+        entry_bar_idx = 0
+    else:
+        in_position = False
+        entry_bar_idx = 0
+        if signals and signals[-1].action == "buy":
+            in_position = True
+            df_sorted = df_backtest.sort_values("timestamp").reset_index(drop=True)
+            mask = df_sorted["timestamp"] == signals[-1].timestamp
+            if mask.any():
+                entry_bar_idx = mask.idxmax()
 
     # 5. Compute "Since" date and period-filtered performance
     launch_date = pd.Timestamp(manifest.launch_date, tz="UTC")
@@ -215,9 +231,11 @@ def run_single_strategy(adapter):
         print(f"{LOG_PREFIX} [{manifest.id}] Since date (last signal before launch): {since_date}")
 
     # Open position info for period metrics
+    # Engine-native strategies embed unrealized P&L in the equity curve,
+    # so we skip the binary open-position tracking for them.
     open_entry_time = None
     open_entry_price = 0.0
-    if in_position and signals and signals[-1].action == "buy":
+    if adapter.run_backtest is None and in_position and signals and signals[-1].action == "buy":
         open_entry_time = signals[-1].timestamp
         open_entry_price = signals[-1].price
 
@@ -246,6 +264,7 @@ def run_single_strategy(adapter):
             equity_curve=result.equity_curve,
             benchmark_prices=price_path_from_period(df_sorted, p_start),
             timeframe=config.timeframe,
+            use_equity_curve_returns=adapter.run_backtest is not None,
         )
         if metrics:
             periods_data[name] = {

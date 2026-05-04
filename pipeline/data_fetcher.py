@@ -23,6 +23,10 @@ LOCAL_HISTORY_PATH = Path.home() / "VSCode/SynologyDrive/backtest/history_data/n
 _YFINANCE_SYMBOL_MAP = {
     "MSTR_1h.csv": "MSTR",
     "BTC-USD_1h.csv": "BTC-USD",
+    "QQQ_1h.csv": "QQQ",
+    "MSTR_1d.csv": "MSTR",
+    "BTC-USD_1d.csv": "BTC-USD",
+    "QQQ_1d.csv": "QQQ",
 }
 
 
@@ -81,9 +85,12 @@ def load_local_history_by_name(
 
     ticker = _YFINANCE_SYMBOL_MAP.get(filename)
     if ticker:
-        print(f"[data_fetcher] Local file {filename} not found, fetching from Yahoo Finance ({ticker})...")
-        df = _fetch_yfinance(ticker)
-        if target_bar.upper() != "1H":
+        is_daily = "_1d." in filename
+        interval = "1d" if is_daily else "1h"
+        period = "5y" if is_daily else "730d"
+        print(f"[data_fetcher] Local file {filename} not found, fetching from Yahoo Finance ({ticker}, {interval})...")
+        df = _fetch_yfinance(ticker, period=period, interval=interval)
+        if not is_daily and target_bar.upper() != "1H":
             df = _resample_yfinance(df, target_bar)
         return df
 

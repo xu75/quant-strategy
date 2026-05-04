@@ -262,6 +262,7 @@ def compute_period_metrics(
     fee_rate: float = 0.001,
     equity_curve: pd.DataFrame | None = None,
     benchmark_prices=None,
+    use_equity_curve_returns: bool = False,
     timeframe: str = "4H",
 ) -> dict | None:
     """Compute performance metrics for a period, including cross-boundary trades.
@@ -297,7 +298,9 @@ def compute_period_metrics(
     include_open = open_entry_time is not None
     open_crosses_boundary = include_open and open_entry_time < period_start
 
-    if not in_period and not cross_boundary and not include_open:
+    has_equity_data = equity_curve is not None and not equity_curve.empty
+
+    if not in_period and not cross_boundary and not include_open and not has_equity_data:
         return None
 
     equity = 1.0
@@ -364,9 +367,15 @@ def compute_period_metrics(
 
     if equity_curve is not None:
         period_curve = _period_equity_curve(equity_curve, period_start)
-        if not period_curve.empty:
+        if not period_curve.empty and len(period_curve) >= 2:
             max_dd = _max_drawdown(period_curve["equity"])
             sharpe = _annualized_sharpe_from_equity(period_curve, timeframe)
+            if use_equity_curve_returns:
+                eq_start = float(period_curve.iloc[0]["equity"])
+                eq_end = float(period_curve.iloc[-1]["equity"])
+                if eq_start > 0:
+                    equity = eq_end / eq_start
+                    realized_equity = equity
 
     buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
     buy_hold_max_dd = _max_drawdown(benchmark_prices) * 100 if benchmark_prices is not None else 0.0

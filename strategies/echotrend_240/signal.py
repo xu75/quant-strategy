@@ -1,26 +1,30 @@
 from __future__ import annotations
 
-"""EchoTrend 240 - Signal Logic
+"""EchoTrend 240 - Signal Logic (V6 Position Management)
 
-Dual-feed strategy: BTC 4H SMA240 regime gate + MSTR regular-hours execution.
+Dual-feed strategy: BTC 4H SMA240 regime gate + V6 multi-factor scoring.
+Architecture: v9 trend_regime variant from mstr-strategy-clowder.
 
-Regime gate:
-- Resample BTC 1H → 4H, compute SMA240
-- Bull: close > SMA240 for bull_confirm_bars consecutive 4H bars
-- Bear: close < SMA240 for bear_confirm_bars consecutive 4H bars
-- Shift(1) to avoid lookahead bias (signal available after 4H bar closes)
-
-Execution:
-- Bull regime → buy MSTR at next regular-hours bar open
-- Bear regime → sell MSTR at next regular-hours bar open
-- MSTR filtered to US/Eastern 09:30-16:00 (NYSE regular session)
-- Binary position: fully in or fully out
+Layer 0: V6 base target (trend/risk/RS scoring → 0.70–1.10)
+Layer T: BTC 4H regime ceiling (bear=0.0, bull=1.10)
+Final:   min(v6_target, regime_ceiling)
+Execution: symmetric step with cooldown and reentry voting.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
+
+from strategies.echotrend_240.indicators import (
+    filter_regular_hours,
+    align_to_mstr_session,
+    add_features,
+    add_daily_trend_features,
+    add_btc_4h_trend_features,
+)
+from pipeline.backtest import BacktestResult, Trade
+from strategies.echotrend_240.engine import EchoTrendEngine, EngineBacktestResult
 
 MARKET_TZ = "US/Eastern"
 MARKET_OPEN = "09:30"
@@ -52,128 +56,119 @@ class StrategyConfig:
 
 @dataclass
 class Signal:
-    action: str  # "buy", "sell", "hold"
+    action: str  # "buy", "sell", "hold", "adjust"
     price: float
     ma_value: float
     timestamp: pd.Timestamp
     hold_bars: int = 0
     reason: str = ""
     regime: str = ""
+    target_exposure: float = 0.0
+    mode: str = ""
+    scores: dict = field(default_factory=dict)
 
 
-def _filter_regular_hours(df: pd.DataFrame) -> pd.DataFrame:
-    """Filter MSTR data to NYSE regular session (09:30-16:00 US/Eastern)."""
-    tmp = df.copy()
-    ts = tmp["timestamp"]
-    if ts.dt.tz is None:
-        ts = ts.dt.tz_localize("UTC")
-    et = ts.dt.tz_convert(MARKET_TZ)
-    time_vals = et.dt.time
-    start = pd.Timestamp(MARKET_OPEN).time()
-    end = pd.Timestamp(MARKET_CLOSE).time()
-    mask = (time_vals >= start) & (time_vals < end)
-    return tmp[mask].reset_index(drop=True)
+def _build_engine_config(config: StrategyConfig) -> dict:
+    """Build engine config dict from StrategyConfig + frozen V6/V9 params."""
+    return {
+        "rsi_window": 14,
+        "costs": {
+            "commission_rate": config.commission_rate,
+            "slippage_rate": config.slippage_rate,
+        },
+        "v6": {
+            "min_exposure": 0.70,
+            "max_exposure": 1.10,
+            "max_margin_fraction": 0.10,
+            "base_exposure": 1.00,
+            "trend_weight": 0.12,
+            "risk_weight": 0.40,
+            "relative_strength_weight": 0.07,
+            "target_ema_alpha": 0.30,
+            "min_trade_exposure": 0.035,
+            "cooldown_bars": 39,
+            "max_step_up": 0.55,
+            "max_step_down": 0.50,
+            "fast_reentry_step": 0.90,
+            "crash_step_down": 0.80,
+            "mode_confirm_bars": 6,
+            "risk_mode_confirm_bars": 3,
+            "bull_mode_confirm_bars": 8,
+            "mode_floors": {"bull": 0.98, "neutral": 0.90, "risk_off": 0.72, "crash": 0.70},
+            "mode_ceilings": {"bull": 1.10, "neutral": 1.03, "risk_off": 0.88, "crash": 0.76},
+            "mstr_1h_pos": 0.010, "mstr_4h_pos": 0.020,
+            "mstr_5d_pos": 0.030, "mstr_20d_pos": 0.050,
+            "btc_20d_pos": 0.030, "market_1h_pos": 0.000,
+            "mstr_1h_risk": -0.035, "mstr_4h_risk": -0.060, "mstr_5d_risk": -0.100,
+            "btc_1h_risk": -0.020, "btc_5d_risk": -0.060,
+            "market_1h_risk": -0.008, "market_5d_risk": -0.030,
+            "rs_4h_risk": -0.040, "day_range_risk": 0.090,
+            "rs_1h_pos": 0.010, "rs_4h_pos": 0.020, "ratio_20_pos": 0.030,
+            "rs_1h_neg": -0.020, "rs_4h_neg": -0.040, "ratio_20_neg": -0.050,
+            "dip_min_trend_score": 55, "dip_max_risk_score": 45,
+            "dip_vwap_dev": 0.010, "dip_add": 0.030,
+            "breakout_add": 0.030,
+            "overheat_max_risk_score": 50, "overheat_rsi": 82,
+            "overheat_vwap_dev": 0.040, "overheat_reduce": 0.030,
+            "max_intraday_offset": 0.050,
+            "crash_risk_score": 70, "risk_off_score": 45,
+            "bull_exposure_threshold": 1.01,
+            "reentry_mstr_1h": 0.035, "reentry_btc_1h": 0.010,
+            "reentry_market_1h": 0.003, "reentry_rs_1h": 0.010,
+            "reentry_min_votes": 3,
+        },
+        "v9": {
+            "min_exposure": 0.0,
+            "trend_regime": {
+                "ma_field": f"btc_4h_above_sma{config.ma_window}",
+                "bear_ceiling": config.bear_ceiling,
+                "bull_ceiling": config.bull_ceiling,
+                "bear_confirm_bars": config.bear_confirm_bars,
+                "bull_confirm_bars": config.bull_confirm_bars,
+                "hysteresis_pct": config.hysteresis_pct,
+                "freeze_bars": config.freeze_bars,
+            },
+        },
+    }
 
 
-def _resample_to_4h(btc_1h: pd.DataFrame) -> pd.DataFrame:
-    """Resample BTC 1H OHLCV to 4H bars."""
-    df = btc_1h.copy()
-    df = df.set_index("timestamp").sort_index()
-    resampled = df.resample("4h", offset="0h").agg({
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-        "volume": "sum",
-    }).dropna()
-    return resampled.reset_index()
+def _prepare_features(
+    df: pd.DataFrame,
+    config: StrategyConfig,
+    *,
+    extra_data: dict | None = None,
+) -> pd.DataFrame:
+    """Build the full feature DataFrame from raw data sources."""
+    extra_data = extra_data or {}
+    btc_df = extra_data.get("btc")
+    qqq_df = extra_data.get("qqq")
+    mstr_daily = extra_data.get("mstr_daily")
+    btc_daily = extra_data.get("btc_daily")
+    qqq_daily = extra_data.get("qqq_daily")
 
+    if btc_df is None:
+        raise ValueError("btc_df is required for EchoTrend 240")
+    if qqq_df is None:
+        raise ValueError("qqq_df is required for EchoTrend 240")
+    if mstr_daily is None:
+        raise ValueError("mstr_daily is required for EchoTrend 240")
+    if btc_daily is None:
+        raise ValueError("btc_daily is required for EchoTrend 240")
+    if qqq_daily is None:
+        raise ValueError("qqq_daily is required for EchoTrend 240")
 
-def _compute_regime(btc_4h: pd.DataFrame, config: StrategyConfig) -> pd.DataFrame:
-    """Compute regime signal from BTC 4H data with confirmation bars.
+    mstr_rth = filter_regular_hours(df) if config.regular_hours_only else df.copy()
+    mstr_rth, btc_aligned, qqq_aligned = align_to_mstr_session(mstr_rth, btc_df, qqq_df)
 
-    Returns DataFrame with columns: [timestamp, close_4h, sma240, raw_above,
-    regime] where regime is 1.0 (bull) or 0.0 (bear).
-    Signal is shifted by 1 bar to avoid lookahead.
-    """
-    df = btc_4h.copy().sort_values("timestamp").reset_index(drop=True)
-    df["sma240"] = df["close"].rolling(
-        window=config.ma_window, min_periods=config.ma_window
-    ).mean()
-    df["raw_above"] = (df["close"] > df["sma240"]).astype(float)
+    features = add_features(mstr_rth, btc_aligned, qqq_aligned, rsi_window=14)
 
-    regime = np.full(len(df), np.nan)
-    current_regime = 0.0
-    counter = 0
-
-    for i in range(config.ma_window, len(df)):
-        above = df.iloc[i]["raw_above"]
-        if pd.isna(above):
-            regime[i] = current_regime
-            continue
-
-        if current_regime == 0.0:
-            if above == 1.0:
-                counter += 1
-                if counter >= config.bull_confirm_bars:
-                    current_regime = 1.0
-                    counter = 0
-            else:
-                counter = 0
-        else:
-            if above == 0.0:
-                counter += 1
-                if counter >= config.bear_confirm_bars:
-                    current_regime = 0.0
-                    counter = 0
-            else:
-                counter = 0
-
-        regime[i] = current_regime
-
-    df["regime"] = regime
-    df["regime"] = df["regime"].shift(1)
-
-    return df[["timestamp", "close", "sma240", "raw_above", "regime"]].rename(
-        columns={"close": "close_4h"}
+    features = add_daily_trend_features(
+        features, mstr_daily, btc_daily, qqq_daily,
     )
 
+    features = add_btc_4h_trend_features(features, btc_df, ma_period=config.ma_window)
 
-def _map_regime_to_1h(
-    regime_4h: pd.DataFrame, mstr_1h: pd.DataFrame
-) -> pd.DataFrame:
-    """Forward-fill 4H regime signal onto MSTR 1H timestamps."""
-    regime = regime_4h[["timestamp", "regime", "sma240"]].copy()
-    regime = regime.rename(columns={"timestamp": "regime_ts"})
-    regime = regime.sort_values("regime_ts")
-
-    mstr = mstr_1h.copy().sort_values("timestamp")
-    mstr["regime"] = np.nan
-    mstr["sma240"] = np.nan
-
-    regime_idx = 0
-    for i in range(len(mstr)):
-        ts = mstr.iloc[i]["timestamp"]
-        while (
-            regime_idx < len(regime) - 1
-            and regime.iloc[regime_idx + 1]["regime_ts"] <= ts
-        ):
-            regime_idx += 1
-        if regime.iloc[regime_idx]["regime_ts"] <= ts:
-            mstr.iloc[i, mstr.columns.get_loc("regime")] = regime.iloc[regime_idx]["regime"]
-            mstr.iloc[i, mstr.columns.get_loc("sma240")] = regime.iloc[regime_idx]["sma240"]
-
-    return mstr
-
-
-def _prepare_mstr(
-    df: pd.DataFrame, btc_df: pd.DataFrame, config: StrategyConfig,
-) -> pd.DataFrame:
-    """Shared pipeline: filter MSTR to regular hours, map regime from BTC 4H."""
-    btc_4h = _resample_to_4h(btc_df)
-    regime_4h = _compute_regime(btc_4h, config)
-    mstr_rth = _filter_regular_hours(df) if config.regular_hours_only else df.copy()
-    return _map_regime_to_1h(regime_4h, mstr_rth)
+    return features
 
 
 def compute_signals(
@@ -182,70 +177,35 @@ def compute_signals(
     *,
     extra_data: dict | None = None,
 ) -> list[Signal]:
-    """Compute trading signals from MSTR 1H + BTC 1H data.
+    """Compute trading signals using V6 engine.
 
-    MSTR data is filtered to NYSE regular session (09:30-16:00 ET).
-    Regime flip detected on bar i queues a pending order; execution
-    happens on bar i+1's open price (true next-bar execution).
+    Returns a list of Signal objects for each rebalance event.
+    The backtest is run internally by the engine; signals are extracted
+    from the engine's rebalance log.
     """
     if config is None:
         config = StrategyConfig()
 
-    extra_data = extra_data or {}
-    btc_df = extra_data.get("btc")
-    if btc_df is None:
-        raise ValueError("btc_df is required for EchoTrend 240 (dual-feed strategy)")
+    features = _prepare_features(df, config, extra_data=extra_data)
 
-    mstr = _prepare_mstr(df, btc_df, config)
+    engine_config = _build_engine_config(config)
+    engine = EchoTrendEngine(engine_config)
+    result = engine.run_backtest(features)
 
     signals: list[Signal] = []
-    in_position = False
-    entry_bar_idx = 0
-    pending_action: str | None = None
-
-    for i in range(1, len(mstr)):
-        row = mstr.iloc[i]
-        prev = mstr.iloc[i - 1]
-        sma = row["sma240"]
-
-        # Execute pending order from previous bar at current bar's open
-        if pending_action == "buy" and not in_position:
-            signals.append(Signal(
-                action="buy",
-                price=row["open"],
-                ma_value=sma if not pd.isna(sma) else 0.0,
-                timestamp=row["timestamp"],
-                reason="Regime flipped to bull — execute at next open",
-                regime="bull",
-            ))
-            in_position = True
-            entry_bar_idx = i
-            pending_action = None
-        elif pending_action == "sell" and in_position:
-            hold_bars = i - entry_bar_idx
-            signals.append(Signal(
-                action="sell",
-                price=row["open"],
-                ma_value=sma if not pd.isna(sma) else 0.0,
-                timestamp=row["timestamp"],
-                hold_bars=hold_bars,
-                reason="Regime flipped to bear — execute at next open",
-                regime="bear",
-            ))
-            in_position = False
-            pending_action = None
-
-        # Detect regime flip on current bar → queue for next bar
-        regime = row["regime"]
-        prev_regime = prev["regime"]
-
-        if pd.isna(regime) or pd.isna(prev_regime):
-            continue
-
-        if not in_position and prev_regime == 0.0 and regime == 1.0:
-            pending_action = "buy"
-        elif in_position and prev_regime == 1.0 and regime == 0.0:
-            pending_action = "sell"
+    for rb in result.rebalances:
+        action = "buy" if rb.side == "buy" else "sell"
+        signals.append(Signal(
+            action=action,
+            price=rb.price,
+            ma_value=0.0,
+            timestamp=rb.timestamp,
+            reason=rb.reason,
+            regime="bull" if engine.trend_regime == "bull" else "bear",
+            target_exposure=rb.target_exposure,
+            mode=rb.mode,
+            scores=rb.scores,
+        ))
 
     return signals
 
@@ -258,101 +218,46 @@ def get_current_signal(
     *,
     extra_data: dict | None = None,
 ) -> Signal:
-    """Get the signal for the latest bar.
-
-    Uses the filtered MSTR index space for hold_bars computation.
-    """
+    """Get the current signal state from the engine."""
     if config is None:
         config = StrategyConfig()
 
-    extra_data = extra_data or {}
-    btc_df = extra_data.get("btc")
-    if btc_df is None:
-        raise ValueError("btc_df is required for EchoTrend 240 (dual-feed strategy)")
+    features = _prepare_features(df, config, extra_data=extra_data)
 
-    mstr = _prepare_mstr(df, btc_df, config)
-
-    if len(mstr) < 3:
+    if features.empty or len(features) < 3:
         return Signal(
             action="hold", price=0.0, ma_value=0.0,
             timestamp=pd.Timestamp.now(tz="UTC"),
             reason="Insufficient data",
         )
 
-    last = mstr.iloc[-1]
-    prev = mstr.iloc[-2]
-    prev2 = mstr.iloc[-3]
-    price = last["close"]
-    sma = last["sma240"]
-    regime = last["regime"]
-    prev_regime = prev["regime"]
-    prev2_regime = prev2["regime"]
+    engine_config = _build_engine_config(config)
+    engine = EchoTrendEngine(engine_config)
+    result = engine.run_backtest(features)
 
-    if pd.isna(regime):
-        return Signal(
-            action="hold",
-            price=price,
-            ma_value=0.0,
-            timestamp=last["timestamp"],
-            reason="Insufficient data for regime computation",
-        )
+    last_row = features.iloc[-1]
+    price = float(last_row["close"])
 
-    regime_str = "bull" if regime == 1.0 else "bear"
+    action = "hold"
+    reason = f"Exposure {result.final_exposure:.2f}, mode={result.final_mode}, regime={result.final_regime}"
 
-    # Check if there's a pending order from prev bar that should execute now
-    if not in_position:
-        if not pd.isna(prev2_regime) and prev2_regime == 0.0 and prev_regime == 1.0:
-            # Regime flipped on prev bar → execute buy at last bar's open
-            return Signal(
-                action="buy",
-                price=last["open"],
-                ma_value=sma if not pd.isna(sma) else 0.0,
-                timestamp=last["timestamp"],
-                reason="Regime flipped to bull — execute at next open",
-                regime="bull",
-            )
-        return Signal(
-            action="hold",
-            price=price,
-            ma_value=sma if not pd.isna(sma) else 0.0,
-            timestamp=last["timestamp"],
-            reason=f"No position, regime is {regime_str}",
-            regime=regime_str,
-        )
-
-    # Recompute hold_bars from signals in filtered space
-    all_signals = compute_signals(df, config, extra_data=extra_data)
-    last_buy = None
-    for s in all_signals:
-        if s.action == "buy":
-            last_buy = s
-    hold_bars = 0
-    if last_buy is not None:
-        buy_mask = mstr["timestamp"] == last_buy.timestamp
-        if buy_mask.any():
-            buy_idx = int(buy_mask.idxmax())
-            hold_bars = len(mstr) - 1 - buy_idx
-
-    # Check if pending sell from prev bar
-    if not pd.isna(prev2_regime) and prev2_regime == 1.0 and prev_regime == 0.0:
-        return Signal(
-            action="sell",
-            price=last["open"],
-            ma_value=sma if not pd.isna(sma) else 0.0,
-            timestamp=last["timestamp"],
-            hold_bars=hold_bars,
-            reason="Regime flipped to bear — execute at next open",
-            regime="bear",
-        )
+    if result.rebalances:
+        last_rb = result.rebalances[-1]
+        last_ts = features.index[-1]
+        if last_rb.timestamp == last_ts:
+            action = last_rb.side
+            reason = last_rb.reason
 
     return Signal(
-        action="hold",
+        action=action,
         price=price,
-        ma_value=sma if not pd.isna(sma) else 0.0,
-        timestamp=last["timestamp"],
-        hold_bars=hold_bars,
-        reason=f"Holding, regime is {regime_str}",
-        regime=regime_str,
+        ma_value=0.0,
+        timestamp=features.index[-1],
+        reason=reason,
+        regime=result.final_regime,
+        target_exposure=result.final_exposure,
+        mode=result.final_mode,
+        scores=engine.last_scores,
     )
 
 
@@ -364,5 +269,81 @@ def get_filtered_df(
     if config is None:
         config = StrategyConfig()
     if config.regular_hours_only:
-        return _filter_regular_hours(df)
+        return filter_regular_hours(df)
     return df.copy()
+
+
+def run_backtest(
+    df: pd.DataFrame,
+    config: StrategyConfig | None = None,
+    *,
+    extra_data: dict | None = None,
+    initial_capital: float = 10000.0,
+    fee_rate: float = 0.001,
+) -> BacktestResult:
+    """Run engine-native backtest and return platform-compatible BacktestResult.
+
+    This bypasses the binary buy/sell backtest in pipeline.backtest,
+    using the V6 engine's continuous exposure management directly.
+    """
+    if config is None:
+        config = StrategyConfig()
+
+    features = _prepare_features(df, config, extra_data=extra_data)
+
+    engine_config = _build_engine_config(config)
+    engine = EchoTrendEngine(engine_config)
+    result = engine.run_backtest(features, initial_capital=initial_capital)
+
+    trades = _engine_rebalances_to_trades(result.rebalances)
+
+    total_trades = len(trades)
+    wins = sum(1 for t in trades if t.pnl_pct > 0)
+    win_rate = wins / total_trades * 100 if total_trades > 0 else 0.0
+    avg_hold = sum(t.hold_bars for t in trades) / total_trades if total_trades > 0 else 0.0
+
+    return BacktestResult(
+        config=config,
+        trades=trades,
+        equity_curve=result.equity_curve,
+        total_return_pct=result.total_return_pct,
+        realized_return_pct=result.total_return_pct,
+        max_drawdown_pct=result.max_drawdown_pct,
+        win_rate=win_rate,
+        total_trades=total_trades,
+        avg_hold_bars=avg_hold,
+        sharpe_ratio=result.sharpe_ratio,
+        start_date=result.start_date,
+        end_date=result.end_date,
+        buy_hold_return_pct=result.buy_hold_return_pct,
+        buy_hold_max_drawdown_pct=result.buy_hold_max_drawdown_pct,
+        has_open_position=result.final_exposure > 0.01,
+    )
+
+
+def _engine_rebalances_to_trades(rebalances: list) -> list[Trade]:
+    """Convert engine rebalance events into platform Trade objects.
+
+    Groups buy→sell pairs into round-trip trades for compatibility
+    with period metrics and reporting.
+    """
+    trades: list[Trade] = []
+    open_buy = None
+    for rb in rebalances:
+        if rb.side == "buy" and open_buy is None:
+            open_buy = rb
+        elif rb.side == "sell" and open_buy is not None:
+            pnl_pct = (rb.price - open_buy.price) / open_buy.price * 100
+            pnl_abs = (rb.price - open_buy.price) * rb.qty
+            hold_bars = 0
+            trades.append(Trade(
+                entry_time=open_buy.timestamp,
+                entry_price=open_buy.price,
+                exit_time=rb.timestamp,
+                exit_price=rb.price,
+                hold_bars=hold_bars,
+                pnl_pct=pnl_pct,
+                pnl_abs=pnl_abs,
+            ))
+            open_buy = None
+    return trades

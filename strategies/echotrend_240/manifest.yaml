@@ -1,8 +1,8 @@
 # strategies/echotrend_240/manifest.yaml
 id: echotrend_240
 name: "EchoTrend 240"
-version: "1.0.0"
-description: "BTC 4H SMA240 regime gate + MSTR 常规时段执行，二元持仓"
+version: "2.0.0"
+description: "BTC 4H SMA240 regime gate + V6 多因子仓位管理 (v9 trend_regime)"
 
 config:
   ma_window: 240
@@ -33,17 +33,37 @@ data_sources:
     timeframe: "1H"
     source: "local"
     local_file: "BTC-USD_1h.csv"
+  qqq:
+    symbol: "QQQ"
+    timeframe: "1H"
+    source: "local"
+    local_file: "QQQ_1h.csv"
+  mstr_daily:
+    symbol: "MSTR"
+    timeframe: "1D"
+    source: "local"
+    local_file: "MSTR_1d.csv"
+  btc_daily:
+    symbol: "BTC-USD"
+    timeframe: "1D"
+    source: "local"
+    local_file: "BTC-USD_1d.csv"
+  qqq_daily:
+    symbol: "QQQ"
+    timeframe: "1D"
+    source: "local"
+    local_file: "QQQ_1d.csv"
 
 display:
   slug: "echotrend-240"
   category: "trend-following"
-  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate，二元持仓）"
+  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate + V6 仓位管理）"
 
 launch_date: "2026-05-04"
 enabled: true
 
 research:
-  paper_title: "EchoTrend 240: BTC 4H SMA240 Regime Gate 策略研究"
+  paper_title: "EchoTrend 240: BTC 4H SMA240 Regime Gate + V6 Position Management"
   website_path: "/research/echotrend-240"
   canonical_doc: "docs/research/strategies/echotrend_240.md"
   source_project: "https://github.com/xu75/mstr-strategy-clowder"
