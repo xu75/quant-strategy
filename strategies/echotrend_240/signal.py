@@ -39,7 +39,7 @@ class StrategyConfig:
     bear_confirm_bars: int = 3
     bull_confirm_bars: int = 3
     bear_ceiling: float = 0.0
-    bull_ceiling: float = 1.10
+    bull_ceiling: float = 1.00
     hysteresis_pct: float = 0.0
     freeze_bars: int = 0
     commission_rate: float = 0.0002
@@ -78,8 +78,8 @@ def _build_engine_config(config: StrategyConfig) -> dict:
         },
         "v6": {
             "min_exposure": 0.70,
-            "max_exposure": 1.10,
-            "max_margin_fraction": 0.10,
+            "max_exposure": 1.00,
+            "max_margin_fraction": 0.00,
             "base_exposure": 1.00,
             "trend_weight": 0.12,
             "risk_weight": 0.40,
@@ -95,7 +95,7 @@ def _build_engine_config(config: StrategyConfig) -> dict:
             "risk_mode_confirm_bars": 3,
             "bull_mode_confirm_bars": 8,
             "mode_floors": {"bull": 0.98, "neutral": 0.90, "risk_off": 0.72, "crash": 0.70},
-            "mode_ceilings": {"bull": 1.10, "neutral": 1.03, "risk_off": 0.88, "crash": 0.76},
+            "mode_ceilings": {"bull": 1.00, "neutral": 1.00, "risk_off": 0.88, "crash": 0.76},
             "mstr_1h_pos": 0.010, "mstr_4h_pos": 0.020,
             "mstr_5d_pos": 0.030, "mstr_20d_pos": 0.050,
             "btc_20d_pos": 0.030, "market_1h_pos": 0.000,

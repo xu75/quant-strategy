@@ -9,7 +9,7 @@ config:
   bear_confirm_bars: 3
   bull_confirm_bars: 3
   bear_ceiling: 0.0
-  bull_ceiling: 1.10
+  bull_ceiling: 1.00
   hysteresis_pct: 0.0
   freeze_bars: 0
   commission_rate: 0.0002
