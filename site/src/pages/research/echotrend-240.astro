@@ -4,8 +4,8 @@ import Layout from '../../layouts/Layout.astro';
 const paper = {
   title: 'EchoTrend 240: BTC 4H SMA240 Regime Gate 策略研究',
   strategyName: 'EchoTrend 240',
-  canonicalUrl: 'https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/echotrend_240.md',
-  sourceProject: 'https://github.com/xu75/mstr-strategy-clowder',
+  canonicalUrl: '',
+  sourceProject: 'https://github.com/xu75',
   strategyUrl: '/strategy/echotrend-240',
 };
 ---
@@ -68,9 +68,8 @@ const paper = {
   <section class="border border-gray-800 rounded-xl p-6">
     <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
     <div class="flex flex-wrap gap-4 text-sm">
-      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300">Strategy page</a>
-      <a href={paper.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Canonical doc on GitHub</a>
-      <a href={paper.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Source research project</a>
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
+      <a href={paper.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.source_project">Source research project</a>
     </div>
   </section>
 </Layout>

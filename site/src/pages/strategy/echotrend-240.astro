@@ -24,8 +24,8 @@ const defaultRangeJson = JSON.stringify(defaultRange);
 const research = {
   title: "EchoTrend 240: BTC 4H SMA240 Regime Gate 策略研究",
   route: "/research/echotrend-240",
-  canonicalUrl: "https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/echotrend_240.md",
-  sourceProject: "https://github.com/xu75/mstr-strategy-clowder",
+  canonicalUrl: "/research/echotrend-240",
+  sourceProject: "https://github.com/xu75",
 };
 ---
 
@@ -211,20 +211,20 @@ const research = {
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.rules">Strategy Rules</h2>
     <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
       <div>
-        <p class="text-white font-medium mb-1">Regime Gate (BTC 4H SMA240)</p>
-        <p>BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.et240.regime_gate">Regime Gate (BTC 4H SMA240)</p>
+        <p data-i18n="strategy.et240.regime_gate_desc">BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead.</p>
       </div>
       <div>
-        <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy MSTR)</p>
-        <p>Regime flips from bear to bull. Full position entered on MSTR at next 1H bar.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.et240.entry">Entry (Buy MSTR)</p>
+        <p data-i18n="strategy.et240.entry_desc">Regime flips from bear to bull. Full position entered on MSTR at next regular-hours bar open.</p>
       </div>
       <div>
-        <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell MSTR)</p>
-        <p>Regime flips from bull to bear (bear_ceiling=0.0). Full position exited on MSTR at next 1H bar.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.et240.exit">Exit (Sell MSTR)</p>
+        <p data-i18n="strategy.et240.exit_desc">Regime flips from bull to bear (bear_ceiling=0.0). Full position exited on MSTR at next regular-hours bar open.</p>
       </div>
       <div>
-        <p class="text-white font-medium mb-1">Design</p>
-        <p>Binary regime gate: fully in during bull, fully out during bear. Execution at next regular-hours bar open after regime flip. No position sizing or stop loss.</p>
+        <p class="text-white font-medium mb-1" data-i18n="strategy.et240.design">Design</p>
+        <p data-i18n="strategy.et240.design_desc">Binary regime gate: fully in during bull, fully out during bear. Execution at next regular-hours bar open after regime flip. No position sizing or stop loss.</p>
       </div>
     </div>
   </section>
@@ -232,13 +232,13 @@ const research = {
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.research">Research Source</h2>
     <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-4">
-      <p>Strategy developed in mstr-strategy-clowder, validated with 4-window backtest, RD-8 parameter sensitivity, and walk-forward analysis.</p>
+      <p data-i18n="strategy.et240.research_desc">Strategy developed in mstr-strategy-clowder, validated with 4-window backtest, RD-8 parameter sensitivity, and walk-forward analysis.</p>
       <div>
         <p class="text-white font-medium mb-1">{research.title}</p>
         <div class="flex flex-wrap gap-3 text-sm">
-          <a href={research.route} class="text-blue-400 hover:text-blue-300">Read research summary</a>
-          <a href={research.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">View canonical doc on GitHub</a>
-          <a href={research.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Source research project</a>
+          <a href={research.route} class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_open">Read research summary</a>
+          <a href={research.canonicalUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_canonical">View canonical doc on GitHub</a>
+          <a href={research.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.et240.research_source">Source research project</a>
         </div>
       </div>
     </div>
@@ -246,13 +246,11 @@ const research = {
 
   <section>
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
-    <p class="text-gray-400 text-sm mb-2">
-      BTC data from OKX public API. MSTR data from local normalized history.
-      Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
-      <a href="https://github.com/xu75/quant-strategy" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="strategy.viewsource">View source code</a>.
+    <p class="text-gray-400 text-sm mb-2" data-i18n="strategy.datasource_et240">
+      BTC data from OKX public API. MSTR data from Yahoo Finance (free, 15-min delayed). Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
     </p>
     <p class="text-gray-500 text-xs" data-i18n="strategy.datasource_note">
-      Note: MSTR data currently relies on locally maintained CSV files. Automated updates via GitHub Actions are planned but depend on finding a suitable free data source for US equity 1H bars. BTC data (OKX) can be fetched automatically. Signal updates may lag until automation is in place.
+      Note: MSTR 1H data is sourced from Yahoo Finance (free, ~15-min delayed, max 730 days history). BTC data from OKX public API. For this low-frequency strategy (regime gate on 4H SMA240), the 15-minute delay has negligible impact on signal accuracy.
     </p>
   </section>
 </Layout>
