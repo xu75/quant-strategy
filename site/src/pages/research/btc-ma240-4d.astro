@@ -4,65 +4,326 @@ import Layout from '../../layouts/Layout.astro';
 const paper = {
   title: 'BTC_4H_MA趋势策略研究论文',
   strategyName: 'TrendLock 40',
-  canonicalUrl: '',
   strategyUrl: '/strategy/btc-ma240-4d',
 };
 ---
 
-<Layout title="Research - TrendLock 40" description="Research memo for TrendLock 40">
+<Layout title="Research - TrendLock 40" description="Full research paper for TrendLock 40 — BTC 4H MA240 trend-following strategy">
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
       <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
     </div>
     <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
     <p class="text-gray-400">{paper.strategyName}</p>
-    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
-      Method, assumptions, and evidence chain behind this strategy.
-    </p>
+    <p class="text-sm text-gray-500 mt-3">基于4小时K线的BTC单均线趋势策略研究</p>
+    <p class="text-xs text-gray-600 mt-1 italic">参数鲁棒性、横盘磨损、双均线对照与自动化实盘部署</p>
   </section>
 
+  <article class="prose prose-invert prose-gray max-w-none space-y-8">
+
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <h2 class="text-xl font-semibold mb-3">摘要</h2>
     <p class="text-gray-300 leading-7">
-      本研究围绕 BTC 4H 趋势跟踪策略，验证了单均线范式在强趋势资产上的可行性，并对参数鲁棒性、
-      横盘磨损与工程化部署进行了系统性复盘。当前生产策略采用 MA240 与最小持仓 24 bars（约 4 天），
-      目标是在不引入复杂执行壳的前提下平衡长期收益与回撤。
+      本文基于项目中构建的BTC/USDT 4小时K线数据集，对单均线趋势跟踪策略进行了系统回测、参数比较和实盘化评估。研究围绕三个问题展开：第一，长周期单均线策略能否在BTC这种强趋势资产上获得较好的收益—回撤比；第二，双均线交叉、移动止盈止损、突破过滤等复杂化改造是否优于简单策略；第三，策略从回测到自动化执行时，应如何处理交易所API、K线确认、状态持久化和交易记录等工程问题。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      项目回测结果显示，BTC 4H MA240配合最小持仓24根K线（约4天）在2018—2025样本区间内具有较好的长期收益和回撤控制能力；而MA10/MA120、MA20/MA120、MA20/MA240等双均线组合整体并未显示出稳定优势。进一步实验表明，过滤进场信号会明显错过BTC主升浪，而适度放宽出场条件（例如跌破MA240超过1%才卖出）在全周期样本中可减少横盘假跌破带来的交易磨损。本文最后讨论了OKX实盘自动化部署、Google Sheets数据采集和日志审计方案，并指出本研究仍受限于历史样本、交易成本假设、滑点缺失和未来市场结构变化。
+    </p>
+    <p class="text-gray-400 text-sm mt-3">关键词：BTC；趋势跟踪；移动平均线；4小时K线；回测；最大回撤；OKX API；自动化交易</p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">1. 引言</h2>
+    <p class="text-gray-300 leading-7">
+      加密资产市场具有高波动、高杠杆、高散户参与度和全天候交易等特征。与传统股票市场不同，BTC等核心加密资产长期呈现出强烈的牛熊周期：牛市中价格可能快速上涨数倍，熊市中也可能出现70%以上的深度回撤。因此，长期持有策略常常能获得极高的账面收益，但投资者需要承担极大的净值波动和心理压力。趋势跟踪策略试图在牛市阶段参与上涨，在熊市阶段降低暴露，以换取更可承受的回撤。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      本项目最初从BTC 4H MA120策略开始，随后扩展到MA180、MA210、MA240、双均线交叉、移动止盈止损、突破确认、横盘过滤等多个方向。在大量回测与代码修正后，研究逐渐聚焦到一个核心问题：对BTC这类强趋势资产而言，是否存在一种足够简单、可解释、易实盘执行、且风险—收益特征较优的趋势策略？
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      本文的研究结论并不将策略表述为收益保证或投资建议。所有结果仅为历史样本内的机械回测输出，不能保证未来仍然有效。但是，该项目展示了一个完整的策略研究流程：从数据采集、信号定义、回测错误修复，到自动化交易系统部署与策略日志管理。
     </p>
   </section>
 
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
-    <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>4H MA240 + min hold 24 bars 在历史样本中呈现稳定的风险收益特征。</li>
-      <li>1D MA40 与 4H MA240 在时间覆盖上等价（40 天窗口），差异主要来自采样与执行粒度。</li>
-      <li>更复杂的双均线组合未持续显示稳健优势，复杂度提升不必然提升泛化能力。</li>
-      <li>策略参数不应只看单窗口收益，必须结合跨周期鲁棒性与交易频率约束共同评估。</li>
+    <h2 class="text-xl font-semibold mb-3">2. 文献与公开研究背景</h2>
+    <p class="text-gray-300 leading-7">
+      移动平均线和趋势跟踪是金融市场中最基础、最常见的技术交易规则之一。在加密资产市场中，相关研究发现技术规则的表现具有明显的资产异质性和时间不稳定性。Grobys等人的研究使用2016—2018年间11种高交易量加密资产的日度价格数据，检验了简单移动平均策略，结果表明部分非BTC资产在20日移动平均规则下产生了正向超额收益，但这种结论并非对所有币种一致[1]。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      近期关于加密资产技术交易规则是否优于买入持有的研究也强调了样本区间、交易成本和市场状态的重要性。Jin等人研究传统技术规则在加密市场中的应用，指出技术交易规则的表现并非稳定地优于简单持有，且可能随市场效率变化而减弱[2]。这与本文项目经验相吻合：在BTC强趋势阶段，复杂策略经常因滞后和假信号而跑输持币；但在深度熊市或牛熊切换阶段，趋势规则又可能通过降低风险暴露改善回撤。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      趋势强度过滤也是公开研究与技术分析中常见的方向。平均趋向指数（ADX）常被用于区分趋势市场与震荡市场；一般而言，ADX较低时，市场更可能处于横盘状态，趋势跟踪信号更容易产生反复磨损[3]。本文没有将ADX作为最终策略的一部分，但在讨论横盘磨损时参考了这一思想：趋势策略的核心难题不是如何在趋势市场赚钱，而是如何避免在非趋势市场中持续损耗。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      数据方面，本文依赖OKX公开K线接口和用户上传的历史CSV文件。OKX API文档规定历史K线接口返回包括起始时间、开盘、最高、最低、收盘、成交量和confirm状态等字段，并对分页与返回数量设定限制[4]。在项目实现中，confirm=1被用于确保只使用已完结K线，从而避免未完成K线引入未来函数或实时噪声。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">3. 数据来源与预处理</h2>
+    <p class="text-gray-300 leading-7">
+      本文主要研究对象为BTC/USDT 4小时K线，数据区间覆盖2018年至2025年。数据最初通过交易所历史K线接口和Google Sheets/CSV方式整理，并在后续回测中以用户上传的本地CSV文件作为数据源。使用4小时K线是一个折中选择：它较日线更及时，能捕捉趋势变化；又较1小时或更低周期更少噪声，适合中低频自动化交易。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">数据预处理包括以下步骤：</p>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300 mt-2">
+      <li>按Open time升序排序，确保K线序列连续；</li>
+      <li>过滤confirm=0的未完结K线，仅使用confirm=1的数据；</li>
+      <li>统一Close字段为数值格式；</li>
+      <li>用Google Sheets公式或Python滚动窗口计算MA120、MA180、MA210、MA240等均线；</li>
+      <li>在回测中统一使用收盘价作为信号判断与成交价。</li>
+    </ul>
+    <p class="text-gray-300 leading-7 mt-3">
+      项目过程中曾发现多个数据与公式问题，例如OKX分页参数方向理解错误、Google Sheets公式拖动导致均线错行、最大回撤算法使用了错误序列等。这些问题均在最终回测前进行了修正。尤其是最大回撤计算，最终统一使用净值曲线的峰值到后续低点的最大跌幅，而不是使用累计收益率序列或单纯首尾价格。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">4. 策略定义与回测方法</h2>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-4 mb-2">4.1 基准策略：简单持币</h3>
+    <p class="text-gray-300 leading-7">
+      简单持币策略定义为在每个周期起点买入BTC，并持有到该周期终点。该策略不进行任何交易择时，是衡量趋势策略是否具有风险调整价值的核心基准。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">4.2 单均线趋势策略</h3>
+    <p class="text-gray-300 leading-7">
+      单均线趋势策略的基本规则如下：当BTC 4H收盘价从均线下方上穿均线时买入；当收盘价跌破均线时卖出。为避免在均线附近频繁震荡时反复交易，项目中加入了最小持仓约束，即买入后至少持有24根4H K线，约等于4天。
+    </p>
+    <pre class="bg-gray-900 rounded-lg p-4 text-sm text-gray-300 mt-3 overflow-x-auto"><code>if not position and prev_close &lt;= prev_MA and close &gt; MA:
+    buy at close
+if position and hold_bars &gt;= 24 and close &lt; MA:
+    sell at close</code></pre>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">4.3 双均线策略</h3>
+    <p class="text-gray-300 leading-7">
+      双均线策略使用短周期均线与长周期均线的交叉作为信号。例如MA20上穿MA120买入，MA20下穿MA120卖出。理论上，双均线可以过滤价格对单一均线的短暂假突破；但在BTC回测中，双均线往往因信号滞后和错失主升段而表现不如简单长周期单均线。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">4.4 横盘磨损与出场优化</h3>
+    <p class="text-gray-300 leading-7">
+      趋势策略最常见的失效场景是价格围绕均线横盘震荡。此时，上穿买入、下穿卖出会形成来回打脸的交易序列，即所谓whipsaw。项目尝试了斜率过滤、价格距离过滤等进场过滤方案，但这类方法在BTC上容易错过主升浪。最终更有效的方向是优化出场，而非严格过滤进场。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">4.5 回测指标</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300 mt-2">
+      <li>总收益率：期末净值/期初净值 - 1；</li>
+      <li>年化收益率：按周期长度对总收益进行复合年化；</li>
+      <li>最大回撤：净值曲线历史峰值至随后低点的最大跌幅；</li>
+      <li>胜率：盈利交易次数/总交易次数；</li>
+      <li>交易次数：完整开仓—平仓交易对数量；</li>
+      <li>交易成本：买入0.1%、卖出0.1%，双边共0.2%。</li>
     </ul>
   </section>
 
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
-    <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>信号与回测采用 next-bar execution 语义（信号于 N bar close 生成，N+1 bar 执行）。</li>
-      <li>默认交易成本为双边 0.1%（每侧 0.1%），与项目回测标准一致。</li>
-      <li>生产策略语义以 crossover entry + min_hold exit 为准，研究模型结论需与生产语义对齐后再上线。</li>
+    <h2 class="text-xl font-semibold mb-3">5. 实证结果一：BTC单均线趋势策略</h2>
+    <p class="text-gray-300 leading-7">
+      在不同单均线周期中，MA240配合最小持仓24根K线表现出较高的长期收益与回撤控制能力。表1列出了项目中确认的一组核心结果。需要注意的是，表中周期均以样本最新K线为终点向前倒推，而非自然年度切分。
+    </p>
+    <p class="text-gray-200 font-medium mt-4 mb-2">表1 BTC 4H MA240 + 最小持仓24根K线策略回测结果</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-gray-300 mt-2">
+        <thead>
+          <tr class="border-b border-gray-700 text-gray-400">
+            <th class="py-2 px-3 text-center">年限</th>
+            <th class="py-2 px-3 text-center">交易次数</th>
+            <th class="py-2 px-3 text-center">策略收益率</th>
+            <th class="py-2 px-3 text-center">最大回撤</th>
+            <th class="py-2 px-3 text-center">胜率</th>
+            <th class="py-2 px-3 text-center">持币收益率</th>
+            <th class="py-2 px-3 text-center">持币回撤</th>
+            <th class="py-2 px-3 text-center">年化收益率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">1年</td><td class="py-2 px-3 text-center">12</td><td class="py-2 px-3 text-center">58.70%</td><td class="py-2 px-3 text-center">11.03%</td><td class="py-2 px-3 text-center">25.00%</td><td class="py-2 px-3 text-center">57.35%</td><td class="py-2 px-3 text-center">30.59%</td><td class="py-2 px-3 text-center">58.70%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">2年</td><td class="py-2 px-3 text-center">21</td><td class="py-2 px-3 text-center">296.33%</td><td class="py-2 px-3 text-center">11.03%</td><td class="py-2 px-3 text-center">42.86%</td><td class="py-2 px-3 text-center">305.09%</td><td class="py-2 px-3 text-center">30.59%</td><td class="py-2 px-3 text-center">99.08%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">3年</td><td class="py-2 px-3 text-center">36</td><td class="py-2 px-3 text-center">348.65%</td><td class="py-2 px-3 text-center">18.08%</td><td class="py-2 px-3 text-center">38.89%</td><td class="py-2 px-3 text-center">273.43%</td><td class="py-2 px-3 text-center">50.96%</td><td class="py-2 px-3 text-center">64.93%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">4年</td><td class="py-2 px-3 text-center">48</td><td class="py-2 px-3 text-center">426.01%</td><td class="py-2 px-3 text-center">36.68%</td><td class="py-2 px-3 text-center">37.50%</td><td class="py-2 px-3 text-center">188.05%</td><td class="py-2 px-3 text-center">77.04%</td><td class="py-2 px-3 text-center">51.44%</td></tr>
+          <tr><td class="py-2 px-3 text-center">5年</td><td class="py-2 px-3 text-center">60</td><td class="py-2 px-3 text-center">1982.96%</td><td class="py-2 px-3 text-center">36.68%</td><td class="py-2 px-3 text-center">36.67%</td><td class="py-2 px-3 text-center">1127.43%</td><td class="py-2 px-3 text-center">77.04%</td><td class="py-2 px-3 text-center">83.54%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-gray-300 leading-7 mt-4">
+      表1显示，MA240策略在1年和2年周期中与持币收益接近，但最大回撤显著低于持币；在3年、4年和5年周期中，策略在收益和风险控制方面均表现较强。特别是在5年周期中，策略收益率达到1982.96%，超过同期持币收益1127.43%，且最大回撤为36.68%，明显低于持币回撤77.04%。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      胜率只有25%—43%区间，说明该策略并非依赖高胜率，而是依赖少数大趋势交易贡献主要收益。这是趋势跟踪策略的典型特征：小亏多、胜率低，但盈亏比高。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">6. 实证结果二：双均线策略的比较与局限</h2>
+    <p class="text-gray-300 leading-7">
+      项目中测试了多组双均线组合，包括MA10/MA120、MA20/MA120和MA20/MA240。总体结果显示，双均线策略并没有稳定优于MA240单均线。它们在部分长周期样本中可能优于持币或降低回撤，但在多数情况下存在信号滞后和过度交易问题。
+    </p>
+    <p class="text-gray-200 font-medium mt-4 mb-2">表2 双均线组合代表性结果</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-gray-300 mt-2">
+        <thead>
+          <tr class="border-b border-gray-700 text-gray-400">
+            <th class="py-2 px-3 text-center">组合</th>
+            <th class="py-2 px-3 text-center">全周期交易次数</th>
+            <th class="py-2 px-3 text-center">全周期总收益</th>
+            <th class="py-2 px-3 text-center">最大回撤</th>
+            <th class="py-2 px-3 text-center">胜率</th>
+            <th class="py-2 px-3 text-center">持币收益</th>
+            <th class="py-2 px-3 text-center">结论</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">MA10/MA120</td><td class="py-2 px-3 text-center">94</td><td class="py-2 px-3 text-center">624.19%</td><td class="py-2 px-3 text-center">54.01%</td><td class="py-2 px-3 text-center">29.79%</td><td class="py-2 px-3 text-center">1053.98%</td><td class="py-2 px-3 text-center text-gray-400">交易过多，显著跑输持币</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">MA20/MA120</td><td class="py-2 px-3 text-center">67</td><td class="py-2 px-3 text-center">788.56%</td><td class="py-2 px-3 text-center">52.86%</td><td class="py-2 px-3 text-center">31.34%</td><td class="py-2 px-3 text-center">1053.08%</td><td class="py-2 px-3 text-center text-gray-400">较MA10改善，但仍跑输持币</td></tr>
+          <tr><td class="py-2 px-3 text-center">MA20/MA240</td><td class="py-2 px-3 text-center">37</td><td class="py-2 px-3 text-center">1276.54%</td><td class="py-2 px-3 text-center">50.16%</td><td class="py-2 px-3 text-center">35.14%</td><td class="py-2 px-3 text-center">972.79%</td><td class="py-2 px-3 text-center text-gray-400">长期较好，但不如MA240单均线简洁稳定</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-gray-300 leading-7 mt-4">
+      双均线策略理论上可以减少单价穿越均线时的噪声，但对于BTC这类强趋势资产，行情启动往往发生在价格刚刚贴近长周期均线时。双均线的确认机制会提高入场滞后，错过趋势初段；而在横盘区间，短均线和长均线仍然会反复交叉，无法从根本上消除交易磨损。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">7. 实证结果三：横盘磨损与出场优化</h2>
+    <p class="text-gray-300 leading-7">
+      当BTC价格在MA240附近震荡时，原始策略容易出现跌破卖出、随后又快速站回均线的情况。项目曾尝试通过MA斜率过滤、距离过滤等方式优化进场，但过强的进场过滤会错过BTC主升浪，甚至使策略全周期亏损。因此，更合理的优化方向是放宽出场条件，降低假跌破造成的交易损耗。
+    </p>
+    <p class="text-gray-200 font-medium mt-4 mb-2">表3 原始MA240策略与放宽出场策略对比</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-gray-300 mt-2">
+        <thead>
+          <tr class="border-b border-gray-700 text-gray-400">
+            <th class="py-2 px-3 text-center">周期</th>
+            <th class="py-2 px-3 text-center">策略</th>
+            <th class="py-2 px-3 text-center">交易次数</th>
+            <th class="py-2 px-3 text-center">总收益</th>
+            <th class="py-2 px-3 text-center">最大回撤</th>
+            <th class="py-2 px-3 text-center">胜率</th>
+            <th class="py-2 px-3 text-center">年化</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">1年</td><td class="py-2 px-3 text-center">原始MA240</td><td class="py-2 px-3 text-center">12</td><td class="py-2 px-3 text-center">54.92%</td><td class="py-2 px-3 text-center">25.35%</td><td class="py-2 px-3 text-center">25.00%</td><td class="py-2 px-3 text-center">54.97%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">1年</td><td class="py-2 px-3 text-center">跌破MA240 1%才卖</td><td class="py-2 px-3 text-center">11</td><td class="py-2 px-3 text-center">43.86%</td><td class="py-2 px-3 text-center">28.39%</td><td class="py-2 px-3 text-center">18.18%</td><td class="py-2 px-3 text-center">43.89%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">2年</td><td class="py-2 px-3 text-center">原始MA240</td><td class="py-2 px-3 text-center">21</td><td class="py-2 px-3 text-center">280.00%</td><td class="py-2 px-3 text-center">25.35%</td><td class="py-2 px-3 text-center">42.86%</td><td class="py-2 px-3 text-center">95.02%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">2年</td><td class="py-2 px-3 text-center">跌破MA240 1%才卖</td><td class="py-2 px-3 text-center">15</td><td class="py-2 px-3 text-center">272.08%</td><td class="py-2 px-3 text-center">28.39%</td><td class="py-2 px-3 text-center">40.00%</td><td class="py-2 px-3 text-center">92.98%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">3年</td><td class="py-2 px-3 text-center">原始MA240</td><td class="py-2 px-3 text-center">36</td><td class="py-2 px-3 text-center">317.42%</td><td class="py-2 px-3 text-center">29.69%</td><td class="py-2 px-3 text-center">38.89%</td><td class="py-2 px-3 text-center">61.06%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">3年</td><td class="py-2 px-3 text-center">跌破MA240 1%才卖</td><td class="py-2 px-3 text-center">26</td><td class="py-2 px-3 text-center">322.22%</td><td class="py-2 px-3 text-center">30.90%</td><td class="py-2 px-3 text-center">30.77%</td><td class="py-2 px-3 text-center">61.68%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">4年</td><td class="py-2 px-3 text-center">原始MA240</td><td class="py-2 px-3 text-center">48</td><td class="py-2 px-3 text-center">377.77%</td><td class="py-2 px-3 text-center">46.00%</td><td class="py-2 px-3 text-center">37.50%</td><td class="py-2 px-3 text-center">47.88%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">4年</td><td class="py-2 px-3 text-center">跌破MA240 1%才卖</td><td class="py-2 px-3 text-center">35</td><td class="py-2 px-3 text-center">472.95%</td><td class="py-2 px-3 text-center">39.47%</td><td class="py-2 px-3 text-center">31.43%</td><td class="py-2 px-3 text-center">54.76%</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 px-3 text-center">全周期</td><td class="py-2 px-3 text-center">原始MA240</td><td class="py-2 px-3 text-center">94</td><td class="py-2 px-3 text-center">2062.60%</td><td class="py-2 px-3 text-center">65.75%</td><td class="py-2 px-3 text-center">28.72%</td><td class="py-2 px-3 text-center">51.49%</td></tr>
+          <tr><td class="py-2 px-3 text-center">全周期</td><td class="py-2 px-3 text-center">跌破MA240 1%才卖</td><td class="py-2 px-3 text-center">74</td><td class="py-2 px-3 text-center">2848.20%</td><td class="py-2 px-3 text-center">62.58%</td><td class="py-2 px-3 text-center">27.03%</td><td class="py-2 px-3 text-center">57.97%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-gray-300 leading-7 mt-4">
+      表3表明，放宽出场并非在所有周期都优于原始策略。在近1年和近2年窗口中，原始策略表现更好；但在3年、4年和全周期窗口中，跌破MA240超过1%才卖出的版本具有更高收益和更少交易次数。这说明出场优化更偏长期鲁棒性，而不是短期收益最大化。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      这一实验给出一个重要经验：对于BTC趋势策略，优化进场容易错过趋势；优化出场则更可能减少均线附近的横盘磨损。换言之，策略设计应尽量保持进场条件简洁，同时避免对MA附近的瞬时跌破过度反应。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">8. 自动化实盘系统设计与工程问题</h2>
+    <p class="text-gray-300 leading-7">
+      除回测外，项目还实现了一个基于OKX的自动交易脚本。脚本每4小时获取已完结K线，计算最新MA信号，并在满足条件时通过OKX API执行现货买卖。实盘系统包括配置读取、签名、K线同步、下单、订单查询、状态持久化、Webhook通知、异常重试和守护进程。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-4 mb-2">8.1 关键工程设计</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300 mt-2">
+      <li>K线确认：仅使用confirm=1的已完结K线，避免未收盘K线造成信号漂移；</li>
+      <li>状态持久化：使用ma120_state.json保存持仓状态、开仓时间、买入数量和订单ID；</li>
+      <li>成交数量校正：买入后查询OKX订单实际成交数量，避免用估算数量造成卖出误差；</li>
+      <li>最小持仓修正：实盘中不能用固定长度窗口的index计算持仓根数，应使用entry_time与最新K线时间差计算；</li>
+      <li>异常重试：K线获取或下单失败后不等待4小时，而是按较短间隔重试并Webhook提醒；</li>
+      <li>日志与审计：通过ma120_trader.log、trade_history.csv和Webhook记录交易与异常。</li>
+    </ul>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">8.2 数据采集与Google Sheets优化</h3>
+    <p class="text-gray-300 leading-7">
+      为了支持多参数回测，项目使用Google Apps Script从OKX同步历史4H K线到Google Sheets。实现过程中遇到的主要问题包括：分页参数方向误解、单次执行时间限制、重复K线写入、公式拖动错行以及GAS中计算MA效率低。最终采用的方案是：GAS只负责写入原始K线数据，MA列由Google Sheets单元格公式自动计算。这种设计减少了脚本循环计算量，提高了可维护性。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">9. 讨论</h2>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-4 mb-2">9.1 为什么简单单均线优于复杂双均线</h3>
+    <p class="text-gray-300 leading-7">
+      BTC历史上最重要的收益来源通常来自少数大趋势。过度确认、过度过滤和过度频繁切换都会带来两个后果：第一，错过趋势初段；第二，在横盘区间仍然无法避免反复亏损。因此，双均线和进场过滤并未解决BTC趋势策略的核心矛盾。相反，简单长周期单均线保留了对主趋势的敏感性，同时通过空仓阶段降低深熊市风险。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">9.2 策略收益与风险的权衡</h3>
+    <p class="text-gray-300 leading-7">
+      在部分样本区间中，持币策略的总收益高于趋势策略，尤其是强牛市阶段。趋势策略的价值不应只以是否跑赢持币衡量，更应看最大回撤、交易纪律和实盘可承受性。对于无法承受80%以上账面回撤的投资者，趋势策略提供了一种降低风险暴露的机制。对于能长期承受巨大回撤且坚定持有的投资者，持币策略仍可能是更高收益选择。
+    </p>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">9.3 本研究的限制</h3>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300 mt-2">
+      <li>回测采用历史数据，未来市场结构可能变化；</li>
+      <li>未系统计入滑点、盘口冲击、极端行情断流和交易所风控；</li>
+      <li>部分参数通过项目探索得到，存在样本内优化风险；</li>
+      <li>BTC结论不能直接外推到ETH或山寨币；</li>
+      <li>自动化实盘仍需持续监控API、余额、状态文件和异常日志。</li>
     </ul>
   </section>
 
   <section class="mb-8 border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
-    <ul class="list-disc pl-6 space-y-2 text-gray-300">
-      <li>历史回测不包含未来市场结构变化，且滑点模型仍可继续完善。</li>
-      <li>任何“最优参数”都依赖评估窗口与指标定义，需要持续滚动复核。</li>
-      <li>外部对比结论若来自已知缺陷脚本，需先排除实现偏差再做策略迁移。</li>
-      <li>原始来源以仓库内 DOCX 为准，避免外部链接失效影响可追溯性。</li>
+    <h2 class="text-xl font-semibold mb-3">10. 结论</h2>
+    <p class="text-gray-300 leading-7">
+      本文基于BTC 4H历史数据，对单均线趋势策略、双均线策略与出场优化进行了系统比较。项目结果显示，BTC 4H MA240配合最小持仓24根K线是一种简洁、可解释且长期表现较好的趋势策略。相比双均线策略，单均线策略交易逻辑更少、参数更少、实盘执行更稳定。复杂化策略并未带来稳定提升，反而经常因为滞后与过度交易降低收益。
+    </p>
+    <p class="text-gray-300 leading-7 mt-3">
+      横盘磨损是趋势策略无法完全消除的结构性问题。实验显示，过强的进场过滤会错过BTC趋势启动；更有价值的方向是优化出场，例如要求价格跌破MA一定比例后再卖出，以减少假跌破造成的交易损耗。总体而言，对BTC这类强趋势资产，策略设计应优先追求简洁、鲁棒、可执行，而非不断叠加技术指标。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">附录A：关键策略伪代码</h2>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-4 mb-2">A.1 原始MA240策略</h3>
+    <pre class="bg-gray-900 rounded-lg p-4 text-sm text-gray-300 mt-2 overflow-x-auto"><code>if not position and prev_close &lt;= prev_MA240 and close &gt; MA240:
+    buy()
+
+if position and hold_bars &gt;= 24 and close &lt; MA240:
+    sell()</code></pre>
+
+    <h3 class="text-lg font-medium text-gray-200 mt-6 mb-2">A.2 放宽出场版本</h3>
+    <pre class="bg-gray-900 rounded-lg p-4 text-sm text-gray-300 mt-2 overflow-x-auto"><code>if not position and prev_close &lt;= prev_MA240 and close &gt; MA240:
+    buy()
+
+if position and hold_bars &gt;= 24 and close &lt; MA240 * 0.99:
+    sell()</code></pre>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">参考文献</h2>
+    <ol class="list-decimal pl-6 space-y-2 text-gray-400 text-sm">
+      <li>Grobys, K., Ahmed, S., &amp; Sapkota, N. (2020). Technical trading rules in the cryptocurrency market. <em>Finance Research Letters</em>, 32. DOI: 10.1016/j.frl.2019.101396.</li>
+      <li>Jin, J. H. et al. (2024). Do technical trading rules outperform the simple buy-and-hold strategy in cryptocurrency markets? <em>Journal of Derivatives and Quantitative Studies</em>, 32(1), 23–45.</li>
+      <li>Investopedia. ADX: The Trend Strength Indicator. 用于解释ADX作为趋势强度指标的基本用途。</li>
+      <li>OKX. API v5 Documentation: Market Data — Get Candlesticks History. 用于说明K线数据字段、confirm字段和分页参数。</li>
+      <li>Monash University. Trend-following Strategies for Crypto Investors. 用于趋势跟踪策略在加密资产投资中的背景参考。</li>
+    </ol>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">原始文档来源</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-400 text-sm">
+      <li><a href="/research/sources/btc_ma_trend_source_2026-05.docx" class="text-blue-400 hover:text-blue-300">原始研究 DOCX</a> (btc_ma_trend_source_2026-05.docx)</li>
+      <li><a href="/research/sources/btc_ma_trend.md" class="text-blue-400 hover:text-blue-300">Markdown 版本</a> (btc_ma_trend.md)</li>
     </ul>
   </section>
 
   <section class="border border-gray-800 rounded-xl p-6">
-    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
-    <div class="flex flex-wrap gap-4 text-sm">
-      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
-    </div>
+    <h2 class="text-xl font-semibold mb-3">声明</h2>
+    <p class="text-gray-400 text-sm leading-6">
+      本文为项目研究总结，不构成投资建议。所有回测结果基于历史数据和特定假设，不能保证未来收益。实际交易需考虑滑点、深度、交易所接口风险、资金安全和个人风险承受能力。
+    </p>
   </section>
+
+  </article>
 </Layout>
