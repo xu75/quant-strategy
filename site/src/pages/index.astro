@@ -108,7 +108,8 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
     <div class="text-gray-400 space-y-3 max-w-2xl">
       <p data-i18n="home.about.p1">
         Quant Strategy publishes open research on low-frequency quantitative
-        investment strategies across crypto and traditional markets.
+        strategies across crypto and traditional markets. Strategy logic and
+        execution methodology are completely open.
       </p>
       <p data-i18n="home.about.p2">
         Strategy rules, parameters, and backtesting assumptions are fully transparent.
@@ -119,9 +120,16 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
         This is an independent developer experiment. The site records live validation results
         to track strategy effectiveness over time. It is not investment advice.
       </p>
-      <p data-i18n="home.about.p4">
-        No black-box algorithms. Strategy logic and execution methodology are completely open.
-      </p>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <a href="https://github.com/xu75" target="_blank" rel="noopener noreferrer"
+        class="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700 transition-colors" data-i18n="home.about.follow">
+        Follow on GitHub
+      </a>
+      <a href="https://buymeacoffee.com/jinnxu" target="_blank" rel="noopener noreferrer"
+        class="px-4 py-2 bg-yellow-600 rounded-lg text-sm hover:bg-yellow-500 transition-colors" data-i18n="home.coffee">
+        Buy Me a Coffee
+      </a>
     </div>
   </section>
 
