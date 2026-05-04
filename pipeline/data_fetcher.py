@@ -64,24 +64,74 @@ def _fetch_yfinance(ticker: str, period: str = "730d", interval: str = "1h") -> 
     return hist.sort_values("timestamp").reset_index(drop=True)
 
 
+_INTERVAL_COVERING = {
+    "1h": ["5m", "15m", "30m"],
+}
+
+
+def _resample_to_target(df: pd.DataFrame, source_freq: str, target_freq: str) -> pd.DataFrame:
+    """Resample finer-grained data to target frequency."""
+    tmp = df.set_index("timestamp").sort_index()
+    resampled = tmp.resample(target_freq, offset="0h").agg({
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+    }).dropna()
+    return resampled.reset_index()
+
+
 def load_local_history_by_name(
     filename: str,
     target_bar: str = "1H",
 ) -> pd.DataFrame:
     """Load a named local history CSV from the normalized data directory.
 
-    Falls back to Yahoo Finance when the local file is unavailable (e.g. in CI).
+    When the target file exists but a finer-grained file provides longer
+    history (e.g. QQQ_5m.csv covers 2020+ while QQQ_1h.csv starts 2024),
+    the finer file is resampled and prepended to fill the gap.
 
-    Args:
-        filename: CSV filename (e.g., "MSTR_1h.csv", "BTC-USD_1h.csv").
-        target_bar: Target candle interval for resampling.
-
-    Returns:
-        DataFrame with ['timestamp', 'open', 'high', 'low', 'close', 'volume'].
+    Falls back to Yahoo Finance when no local file is available (e.g. in CI).
     """
     path = LOCAL_HISTORY_PATH.parent / filename
+    base_df = None
+
     if path.exists():
-        return load_local_history(path=path, target_bar=target_bar)
+        base_df = load_local_history(path=path, target_bar=target_bar)
+
+    # Interval-covering: try finer-grained files to extend history
+    target_lower = target_bar.lower()
+    covering_intervals = _INTERVAL_COVERING.get(target_lower, [])
+    stem = filename.rsplit("_", 1)[0]  # e.g. "QQQ" from "QQQ_1h.csv"
+
+    for finer in covering_intervals:
+        finer_file = f"{stem}_{finer}.csv"
+        finer_path = LOCAL_HISTORY_PATH.parent / finer_file
+        if not finer_path.exists():
+            continue
+
+        # Always resample finer data to target frequency
+        finer_raw = load_local_history(path=finer_path, target_bar=target_bar)
+        if target_lower != finer:
+            finer_raw = _resample_to_target(finer_raw, finer, target_lower)
+
+        if base_df is not None:
+            base_start = base_df["timestamp"].min()
+            earlier = finer_raw[finer_raw["timestamp"] < base_start]
+            if not earlier.empty:
+                print(f"[data_fetcher] Covering {filename} with {finer_file}: "
+                      f"prepending {len(earlier)} bars before {base_start}")
+                base_df = pd.concat([earlier, base_df], ignore_index=True)
+                base_df = base_df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
+            break
+        else:
+            print(f"[data_fetcher] {filename} not found, resampling from {finer_file}")
+            base_df = finer_raw
+            break
+
+    if base_df is not None:
+        return base_df
 
     ticker = _YFINANCE_SYMBOL_MAP.get(filename)
     if ticker:
