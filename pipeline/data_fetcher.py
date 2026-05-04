@@ -3,6 +3,7 @@ from __future__ import annotations
 """Market data fetcher.
 
 Loads local historical data and fetches recent candles from OKX public API.
+Falls back to Yahoo Finance for US equity data when local CSV is unavailable.
 """
 
 import time
@@ -18,12 +19,54 @@ MAX_CANDLES_PER_REQUEST = 100  # OKX limit per request
 # Default path to local historical 1h data
 LOCAL_HISTORY_PATH = Path.home() / "VSCode/SynologyDrive/backtest/history_data/normalized/BTC-USD_1h.csv"
 
+# yfinance symbol mapping: local CSV name -> Yahoo Finance ticker
+_YFINANCE_SYMBOL_MAP = {
+    "MSTR_1h.csv": "MSTR",
+    "BTC-USD_1h.csv": "BTC-USD",
+}
+
+
+def _fetch_yfinance(ticker: str, period: str = "730d", interval: str = "1h") -> pd.DataFrame:
+    """Fetch historical data from Yahoo Finance via yfinance.
+
+    Returns DataFrame with ['timestamp', 'open', 'high', 'low', 'close', 'volume'].
+    Yahoo Finance 1H data is limited to ~730 days of history.
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        raise ImportError(
+            "yfinance is required when local CSV is unavailable. "
+            "Install with: pip install yfinance"
+        )
+
+    tk = yf.Ticker(ticker)
+    hist = tk.history(period=period, interval=interval)
+    if hist.empty:
+        raise ValueError(f"No data returned from Yahoo Finance for {ticker}")
+
+    hist = hist.reset_index()
+    ts_col = "Datetime" if "Datetime" in hist.columns else "Date"
+    hist = hist.rename(columns={
+        ts_col: "timestamp",
+        "Open": "open",
+        "High": "high",
+        "Low": "low",
+        "Close": "close",
+        "Volume": "volume",
+    })
+    hist["timestamp"] = pd.to_datetime(hist["timestamp"], utc=True)
+    hist = hist[["timestamp", "open", "high", "low", "close", "volume"]]
+    return hist.sort_values("timestamp").reset_index(drop=True)
+
 
 def load_local_history_by_name(
     filename: str,
     target_bar: str = "1H",
 ) -> pd.DataFrame:
     """Load a named local history CSV from the normalized data directory.
+
+    Falls back to Yahoo Finance when the local file is unavailable (e.g. in CI).
 
     Args:
         filename: CSV filename (e.g., "MSTR_1h.csv", "BTC-USD_1h.csv").
@@ -33,7 +76,35 @@ def load_local_history_by_name(
         DataFrame with ['timestamp', 'open', 'high', 'low', 'close', 'volume'].
     """
     path = LOCAL_HISTORY_PATH.parent / filename
-    return load_local_history(path=path, target_bar=target_bar)
+    if path.exists():
+        return load_local_history(path=path, target_bar=target_bar)
+
+    ticker = _YFINANCE_SYMBOL_MAP.get(filename)
+    if ticker:
+        print(f"[data_fetcher] Local file {filename} not found, fetching from Yahoo Finance ({ticker})...")
+        df = _fetch_yfinance(ticker)
+        if target_bar.upper() != "1H":
+            df = _resample_yfinance(df, target_bar)
+        return df
+
+    raise FileNotFoundError(
+        f"Local file {path} not found and no Yahoo Finance mapping for {filename}"
+    )
+
+
+def _resample_yfinance(df: pd.DataFrame, target_bar: str) -> pd.DataFrame:
+    """Resample yfinance 1H data to a coarser timeframe."""
+    resample_map = {"4H": "4h", "1D": "1D"}
+    freq = resample_map.get(target_bar.upper(), target_bar.lower())
+    tmp = df.set_index("timestamp").sort_index()
+    resampled = tmp.resample(freq, offset="0h").agg({
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+    }).dropna()
+    return resampled.reset_index()
 
 
 def load_local_history(

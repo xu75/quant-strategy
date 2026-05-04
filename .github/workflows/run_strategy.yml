@@ -23,7 +23,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install pandas requests pytz matplotlib pytest pyyaml
+        run: pip install pandas requests pytz matplotlib pytest pyyaml yfinance
 
       - name: Run tests
         run: python -m pytest tests/ -v
@@ -34,25 +34,25 @@ jobs:
       - name: Validate outputs
         run: |
           python -c "
-          import json, sys
-          for path in ['data/btc_ma_trend/latest.json', 'data/btc_ma_trend/backtest.json']:
-              with open(path) as f:
-                  data = json.load(f)
-              if not data:
-                  print(f'FAIL: {path} is empty')
-                  sys.exit(1)
-              print(f'OK: {path}')
-          import os
-          for chart in [
-              'data/btc_ma_trend/charts/equity.png',
-              'data/btc_ma_trend/charts/price_ma.png',
-              'site/public/charts/btc_ma_trend/equity.png',
-              'site/public/charts/btc_ma_trend/price_ma.png',
-          ]:
-              if not os.path.exists(chart) or os.path.getsize(chart) < 1000:
-                  print(f'FAIL: {chart} missing or too small')
-                  sys.exit(1)
-              print(f'OK: {chart}')
+          import json, sys, os
+          for strategy in ['btc_ma_trend', 'btc_ma_trend_plus', 'echotrend_240']:
+              for path in [f'data/{strategy}/latest.json', f'data/{strategy}/backtest.json']:
+                  if not os.path.exists(path):
+                      print(f'FAIL: {path} missing')
+                      sys.exit(1)
+                  with open(path) as f:
+                      data = json.load(f)
+                  if not data:
+                      print(f'FAIL: {path} is empty')
+                      sys.exit(1)
+                  print(f'OK: {path}')
+              for chart in ['equity.png', 'price_ma.png']:
+                  for prefix in [f'data/{strategy}/charts', f'site/public/charts/{strategy}']:
+                      p = f'{prefix}/{chart}'
+                      if not os.path.exists(p) or os.path.getsize(p) < 1000:
+                          print(f'FAIL: {p} missing or too small')
+                          sys.exit(1)
+                      print(f'OK: {p}')
           print('All outputs validated')
           "
 
