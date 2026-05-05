@@ -26,8 +26,9 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   const sincePerf = backtest.periods?.since_launch?.performance;
   const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
+  const isEchoTrend = id === 'echotrend_240';
 
-  return [{ href, latest, signal, strategy, sinceDateIso, returnPct }];
+  return [{ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend }];
 });
 ---
 
@@ -54,13 +55,15 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   <section class="mb-12">
     <h2 id="strategies" class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend }) => (
         <a href={href} class="block">
           <div class="border border-gray-800 rounded-xl p-6 hover:border-gray-600 transition-colors">
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h3 class="text-lg font-semibold">{strategy.name}</h3>
-                <p class="text-sm text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window}</p>
+                <p class="text-sm text-gray-400">{isEchoTrend
+                  ? `${strategy.symbol} · ${strategy.timeframe} · BTC Regime Gate + V6 Scoring`
+                  : `${strategy.symbol} · ${strategy.timeframe} · MA${strategy.ma_window}`}</p>
               </div>
               <span class={`px-3 py-1 rounded-full text-sm font-medium ${
                 signal.action === 'hold' && latest.position.in_position
@@ -80,21 +83,43 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
                 <p class="text-lg font-mono">${signal.price.toLocaleString()}</p>
               </div>
+              {isEchoTrend ? (
+                <div>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
+                  <p class={`text-lg font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : signal.regime === 'bear' ? 'text-red-400' : 'text-gray-300'}`}>
+                    {signal.regime || '—'}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
+                  <p class="text-lg font-mono">${signal.ma_value.toLocaleString()}</p>
+                </div>
+              )}
+              {isEchoTrend ? (
+                <div>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
+                  <p class="text-lg font-mono">{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
+                </div>
+              ) : (
+                <div>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
+                  <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {returnPct > 0 ? '+' : ''}{returnPct}%
+                  </p>
+                </div>
+              )}
               <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
-                <p class="text-lg font-mono">${signal.ma_value.toLocaleString()}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
-                <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {returnPct > 0 ? '+' : ''}{returnPct}%
-                </p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
-                <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
-                  {sinceDateIso ?? '—'}
-                </p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n={isEchoTrend ? 'label.return' : 'label.since'}>{isEchoTrend ? 'Return (MTM)' : 'Since'}</p>
+                {isEchoTrend ? (
+                  <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {returnPct > 0 ? '+' : ''}{returnPct}%
+                  </p>
+                ) : (
+                  <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
+                    {sinceDateIso ?? '—'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -109,16 +134,16 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
       <p data-i18n="home.about.p1">
         Quant Strategy publishes open research on low-frequency quantitative
         strategies across crypto and traditional markets. Strategy logic and
-        execution methodology are completely open.
+        execution methodology are completely open. This is an independent developer
+        experiment — the site records live validation results to track strategy
+        effectiveness over time. It is not investment advice.
       </p>
       <p data-i18n="home.about.p2">
         Strategy rules, parameters, and backtesting assumptions are fully transparent.
         Every signal is generated by automated scripts running on GitHub Actions — no
         manual intervention. Anyone can reproduce the results using the published rules.
-      </p>
-      <p data-i18n="home.about.p3">
-        This is an independent developer experiment. The site records live validation results
-        to track strategy effectiveness over time. It is not investment advice.
+        I also run live trading to validate strategies with real results over time,
+        continuously refining them. Feel free to connect and discuss.
       </p>
     </div>
     <div class="flex gap-3 mt-5">

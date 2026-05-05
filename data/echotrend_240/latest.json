@@ -13,7 +13,11 @@
     "ma_value": 0.0,
     "timestamp": "2026-05-04T19:30:00+00:00",
     "hold_bars": 0,
-    "reason": "Exposure 0.97, mode=bull, regime=bull"
+    "reason": "Exposure 0.97, mode=bull, regime=bull",
+    "regime": "bull",
+    "mode": "bull",
+    "target_exposure": 0.97,
+    "scores": {}
   },
   "position": {
     "in_position": true,

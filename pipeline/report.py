@@ -57,6 +57,25 @@ def generate_status_json(
 
     signal = current_signal
 
+    signal_dict = {
+        "action": signal.action,
+        "price": round(signal.price, 2),
+        "ma_value": round(signal.ma_value, 2),
+        "timestamp": signal.timestamp.isoformat(),
+        "hold_bars": signal.hold_bars,
+        "reason": signal.reason,
+    }
+
+    # EchoTrend-specific structured fields
+    if hasattr(signal, 'regime') and signal.regime is not None:
+        signal_dict["regime"] = signal.regime
+    if hasattr(signal, 'mode') and signal.mode is not None:
+        signal_dict["mode"] = signal.mode
+    if hasattr(signal, 'target_exposure') and signal.target_exposure is not None:
+        signal_dict["target_exposure"] = round(signal.target_exposure, 4)
+    if hasattr(signal, 'scores') and signal.scores:
+        signal_dict["scores"] = {k: round(v, 2) if isinstance(v, float) else v for k, v in signal.scores.items()}
+
     status = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "strategy": {
@@ -65,14 +84,7 @@ def generate_status_json(
             "timeframe": config.timeframe,
             "symbol": config.symbol,
         },
-        "current_signal": {
-            "action": signal.action,
-            "price": round(signal.price, 2),
-            "ma_value": round(signal.ma_value, 2),
-            "timestamp": signal.timestamp.isoformat(),
-            "hold_bars": signal.hold_bars,
-            "reason": signal.reason,
-        },
+        "current_signal": signal_dict,
         "position": {
             "in_position": in_position,
             "entry_bar_idx": entry_bar_idx if in_position else None,
