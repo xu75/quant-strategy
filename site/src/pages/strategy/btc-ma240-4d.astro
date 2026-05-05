@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import PerformanceSummary from '../../components/PerformanceSummary.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -86,75 +87,16 @@ const research = {
     </div>
   </section>
 
-  <section class="mb-10">
-    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <h2 class="text-xl font-semibold" data-i18n="strategy.perf">Performance Summary</h2>
-      <div class="flex gap-1" id="period-tabs">
-        {periods.since_launch && <button data-period="since_launch" class="px-3 py-1.5 rounded-lg text-sm bg-blue-600 text-white transition-colors" data-i18n="strategy.since_launch">Since Launch</button>}
-        {periods['1y'] && <button data-period="1y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">1Y</button>}
-        {periods['2y'] && <button data-period="2y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">2Y</button>}
-        {periods['3y'] && <button data-period="3y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">3Y</button>}
-        {periods['5y'] && <button data-period="5y" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">5Y</button>}
-      </div>
-    </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
-        <p id="perf-return" class={`text-xl font-mono ${defaultPerf.total_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {defaultPerf.total_return_pct > 0 ? '+' : ''}{defaultPerf.total_return_pct}%
-        </p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold">Buy & Hold</p>
-        <p id="perf-buyhold" class={`text-xl font-mono ${defaultPerf.buy_hold_return_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {defaultPerf.buy_hold_return_pct > 0 ? '+' : ''}{defaultPerf.buy_hold_return_pct}%
-        </p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.drawdown">Max Drawdown</p>
-        <p id="perf-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.max_drawdown_pct}%</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold_drawdown">B&H Max DD</p>
-        <p id="perf-buyhold-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.buy_hold_max_drawdown_pct}%</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe (Ann.)</p>
-        <p id="perf-sharpe" class="text-xl font-mono">{defaultPerf.sharpe_ratio}</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.winrate">Win Rate</p>
-        <p id="perf-winrate" class="text-xl font-mono">{defaultPerf.win_rate_pct}%</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.trades">Total Trades</p>
-        <p id="perf-trades" class="text-xl font-mono">{defaultPerf.total_trades}</p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.avghold">Avg Hold</p>
-        <p id="perf-hold" class="text-xl font-mono"><span id="perf-hold-val">{defaultPerf.avg_hold_bars}</span> <span data-i18n="label.bars">bars</span></p>
-      </div>
-      <div class="border border-gray-800 rounded-lg p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.period">Period</p>
-        <p id="perf-period" class="text-sm font-mono mt-1">—</p>
-      </div>
-    </div>
-    {defaultPerf.has_open_position && (
-      <p class="text-xs text-gray-500 mt-3" id="perf-open-note" data-i18n="strategy.mtm_note">* MTM return includes unrealized P&L from the current open position.</p>
-    )}
-    <div class="mt-4">
-      <a href="/backtest/btc-ma240-4d" class="text-blue-400 hover:text-blue-300 text-sm" data-i18n="strategy.view_backtest">
-        View full backtest results &rarr;
-      </a>
-    </div>
-  </section>
+  <PerformanceSummary
+    defaultPerf={defaultPerf}
+    periods={periods}
+    periodsJson={periodsJson}
+    defaultRangeJson={defaultRangeJson}
+    backtestHref="/backtest/btc-ma240-4d"
+  />
 
-  <script define:vars={{ periodsJson, defaultRangeJson }}>
-    const periods = JSON.parse(periodsJson);
-    const defaultRange = JSON.parse(defaultRangeJson);
-    const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  <script>
     const fmtDateTime = (iso) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-
     document.querySelectorAll('.js-local-datetime[data-iso]').forEach((el) => {
       const iso = el.dataset.iso;
       if (!iso) return;
@@ -163,57 +105,6 @@ const research = {
         el.textContent = fmtDateTime(iso);
       }
     });
-
-    const perfPeriodEl = document.getElementById('perf-period');
-    if (perfPeriodEl && defaultRange?.start && defaultRange?.end) {
-      perfPeriodEl.textContent = `${fmtDate(defaultRange.start)} — ${fmtDate(defaultRange.end)}`;
-    }
-
-    const tabs = document.getElementById('period-tabs');
-    if (tabs) {
-      tabs.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-period]');
-        if (!btn) return;
-        const key = btn.dataset.period;
-        const data = periods[key];
-        if (!data) return;
-        const p = data.performance;
-
-        // Update tab styles
-        tabs.querySelectorAll('button').forEach(b => {
-          b.className = b === btn
-            ? 'px-3 py-1.5 rounded-lg text-sm bg-blue-600 text-white transition-colors'
-            : 'px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors';
-        });
-
-        // Helper: set value + color
-        const setVal = (id, val, suffix, colored) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          const prefix = val > 0 ? '+' : '';
-          el.textContent = colored !== false ? `${prefix}${val}${suffix}` : `${val}${suffix}`;
-          if (colored !== false) {
-            el.className = el.className.replace(/text-(green|red)-400/g, '');
-            el.classList.add(val >= 0 ? 'text-green-400' : 'text-red-400');
-          }
-        };
-
-        setVal('perf-return', p.total_return_pct, '%');
-        setVal('perf-buyhold', p.buy_hold_return_pct, '%');
-        document.getElementById('perf-drawdown').textContent = `-${p.max_drawdown_pct}%`;
-        document.getElementById('perf-buyhold-drawdown').textContent = `-${p.buy_hold_max_drawdown_pct}%`;
-        document.getElementById('perf-sharpe').textContent = p.sharpe_ratio;
-        document.getElementById('perf-winrate').textContent = `${p.win_rate_pct}%`;
-        document.getElementById('perf-trades').textContent = p.total_trades;
-        document.getElementById('perf-hold-val').textContent = p.avg_hold_bars;
-
-        document.getElementById('perf-period').textContent = `${fmtDate(data.start)} — ${fmtDate(data.end)}`;
-
-        // Open position note
-        const note = document.getElementById('perf-open-note');
-        if (note) note.style.display = p.has_open_position ? '' : 'none';
-      });
-    }
   </script>
 
   <section class="mb-10">
