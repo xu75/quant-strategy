@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from core.registry import discover_strategies, load_strategy_module
+from core.state import config_hash, load_state, save_state, validate_state_for_resume
 from pipeline.data_fetcher import fetch_candles, fetch_historical_candles, load_local_history, load_local_history_by_name
 from pipeline.backtest import run_backtest, compute_period_metrics
 from pipeline.report import (
@@ -152,8 +153,19 @@ def sync_public_charts(strategy_id: str, charts_dir: Path) -> None:
             shutil.copyfile(src, public_strategy_charts / filename)
 
 
-def run_single_strategy(adapter):
-    """Run a single strategy through the full pipeline."""
+def run_single_strategy(adapter, mode: str = "full-backtest"):
+    """Run a single strategy through the pipeline.
+
+    mode: "full-backtest" — complete historical backtest, updates all outputs
+          "daily-signal"  — incremental from persisted state, updates latest.json + state.json only
+    """
+    if mode == "daily-signal":
+        return _run_daily_signal(adapter)
+    return _run_full_backtest(adapter)
+
+
+def _run_full_backtest(adapter):
+    """Full backtest mode — the original pipeline."""
     manifest = adapter.manifest
     config = adapter.config
 
@@ -295,13 +307,130 @@ def run_single_strategy(adapter):
     generate_price_ma_chart(df_backtest, config, result.trades, charts_dir / "price_ma.png")
     sync_public_charts(manifest.id, charts_dir)
 
+    # 7. Export engine state for future daily-signal runs
+    if adapter.run_backtest is not None:
+        _export_engine_state(adapter, df, config, extra_data, output_dir)
+
     print(f"{LOG_PREFIX} [{manifest.id}] Reports written to {output_dir}/")
     print(f"{LOG_PREFIX} [{manifest.id}] Done.")
 
 
-def run_all_strategies():
+def _export_engine_state(adapter, df, config, extra_data, output_dir):
+    """Persist engine state snapshot for daily-signal resume.
+
+    Requires the strategy module to expose export_engine_state(df, config, extra_data).
+    """
+    manifest = adapter.manifest
+    export_fn = adapter.export_engine_state
+    if export_fn is None:
+        return
+
+    snapshot = export_fn(df, config, extra_data=extra_data)
+    snapshot["strategy_id"] = manifest.id
+    snapshot["strategy_version"] = manifest.version
+    snapshot["config_hash"] = config_hash(dict(manifest.config))
+    snapshot["mode"] = "full-backtest"
+
+    save_state(output_dir / "state.json", snapshot)
+    print(f"{LOG_PREFIX} [{manifest.id}] Engine state exported (watermark={snapshot.get('watermark')})")
+
+
+def _run_daily_signal(adapter):
+    """Daily-signal mode — incremental update from persisted state.
+
+    Only updates latest.json and state.json. Never touches backtest.json or charts.
+    Fail-closed: refuses to run if state is missing, stale, or config changed.
+    Strategies without incremental support are skipped (not fallback to full-backtest).
+    """
+    manifest = adapter.manifest
+    config = adapter.config
+
+    print(f"\n{LOG_PREFIX} ========================================")
+    print(f"{LOG_PREFIX} Daily signal: {manifest.name} ({manifest.id})")
+    print(f"{LOG_PREFIX} ========================================")
+
+    # Only strategies with incremental support can run in daily-signal mode
+    if adapter.run_incremental is None:
+        print(f"{LOG_PREFIX} [{manifest.id}] SKIP: no incremental support (daily-signal requires run_incremental)")
+        return
+
+    output_dir = OUTPUT_BASE_DIR / manifest.id
+    state_path = output_dir / "state.json"
+
+    # Load persisted state
+    saved = load_state(state_path)
+    if saved is None:
+        print(f"{LOG_PREFIX} [{manifest.id}] SKIP: no state.json found — run full-backtest first")
+        return
+
+    # Load data
+    df = load_strategy_data(manifest, config)
+    extra_data = load_extra_data_sources(manifest)
+
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    latest_ts = pd.Timestamp(df_sorted.iloc[-1]["timestamp"])
+    if latest_ts.tzinfo is None:
+        latest_ts = latest_ts.tz_localize("UTC")
+
+    # Validate state
+    current_hash = config_hash(dict(manifest.config))
+    warmup = config.__dict__.get("warmup_bars", 960)
+    error = validate_state_for_resume(
+        saved,
+        strategy_id=manifest.id,
+        strategy_version=manifest.version,
+        current_config_hash=current_hash,
+        latest_data_ts=latest_ts,
+        warmup_bars=warmup,
+    )
+    if error:
+        print(f"{LOG_PREFIX} [{manifest.id}] SKIP (fail-closed): {error}")
+        return
+
+    # Restore engine and run incremental bars
+    incremental_result = adapter.run_incremental(df, config, saved, extra_data=extra_data)
+
+    if incremental_result is None:
+        print(f"{LOG_PREFIX} [{manifest.id}] No new bars since watermark")
+        return
+
+    new_watermark = incremental_result["watermark"]
+    exposure = incremental_result["exposure"]
+    mode_str = incremental_result["mode"]
+    regime_str = incremental_result["regime"]
+    snapshot = incremental_result["state"]
+    current_signal = incremental_result["current_signal"]
+
+    print(
+        f"{LOG_PREFIX} [{manifest.id}] Signal: exposure={exposure:.3f}, "
+        f"mode={mode_str}, regime={regime_str}"
+    )
+
+    # Determine position state
+    in_position = exposure > 0.01
+    entry_bar_idx = 0
+
+    # Generate latest.json only — signal comes from incremental result, not full replay
+    generate_status_json(
+        df if adapter.get_filtered_df is None else adapter.get_filtered_df(df, config),
+        config, in_position, entry_bar_idx, output_dir / "latest.json",
+        current_signal=current_signal,
+    )
+
+    # Update state.json
+    snapshot["strategy_id"] = manifest.id
+    snapshot["strategy_version"] = manifest.version
+    snapshot["config_hash"] = current_hash
+    snapshot["mode"] = "daily-signal"
+    save_state(state_path, snapshot)
+
+    print(f"{LOG_PREFIX} [{manifest.id}] State updated (watermark={new_watermark})")
+    print(f"{LOG_PREFIX} [{manifest.id}] Done (daily-signal).")
+
+
+def run_all_strategies(mode: str = "full-backtest"):
     """Main orchestration: discover strategies → run each → output reports."""
-    print(f"{LOG_PREFIX} Discovering strategies...")
+    print(f"{LOG_PREFIX} Discovering strategies... (mode={mode})")
     manifests = discover_strategies()
 
     if not manifests:
@@ -316,7 +445,7 @@ def run_all_strategies():
     for manifest in manifests:
         try:
             adapter = load_strategy_module(manifest)
-            run_single_strategy(adapter)
+            run_single_strategy(adapter, mode=mode)
         except Exception as e:
             print(f"{LOG_PREFIX} [{manifest.id}] ERROR: {e}")
             import traceback

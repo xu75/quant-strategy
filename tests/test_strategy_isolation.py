@@ -138,8 +138,11 @@ class TestOutputPathIsolation:
         if not data_dir.exists():
             pytest.skip("data/ not present")
         manifest_ids = {data["id"] for _, data in _load_all_manifests()}
+        platform_dirs = {"market"}
         for child in data_dir.iterdir():
             if child.is_dir() and not child.name.startswith("."):
+                if child.name in platform_dirs:
+                    continue
                 assert child.name in manifest_ids, (
                     f"data/{child.name}/ has no matching strategy manifest"
                 )

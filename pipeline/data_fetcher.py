@@ -16,7 +16,10 @@ import requests
 OKX_BASE_URL = "https://www.okx.com"
 MAX_CANDLES_PER_REQUEST = 100  # OKX limit per request
 
-# Default path to local historical 1h data
+# Canonical market data directory (committed to repo, CI-owned)
+CANONICAL_MARKET_DIR = Path(__file__).parent.parent / "data" / "market"
+
+# Legacy local path for development machines
 LOCAL_HISTORY_PATH = Path.home() / "VSCode/SynologyDrive/backtest/history_data/normalized/BTC-USD_1h.csv"
 
 # yfinance symbol mapping: local CSV name -> Yahoo Finance ticker
@@ -82,36 +85,61 @@ def _resample_to_target(df: pd.DataFrame, source_freq: str, target_freq: str) ->
     return resampled.reset_index()
 
 
+def _resolve_csv_path(filename: str) -> Path | None:
+    """Find a CSV file: canonical data/market/ first, then legacy local path."""
+    canonical = CANONICAL_MARKET_DIR / filename
+    if canonical.exists():
+        return canonical
+    legacy = LOCAL_HISTORY_PATH.parent / filename
+    if legacy.exists():
+        return legacy
+    return None
+
+
 def load_local_history_by_name(
     filename: str,
     target_bar: str = "1H",
 ) -> pd.DataFrame:
-    """Load a named local history CSV from the normalized data directory.
+    """Load a named local history CSV from canonical or legacy directory.
+
+    Resolution order:
+      1. data/market/{filename}  (canonical, committed to repo, CI-readable)
+      2. ~/VSCode/SynologyDrive/backtest/history_data/normalized/{filename}  (legacy dev)
 
     When the target file exists but a finer-grained file provides longer
     history (e.g. QQQ_5m.csv covers 2020+ while QQQ_1h.csv starts 2024),
     the finer file is resampled and prepended to fill the gap.
 
-    Falls back to Yahoo Finance when no local file is available (e.g. in CI).
-    """
-    path = LOCAL_HISTORY_PATH.parent / filename
-    base_df = None
+    Interval covering is source-constrained: if base file comes from canonical,
+    finer files must also come from canonical (no cross-source mixing).
 
-    if path.exists():
+    No silent yfinance fallback — raises FileNotFoundError if no local file found.
+    """
+    path = _resolve_csv_path(filename)
+    base_df = None
+    base_source = None  # "canonical" or "legacy"
+
+    if path is not None:
         base_df = load_local_history(path=path, target_bar=target_bar)
+        base_source = "canonical" if path.parent == CANONICAL_MARKET_DIR else "legacy"
 
     # Interval-covering: try finer-grained files to extend history
+    # Only search within the same source (canonical or legacy)
     target_lower = target_bar.lower()
     covering_intervals = _INTERVAL_COVERING.get(target_lower, [])
     stem = filename.rsplit("_", 1)[0]  # e.g. "QQQ" from "QQQ_1h.csv"
 
     for finer in covering_intervals:
         finer_file = f"{stem}_{finer}.csv"
-        finer_path = LOCAL_HISTORY_PATH.parent / finer_file
-        if not finer_path.exists():
+        finer_path = _resolve_csv_path(finer_file)
+        if finer_path is None:
             continue
 
-        # Always resample finer data to target frequency
+        # Source constraint: only use finer file if it's from the same source as base
+        finer_source = "canonical" if finer_path.parent == CANONICAL_MARKET_DIR else "legacy"
+        if base_source is not None and finer_source != base_source:
+            continue
+
         finer_raw = load_local_history(path=finer_path, target_bar=target_bar)
         if target_lower != finer:
             finer_raw = _resample_to_target(finer_raw, finer, target_lower)
@@ -128,24 +156,15 @@ def load_local_history_by_name(
         else:
             print(f"[data_fetcher] {filename} not found, resampling from {finer_file}")
             base_df = finer_raw
+            base_source = finer_source
             break
 
     if base_df is not None:
         return base_df
 
-    ticker = _YFINANCE_SYMBOL_MAP.get(filename)
-    if ticker:
-        is_daily = "_1d." in filename
-        interval = "1d" if is_daily else "1h"
-        period = "5y" if is_daily else "730d"
-        print(f"[data_fetcher] Local file {filename} not found, fetching from Yahoo Finance ({ticker}, {interval})...")
-        df = _fetch_yfinance(ticker, period=period, interval=interval)
-        if not is_daily and target_bar.upper() != "1H":
-            df = _resample_yfinance(df, target_bar)
-        return df
-
     raise FileNotFoundError(
-        f"Local file {path} not found and no Yahoo Finance mapping for {filename}"
+        f"Market data file '{filename}' not found in canonical ({CANONICAL_MARKET_DIR}) "
+        f"or legacy ({LOCAL_HISTORY_PATH.parent}) directories"
     )
 
 
@@ -204,6 +223,60 @@ def load_local_history(
 
     resampled = resampled.reset_index().rename(columns={"datetime": "timestamp"})
     return resampled
+
+
+def update_canonical_csv(filename: str, new_df: pd.DataFrame) -> int:
+    """Append new rows to a canonical CSV in data/market/.
+
+    Idempotent: deduplicates on datetime, only appends rows after the
+    current last timestamp. Returns the number of new rows appended.
+
+    Fail-closed: raises ValueError if gap exceeds threshold.
+    Filters out unconfirmed bars (timestamp >= now - bar_interval).
+    """
+    path = CANONICAL_MARKET_DIR / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Canonical file {path} does not exist — seed it first")
+
+    existing = pd.read_csv(path, parse_dates=["datetime"])
+    existing["datetime"] = pd.to_datetime(existing["datetime"], utc=True)
+    last_ts = existing["datetime"].max()
+
+    # Normalize new data to canonical format
+    if "timestamp" in new_df.columns and "datetime" not in new_df.columns:
+        new_df = new_df.rename(columns={"timestamp": "datetime"})
+    new_df["datetime"] = pd.to_datetime(new_df["datetime"], utc=True)
+
+    # Filter out unconfirmed bars (current bar not yet closed)
+    is_hourly = "_1h" in filename
+    is_daily = "_1d" in filename
+    bar_interval_hours = 1 if is_hourly else 24 if is_daily else 1
+    now = pd.Timestamp.now(tz="UTC")
+    cutoff = now - pd.Timedelta(hours=bar_interval_hours)
+    new_df = new_df[new_df["datetime"] <= cutoff].copy()
+
+    # Only keep rows strictly after the current last timestamp
+    append_rows = new_df[new_df["datetime"] > last_ts].copy()
+    if append_rows.empty:
+        return 0
+
+    append_rows = append_rows.sort_values("datetime")
+    append_rows = append_rows[["datetime", "open", "high", "low", "close", "volume"]]
+
+    # Gap check: first new row should be within expected interval of last existing row
+    first_new = append_rows["datetime"].iloc[0]
+    gap_hours = (first_new - last_ts).total_seconds() / 3600
+    max_gap = 168 if is_hourly else 720 if is_daily else 168  # 1 week / 1 month
+    if gap_hours > max_gap:
+        raise ValueError(
+            f"Gap of {gap_hours:.0f}h in {filename} exceeds threshold {max_gap}h "
+            f"(last={last_ts}, first_new={first_new})"
+        )
+
+    # Append (no header)
+    append_rows.to_csv(path, mode="a", header=False, index=False,
+                       date_format="%Y-%m-%dT%H:%M:%SZ")
+    return len(append_rows)
 
 
 def fetch_candles(

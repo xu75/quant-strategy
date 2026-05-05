@@ -57,6 +57,9 @@ class StrategyAdapter:
     get_current_signal: Callable
     get_filtered_df: Callable | None = None
     run_backtest: Callable | None = None
+    export_engine_state: Callable | None = None
+    import_engine_state: Callable | None = None
+    run_incremental: Callable | None = None
 
 
 def validate_manifest(manifest_path: Path) -> StrategyManifest:
@@ -165,6 +168,9 @@ def load_strategy_module(manifest: StrategyManifest) -> StrategyAdapter:
         get_current_signal=module.get_current_signal,
         get_filtered_df=getattr(module, "get_filtered_df", None),
         run_backtest=getattr(module, "run_backtest", None),
+        export_engine_state=getattr(module, "export_engine_state", None),
+        import_engine_state=getattr(module, "import_engine_state", None),
+        run_incremental=getattr(module, "run_incremental", None),
     )
 
 

@@ -347,3 +347,96 @@ def _engine_rebalances_to_trades(rebalances: list) -> list[Trade]:
             ))
             open_buy = None
     return trades
+
+
+def export_engine_state(
+    df: pd.DataFrame,
+    config: StrategyConfig | None = None,
+    *,
+    extra_data: dict | None = None,
+    initial_capital: float = 10000.0,
+) -> dict:
+    """Run full engine and export final state snapshot for daily-signal resume."""
+    if config is None:
+        config = StrategyConfig()
+
+    features = _prepare_features(df, config, extra_data=extra_data)
+    engine_config = _build_engine_config(config)
+    engine = EchoTrendEngine(engine_config)
+
+    first_price = float(features.iloc[0]["close"])
+    state = engine.initial_state(first_price, initial_capital=initial_capital)
+    for i in range(len(features)):
+        engine.on_bar(state, features.index[i], features.iloc[i])
+
+    watermark = features.index[-1]
+    return engine.export_state(state, watermark)
+
+
+def run_incremental(
+    df: pd.DataFrame,
+    config: StrategyConfig | None = None,
+    saved_state: dict = None,
+    *,
+    extra_data: dict | None = None,
+) -> dict | None:
+    """Resume engine from saved state, process only new bars.
+
+    Returns dict with keys: watermark, exposure, mode, regime, state, current_signal.
+    Returns None if no new bars to process.
+    """
+    if config is None:
+        config = StrategyConfig()
+    if saved_state is None:
+        return None
+
+    features = _prepare_features(df, config, extra_data=extra_data)
+    engine_config = _build_engine_config(config)
+    engine = EchoTrendEngine(engine_config)
+    state = engine.import_state(saved_state)
+
+    watermark = pd.Timestamp(saved_state["watermark"])
+    if watermark.tzinfo is None:
+        watermark = watermark.tz_localize("UTC")
+
+    new_bars = features.loc[features.index > watermark]
+    if new_bars.empty:
+        return None
+
+    for i in range(len(new_bars)):
+        engine.on_bar(state, new_bars.index[i], new_bars.iloc[i])
+
+    new_watermark = features.index[-1]
+    exposure = state.total_shares / state.initial_shares
+    snapshot = engine.export_state(state, new_watermark)
+
+    last_row = features.iloc[-1]
+    price = float(last_row["close"])
+    reason = f"Exposure {exposure:.2f}, mode={engine.mode}, regime={engine.trend_regime}"
+    action = "hold"
+    if engine.rebalances:
+        last_rb = engine.rebalances[-1]
+        if last_rb.timestamp == new_watermark:
+            action = last_rb.side
+            reason = last_rb.reason
+
+    current_signal = Signal(
+        action=action,
+        price=price,
+        ma_value=0.0,
+        timestamp=new_watermark,
+        reason=reason,
+        regime=engine.trend_regime,
+        target_exposure=exposure,
+        mode=engine.mode,
+        scores=engine.last_scores,
+    )
+
+    return {
+        "watermark": new_watermark,
+        "exposure": exposure,
+        "mode": engine.mode,
+        "regime": engine.trend_regime,
+        "state": snapshot,
+        "current_signal": current_signal,
+    }

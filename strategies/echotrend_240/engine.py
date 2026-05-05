@@ -93,6 +93,64 @@ class EchoTrendEngine:
         )
 
     # ---------------------------------------------------------------
+    # State serialization (for daily-signal incremental mode)
+    # ---------------------------------------------------------------
+    def export_state(self, state: PortfolioState, watermark: pd.Timestamp) -> dict:
+        """Export all path-dependent state for incremental resume."""
+        return {
+            "engine": {
+                "bar_index": self.bar_index,
+                "exposure_ema": self.exposure_ema,
+                "last_scores": dict(self.last_scores),
+                "mode": self.mode,
+                "mode_counter": self.mode_counter,
+                "trend_regime": self.trend_regime,
+                "regime_counter": self.regime_counter,
+                "regime_change_bar": self.regime_change_bar,
+                "regime_flips": self.regime_flips,
+                "last_rebalance_bar": self.last_rebalance_bar,
+                "pending_order": dict(self._pending_order) if self._pending_order else None,
+            },
+            "portfolio": {
+                "cash": state.cash,
+                "core_shares": state.core_shares,
+                "initial_shares": state.initial_shares,
+                "initial_capital": state.initial_capital,
+                "total_costs": state.total_costs,
+            },
+            "watermark": watermark.isoformat(),
+        }
+
+    def import_state(self, snapshot: dict) -> PortfolioState:
+        """Restore engine + portfolio from a previously exported snapshot.
+
+        Returns the reconstructed PortfolioState. Engine mutable fields
+        are restored in-place.
+        """
+        eng = snapshot["engine"]
+        self.bar_index = eng["bar_index"]
+        self.exposure_ema = eng["exposure_ema"]
+        self.last_scores = eng.get("last_scores", {})
+        self.mode = eng["mode"]
+        self.mode_counter = eng["mode_counter"]
+        self.trend_regime = eng["trend_regime"]
+        self.regime_counter = eng["regime_counter"]
+        self.regime_change_bar = eng["regime_change_bar"]
+        self.regime_flips = eng["regime_flips"]
+        self.last_rebalance_bar = eng["last_rebalance_bar"]
+        self._pending_order = eng.get("pending_order")
+
+        port = snapshot["portfolio"]
+        return PortfolioState(
+            cash=port["cash"],
+            core_shares=port["core_shares"],
+            initial_shares=port["initial_shares"],
+            max_shares=port["initial_shares"] * self.v6.get("max_exposure", 1.10),
+            initial_capital=port["initial_capital"],
+            total_costs=port["total_costs"],
+        )
+
+    # ---------------------------------------------------------------
     # Main bar loop
     # ---------------------------------------------------------------
     def on_bar(

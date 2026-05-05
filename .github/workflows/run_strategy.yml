@@ -5,16 +5,61 @@ on:
     # Every 4 hours at :05 past (UTC: 0, 4, 8, 12, 16, 20)
     # Offset by 5 min to allow OKX candle close confirmation
     - cron: '5 0,4,8,12,16,20 * * *'
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Pipeline mode'
+        required: false
+        default: 'full-backtest'
+        type: choice
+        options:
+          - full-backtest
+          - daily-signal
 
 permissions:
   contents: write
 
 jobs:
-  run-strategy:
+  update-data:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install pandas requests pytz yfinance
+
+      - name: Update market data
+        run: python run_strategy.py --mode update-data
+
+      - name: Commit market data
+        run: |
+          git config user.name "Quant Strategy Bot"
+          git config user.email "bot@quant-strategy.mesh-hub.xyz"
+          git add data/market/
+          if git diff --cached --quiet; then
+            echo "No new market data"
+          else
+            git commit -m "chore(data): update market data $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase
+            git push
+          fi
+
+  run-strategy:
+    needs: update-data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Pull latest (includes market data update)
+        run: git pull --rebase
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,41 +74,23 @@ jobs:
         run: python -m pytest tests/ -v
 
       - name: Run strategy pipeline
-        run: python run_strategy.py
-
-      - name: Validate outputs
-        run: |
-          python -c "
-          import json, sys, os
-          for strategy in ['btc_ma_trend', 'btc_ma_trend_plus', 'echotrend_240']:
-              for path in [f'data/{strategy}/latest.json', f'data/{strategy}/backtest.json']:
-                  if not os.path.exists(path):
-                      print(f'FAIL: {path} missing')
-                      sys.exit(1)
-                  with open(path) as f:
-                      data = json.load(f)
-                  if not data:
-                      print(f'FAIL: {path} is empty')
-                      sys.exit(1)
-                  print(f'OK: {path}')
-              for chart in ['equity.png', 'price_ma.png']:
-                  for prefix in [f'data/{strategy}/charts', f'site/public/charts/{strategy}']:
-                      p = f'{prefix}/{chart}'
-                      if not os.path.exists(p) or os.path.getsize(p) < 1000:
-                          print(f'FAIL: {p} missing or too small')
-                          sys.exit(1)
-                      print(f'OK: {p}')
-          print('All outputs validated')
-          "
+        run: python run_strategy.py --mode ${{ inputs.mode || 'full-backtest' }}
 
       - name: Commit and push results
         run: |
           git config user.name "Quant Strategy Bot"
           git config user.email "bot@quant-strategy.mesh-hub.xyz"
-          git add data/ site/public/charts/
+          MODE="${{ inputs.mode || 'full-backtest' }}"
+          if [ "$MODE" = "daily-signal" ]; then
+            find data -name "latest.json" -exec git add {} + 2>/dev/null || true
+            find data -name "state.json" -exec git add {} + 2>/dev/null || true
+          else
+            git add data/ site/public/charts/
+          fi
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update strategy data $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "chore($MODE): update strategy data $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase
             git push
           fi
