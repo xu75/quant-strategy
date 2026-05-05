@@ -249,11 +249,12 @@ const research = {
   <section>
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
     <p class="text-gray-400 text-sm mb-2">
-      BTC data from OKX public API. MSTR data from local normalized history.
-      Signals are generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
+      Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D/5M bars.
+      CI pipeline updates data via Yahoo Finance (equities) and OKX (crypto) every 4 hours.
+      Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
     </p>
     <p class="text-gray-500 text-xs" data-i18n="strategy.datasource_note">
-      Note: MSTR data currently relies on locally maintained CSV files. Automated updates via GitHub Actions are planned but depend on finding a suitable free data source for US equity 1H bars. BTC data (OKX) can be fetched automatically. Signal updates may lag until automation is in place.
+      Note: CI runs update-data → full-backtest every 4 hours. EchoTrend 240 supports incremental daily-signal mode (state.json resume) for faster updates.
     </p>
   </section>
 </Layout>
