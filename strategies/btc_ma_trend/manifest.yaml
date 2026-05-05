@@ -11,6 +11,13 @@ config:
   symbol: "BTC-USDT"
   data_source: "okx"
 
+data_sources:
+  btc:
+    symbol: "BTC-USDT"
+    timeframe: "4H"
+    source: "local"
+    local_file: "BTC-USD_1h.csv"
+
 display:
   slug: "btc-ma240-4d"
   category: "trend-following"

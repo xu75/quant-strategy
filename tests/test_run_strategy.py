@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 import core.runner as runner
+from core.registry import discover_strategies, load_strategy_module
 from strategies.btc_ma_trend.signal import StrategyConfig
 
 
@@ -101,6 +102,34 @@ def test_load_strategy_data_requests_configured_local_timeframe(monkeypatch):
     runner.load_strategy_data(manifest, config)
 
     assert requested_bars == ["1D"]
+
+
+def test_trendlock_uses_canonical_primary_history_in_ci(monkeypatch):
+    """TrendLock 40 must use committed BTC history before OKX fallback in CI."""
+    calls: list[tuple] = []
+
+    def named_history(filename, target_bar):
+        calls.append(("named", filename, target_bar))
+        return make_history()
+
+    def missing_legacy(**kwargs):
+        calls.append(("legacy", kwargs.get("target_bar")))
+        raise FileNotFoundError("legacy local CSV is not present in CI")
+
+    def okx_fallback(**kwargs):
+        calls.append(("okx", kwargs.get("limit")))
+        return make_history("2023-08-01")
+
+    monkeypatch.setattr(runner, "load_local_history_by_name", named_history)
+    monkeypatch.setattr(runner, "load_local_history", missing_legacy)
+    monkeypatch.setattr(runner, "fetch_historical_candles", okx_fallback)
+
+    manifest = next(m for m in discover_strategies() if m.id == "btc_ma_trend")
+    config = load_strategy_module(manifest).config
+    df = runner.load_strategy_data(manifest, config)
+
+    assert len(df) == 3
+    assert calls == [("named", "BTC-USD_1h.csv", "4H")]
 
 
 def test_sync_public_charts_copies_generated_outputs(tmp_path, monkeypatch):
