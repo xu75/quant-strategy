@@ -1,15 +1,15 @@
 {
   "engine": {
     "bar_index": 10995,
-    "exposure_ema": 0.9408412862886221,
+    "exposure_ema": 0.999994200288622,
     "last_scores": {
-      "trend": 0.0,
+      "trend": 70.0,
       "risk": 0.0,
       "rs": 50.0,
-      "raw": 0.9,
-      "target": 0.9408412862886221
+      "raw": 1.0,
+      "target": 0.999994200288622
     },
-    "mode": "neutral",
+    "mode": "bull",
     "mode_counter": 0,
     "trend_regime": "bull",
     "regime_counter": 0,
