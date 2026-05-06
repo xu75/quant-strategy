@@ -31,7 +31,7 @@ def _python_files(directory: Path) -> list[Path]:
 
 
 class TestManifestIsolation:
-    """Manifest-level isolation: ID format, dirname match, uniqueness."""
+    """Manifest-level isolation: ID format, dirname match, uniqueness, coverage fields."""
 
     @pytest.fixture(scope="class")
     def manifests(self):
@@ -63,6 +63,40 @@ class TestManifestIsolation:
     def test_no_duplicate_slugs(self, manifests):
         slugs = [data.get("display", {}).get("slug", data["id"]) for _, data in manifests]
         assert len(slugs) == len(set(slugs)), f"Duplicate strategy slugs: {slugs}"
+
+    def test_min_lookback_years_declared(self, manifests):
+        for path, data in manifests:
+            if not data.get("enabled", True):
+                continue
+            assert "min_lookback_years" in data, (
+                f"{path}: missing 'min_lookback_years' (required by coverage guardrail)"
+            )
+            assert isinstance(data["min_lookback_years"], int) and data["min_lookback_years"] >= 1
+
+    def test_warmup_bars_declared(self, manifests):
+        for path, data in manifests:
+            if not data.get("enabled", True):
+                continue
+            assert "warmup_bars" in data, (
+                f"{path}: missing 'warmup_bars' (required by coverage guardrail)"
+            )
+            assert isinstance(data["warmup_bars"], int) and data["warmup_bars"] >= 1
+
+    def test_data_sources_with_canonical_primary(self, manifests):
+        for path, data in manifests:
+            if not data.get("enabled", True):
+                continue
+            assert "data_sources" in data, (
+                f"{path}: missing 'data_sources' — full-backtest requires canonical data"
+            )
+            primary_symbol = data["config"]["symbol"]
+            found = any(
+                src.get("symbol") == primary_symbol and src.get("local_file")
+                for src in data["data_sources"].values()
+            )
+            assert found, (
+                f"{path}: no data_source with local_file for primary symbol '{primary_symbol}'"
+            )
 
 
 class TestImportBoundaries:

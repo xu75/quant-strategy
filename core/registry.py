@@ -77,7 +77,7 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
     with open(manifest_path) as f:
         data = yaml.safe_load(f)
 
-    required = ["id", "name", "version", "description", "config", "display", "launch_date"]
+    required = ["id", "name", "version", "description", "config", "display", "launch_date", "min_lookback_years", "warmup_bars"]
     missing = [k for k in required if k not in data]
     if missing:
         raise ValueError(f"manifest {manifest_path} missing required fields: {missing}")
@@ -105,6 +105,20 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
     config_missing = [k for k in config_required if k not in config]
     if config_missing:
         raise ValueError(f"manifest {manifest_path} config missing: {config_missing}")
+
+    if "data_sources" not in data:
+        raise ValueError(
+            f"manifest {manifest_path}: missing 'data_sources' — full-backtest requires canonical data declaration"
+        )
+    primary_symbol = config["symbol"]
+    primary_has_local = any(
+        src.get("symbol") == primary_symbol and src.get("local_file")
+        for src in data["data_sources"].values()
+    )
+    if not primary_has_local:
+        raise ValueError(
+            f"manifest {manifest_path}: data_sources must declare a local_file for primary symbol '{primary_symbol}'"
+        )
 
     return StrategyManifest(
         id=data["id"],

@@ -59,6 +59,9 @@ display:
   category: "trend-following"
   short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate + V6 仓位管理）"
 
+min_lookback_years: 5
+warmup_bars: 960
+
 launch_date: "2026-05-04"
 enabled: true
 

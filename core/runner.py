@@ -29,9 +29,53 @@ FALLBACK_HISTORY_CANDLES = 6000
 LOG_PREFIX = "[Quant Strategy]"
 
 
-def load_strategy_data(manifest, config) -> pd.DataFrame:
-    """Load enough candles for reproducible backtests."""
-    # Check if manifest declares a local file for the primary symbol
+def _hours_per_bar(timeframe: str) -> float:
+    tf = timeframe.strip().upper()
+    if tf.endswith("H"):
+        return float(tf[:-1])
+    if tf.endswith("D"):
+        return float(tf[:-1]) * 24
+    return 4.0
+
+
+def validate_data_coverage(
+    df: pd.DataFrame,
+    min_lookback_years: int,
+    warmup_bars: int,
+    timeframe: str,
+) -> None:
+    """Validate that data covers min_lookback_years + warmup. Raises ValueError if not."""
+    if df.empty:
+        raise ValueError("coverage: empty DataFrame")
+
+    data_start = pd.Timestamp(df.iloc[0]["timestamp"])
+    if data_start.tzinfo is None:
+        data_start = data_start.tz_localize("UTC")
+
+    data_end = pd.Timestamp(df.iloc[-1]["timestamp"])
+    if data_end.tzinfo is None:
+        data_end = data_end.tz_localize("UTC")
+
+    warmup_hours = warmup_bars * _hours_per_bar(timeframe)
+    required_start = data_end - pd.DateOffset(years=min_lookback_years) - pd.Timedelta(hours=warmup_hours)
+
+    if data_start > required_start:
+        raise ValueError(
+            f"coverage: data starts {data_start.date()}, but need {required_start.date()} "
+            f"({min_lookback_years}y + {warmup_bars} bars warmup). "
+            f"Got {len(df)} rows covering {data_start.date()} to {data_end.date()}."
+        )
+
+
+def load_strategy_data(manifest, config, canonical_only: bool = False) -> pd.DataFrame:
+    """Load enough candles for reproducible backtests.
+
+    If manifest declares data_sources with a local_file for the primary symbol,
+    that canonical source is required. OKX/yfinance fallback is only allowed
+    when no canonical source is declared (legacy mode — will fail coverage check).
+
+    canonical_only: If True, reject legacy local paths — only data/market/ is accepted.
+    """
     raw = getattr(manifest, '_raw_data', None)
     if raw:
         data_sources = raw.get("data_sources", {})
@@ -41,12 +85,17 @@ def load_strategy_data(manifest, config) -> pd.DataFrame:
                 local_file = src["local_file"]
                 timeframe = src.get("timeframe", config.timeframe)
                 print(f"{LOG_PREFIX} [{manifest.id}] Loading primary data from local file: {local_file}")
-                df = load_local_history_by_name(local_file, target_bar=timeframe)
+                df = load_local_history_by_name(local_file, target_bar=timeframe, canonical_only=canonical_only)
                 print(
                     f"{LOG_PREFIX} [{manifest.id}] Loaded {len(df)} candles, "
                     f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
                 )
                 return df
+        if data_sources:
+            raise ValueError(
+                f"[{manifest.id}] data_sources declared but no local_file for primary symbol '{primary_symbol}' — "
+                f"full-backtest requires canonical data"
+            )
 
     df_hist = None
     try:
@@ -91,7 +140,7 @@ def load_strategy_data(manifest, config) -> pd.DataFrame:
     sys.exit(1)
 
 
-def load_extra_data_sources(manifest) -> dict[str, pd.DataFrame]:
+def load_extra_data_sources(manifest, canonical_only: bool = False) -> dict[str, pd.DataFrame]:
     """Load additional data sources declared in manifest.data_sources.
 
     Returns a dict mapping source key (e.g. 'btc') to DataFrame.
@@ -117,7 +166,7 @@ def load_extra_data_sources(manifest) -> dict[str, pd.DataFrame]:
         timeframe = src.get("timeframe", "1H")
         if local_file:
             print(f"{LOG_PREFIX} [{manifest.id}] Loading extra source '{key}': {local_file} @ {timeframe}")
-            extras[key] = load_local_history_by_name(local_file, target_bar=timeframe)
+            extras[key] = load_local_history_by_name(local_file, target_bar=timeframe, canonical_only=canonical_only)
             print(f"{LOG_PREFIX} [{manifest.id}]   -> {len(extras[key])} candles")
 
     return extras
@@ -141,6 +190,17 @@ def build_performance_period_boundaries(
     for years in (1, 2, 3, 5):
         boundaries[f"{years}y"] = end_date - pd.DateOffset(years=years)
     return boundaries
+
+
+def filter_periods_by_coverage(
+    boundaries: dict[str, pd.Timestamp],
+    data_start: pd.Timestamp,
+) -> dict[str, pd.Timestamp]:
+    """Filter period boundaries to only those covered by data_start."""
+    return {
+        name: ts for name, ts in boundaries.items()
+        if data_start <= ts
+    }
 
 
 def sync_public_charts(strategy_id: str, charts_dir: Path) -> None:
@@ -173,13 +233,49 @@ def _run_full_backtest(adapter):
     print(f"{LOG_PREFIX} Running strategy: {manifest.name} ({manifest.id})")
     print(f"{LOG_PREFIX} ========================================")
 
-    # 1. Load data
-    df = load_strategy_data(manifest, config)
-    extra_data = load_extra_data_sources(manifest)
+    # 1. Load data (canonical_only in full-backtest to prevent legacy fallback)
+    df = load_strategy_data(manifest, config, canonical_only=True)
+    extra_data = load_extra_data_sources(manifest, canonical_only=True)
     print(
         f"{LOG_PREFIX} [{manifest.id}] Combined: {len(df)} candles, "
         f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
     )
+
+    # 1b. Coverage validation (fail-closed)
+    raw = getattr(manifest, '_raw_data', None) or {}
+    min_lookback = raw.get("min_lookback_years")
+    warmup = raw.get("warmup_bars")
+    if min_lookback and warmup:
+        validate_data_coverage(df, min_lookback, warmup, config.timeframe)
+        print(f"{LOG_PREFIX} [{manifest.id}] Coverage OK (primary): {min_lookback}y + {warmup} bars warmup")
+
+        # Compute wall-clock required_start from primary data
+        # All extra sources must cover at least this same start date
+        primary_end = pd.Timestamp(df.iloc[-1]["timestamp"])
+        if primary_end.tzinfo is None:
+            primary_end = primary_end.tz_localize("UTC")
+        warmup_hours = warmup * _hours_per_bar(config.timeframe)
+        required_start = primary_end - pd.DateOffset(years=min_lookback) - pd.Timedelta(hours=warmup_hours)
+
+        # Validate extra data sources against the same wall-clock boundary
+        data_sources = raw.get("data_sources", {})
+        primary_symbol = manifest.config.get("symbol", "")
+        primary_timeframe = manifest.config.get("timeframe", "1H")
+        for key, src in data_sources.items():
+            if src.get("symbol") == primary_symbol and src.get("timeframe", "1H") == primary_timeframe:
+                continue
+            if key in extra_data:
+                edf = extra_data[key]
+                src_start = pd.Timestamp(edf.iloc[0]["timestamp"])
+                if src_start.tzinfo is None:
+                    src_start = src_start.tz_localize("UTC")
+                if src_start > required_start:
+                    raise ValueError(
+                        f"coverage: extra source '{key}' starts {src_start.date()}, "
+                        f"but need {required_start.date()} "
+                        f"(same wall-clock boundary as primary: {min_lookback}y + {warmup} bars @ {config.timeframe})"
+                    )
+                print(f"{LOG_PREFIX} [{manifest.id}] Coverage OK (extra '{key}'): starts {src_start.date()}")
 
     # 2. Compute signals and run backtest
     # Strategies with run_backtest use their own engine (e.g. continuous exposure).
@@ -258,7 +354,14 @@ def _run_full_backtest(adapter):
     period_boundaries = build_performance_period_boundaries(end_date, since_date)
 
     periods_data = {}
-    for name, p_start in period_boundaries.items():
+    data_start = df_sorted.iloc[0]["timestamp"]
+    if hasattr(data_start, 'tzinfo') and data_start.tzinfo is None:
+        data_start = data_start.tz_localize("UTC")
+    valid_boundaries = filter_periods_by_coverage(period_boundaries, data_start)
+    skipped = set(period_boundaries.keys()) - set(valid_boundaries.keys())
+    for name in skipped:
+        print(f"{LOG_PREFIX} [{manifest.id}] Period '{name}' skipped: data starts after boundary")
+    for name, p_start in valid_boundaries.items():
         mask = df_sorted["timestamp"] <= p_start
         start_price = (
             float(df_sorted.loc[mask, "close"].iloc[-1])
@@ -293,6 +396,38 @@ def _run_full_backtest(adapter):
     output_dir = OUTPUT_BASE_DIR / manifest.id
     charts_dir = output_dir / "charts"
 
+    # Build provenance metadata (per-source)
+    def _ts_iso(ts):
+        return ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+
+    sources_provenance = []
+    sources_provenance.append({
+        "key": "primary",
+        "symbol": manifest.config.get("symbol", ""),
+        "timeframe": config.timeframe,
+        "source": "canonical",
+        "rows": len(df),
+        "start": _ts_iso(df.iloc[0]["timestamp"]),
+        "end": _ts_iso(df.iloc[-1]["timestamp"]),
+    })
+    for key, edf in extra_data.items():
+        sources_provenance.append({
+            "key": key,
+            "symbol": raw.get("data_sources", {}).get(key, {}).get("symbol", ""),
+            "timeframe": raw.get("data_sources", {}).get(key, {}).get("timeframe", "1H"),
+            "source": "canonical",
+            "rows": len(edf),
+            "start": _ts_iso(edf.iloc[0]["timestamp"]),
+            "end": _ts_iso(edf.iloc[-1]["timestamp"]),
+        })
+
+    provenance = {
+        "generation_mode": "full-backtest",
+        "coverage_ok": True,
+        "min_lookback_years": raw.get("min_lookback_years"),
+        "sources": sources_provenance,
+    }
+
     generate_status_json(
         df_backtest, config, in_position, entry_bar_idx, output_dir / "latest.json",
         current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config, extra_data=extra_data),
@@ -302,6 +437,7 @@ def _run_full_backtest(adapter):
         output_dir / "backtest.json",
         since_date=since_date.isoformat() if since_date else None,
         periods=periods_data,
+        provenance=provenance,
     )
     generate_equity_chart(result, charts_dir / "equity.png", benchmark_prices=df_sorted[["timestamp", "close"]])
     generate_price_ma_chart(df_backtest, config, result.trades, charts_dir / "price_ma.png")

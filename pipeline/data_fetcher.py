@@ -85,11 +85,13 @@ def _resample_to_target(df: pd.DataFrame, source_freq: str, target_freq: str) ->
     return resampled.reset_index()
 
 
-def _resolve_csv_path(filename: str) -> Path | None:
+def _resolve_csv_path(filename: str, canonical_only: bool = False) -> Path | None:
     """Find a CSV file: canonical data/market/ first, then legacy local path."""
     canonical = CANONICAL_MARKET_DIR / filename
     if canonical.exists():
         return canonical
+    if canonical_only:
+        return None
     legacy = LOCAL_HISTORY_PATH.parent / filename
     if legacy.exists():
         return legacy
@@ -99,12 +101,16 @@ def _resolve_csv_path(filename: str) -> Path | None:
 def load_local_history_by_name(
     filename: str,
     target_bar: str = "1H",
+    canonical_only: bool = False,
 ) -> pd.DataFrame:
     """Load a named local history CSV from canonical or legacy directory.
 
     Resolution order:
       1. data/market/{filename}  (canonical, committed to repo, CI-readable)
       2. ~/VSCode/SynologyDrive/backtest/history_data/normalized/{filename}  (legacy dev)
+
+    When canonical_only=True, only canonical source is accepted. Legacy fallback
+    is rejected. Use this for full-backtest mode to ensure reproducible results.
 
     When the target file exists but a finer-grained file provides longer
     history (e.g. QQQ_5m.csv covers 2020+ while QQQ_1h.csv starts 2024),
@@ -115,7 +121,7 @@ def load_local_history_by_name(
 
     No silent yfinance fallback — raises FileNotFoundError if no local file found.
     """
-    path = _resolve_csv_path(filename)
+    path = _resolve_csv_path(filename, canonical_only=canonical_only)
     base_df = None
     base_source = None  # "canonical" or "legacy"
 
@@ -131,7 +137,7 @@ def load_local_history_by_name(
 
     for finer in covering_intervals:
         finer_file = f"{stem}_{finer}.csv"
-        finer_path = _resolve_csv_path(finer_file)
+        finer_path = _resolve_csv_path(finer_file, canonical_only=canonical_only)
         if finer_path is None:
             continue
 

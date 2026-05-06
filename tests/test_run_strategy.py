@@ -108,7 +108,7 @@ def test_trendlock_uses_canonical_primary_history_in_ci(monkeypatch):
     """TrendLock 40 must use committed BTC history before OKX fallback in CI."""
     calls: list[tuple] = []
 
-    def named_history(filename, target_bar):
+    def named_history(filename, target_bar, canonical_only=False):
         calls.append(("named", filename, target_bar))
         return make_history()
 

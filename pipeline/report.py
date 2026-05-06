@@ -115,6 +115,7 @@ def generate_backtest_json(
     output_path: Path,
     since_date: str | None = None,
     periods: dict | None = None,
+    provenance: dict | None = None,
 ) -> None:
     """Write backtest results to JSON.
 
@@ -123,6 +124,7 @@ def generate_backtest_json(
         output_path: Path to write JSON file.
         since_date: Fixed launch reference date (ISO string).
         periods: Period-filtered performance data.
+        provenance: Data provenance metadata (source, rows, coverage).
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     data = result_to_dict(result)
@@ -130,6 +132,8 @@ def generate_backtest_json(
         data["since_date"] = since_date
     if periods:
         data["periods"] = periods
+    if provenance:
+        data["provenance"] = provenance
     with open(output_path, "w") as f:
         json.dump(data, f, indent=2, default=str)
 
