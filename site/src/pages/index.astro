@@ -78,7 +78,7 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
               </span>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
                 <p class="text-lg font-mono">${signal.price.toLocaleString()}</p>
@@ -103,23 +103,21 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
                 </div>
               ) : (
                 <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
-                  <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {returnPct > 0 ? '+' : ''}{returnPct}%
-                  </p>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
+                  <p class="text-lg font-mono">{signal.hold_bars ?? '—'}</p>
                 </div>
               )}
               <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n={isEchoTrend ? 'label.return' : 'label.since'}>{isEchoTrend ? 'Return (MTM)' : 'Since'}</p>
-                {isEchoTrend ? (
-                  <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {returnPct > 0 ? '+' : ''}{returnPct}%
-                  </p>
-                ) : (
-                  <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
-                    {sinceDateIso ?? '—'}
-                  </p>
-                )}
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
+                <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {returnPct > 0 ? '+' : ''}{returnPct}%
+                </p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
+                <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
+                  {sinceDateIso ?? '—'}
+                </p>
               </div>
             </div>
           </div>

@@ -21,6 +21,7 @@ const defaultRange = periods.since_launch
   ? { start: periods.since_launch.start, end: periods.since_launch.end }
   : period;
 
+const sinceDateIso = backtest.since_date ?? null;
 // Serialize periods for client-side tab switching
 const periodsJson = JSON.stringify(periods);
 const defaultRangeJson = JSON.stringify(defaultRange);
@@ -39,6 +40,7 @@ const research = {
     <h1 class="text-3xl font-bold mb-1">{strategy.name}</h1>
     <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window} · Min hold {strategy.min_hold_days}D</p>
     <p class="text-xs text-gray-600 mt-2">
+      {sinceDateIso && <><span data-i18n="strategy.live_since">Live since:</span> <span class="js-local-date" data-iso={sinceDateIso}>{sinceDateIso}</span> · </>}
       <span data-i18n="strategy.updated">Last updated:</span>
       <span class="js-local-datetime" data-iso={latest.updated_at}>{latest.updated_at}</span>
     </p>
@@ -97,12 +99,21 @@ const research = {
 
   <script>
     const fmtDateTime = (iso) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' });
     document.querySelectorAll('.js-local-datetime[data-iso]').forEach((el) => {
       const iso = el.dataset.iso;
       if (!iso) return;
       const dt = new Date(iso);
       if (!Number.isNaN(dt.getTime())) {
         el.textContent = fmtDateTime(iso);
+      }
+    });
+    document.querySelectorAll('.js-local-date[data-iso]').forEach((el) => {
+      const iso = el.dataset.iso;
+      if (!iso) return;
+      const dt = new Date(iso);
+      if (!Number.isNaN(dt.getTime())) {
+        el.textContent = fmtDate(iso);
       }
     });
   </script>
