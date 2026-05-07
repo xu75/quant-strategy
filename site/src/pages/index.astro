@@ -8,6 +8,7 @@ const strategyEntries = [
   { id: 'btc_ma_trend', href: '/strategy/btc-ma240-4d' },
   { id: 'btc_ma_trend_plus', href: '/strategy/btc-ma240-ecb2' },
   { id: 'echotrend_240', href: '/strategy/echotrend-240' },
+  { id: 'echotrend_240_v2', href: '/strategy/echotrend-240-v2' },
 ];
 
 const strategyCards = strategyEntries.flatMap(({ id, href }) => {
@@ -35,7 +36,8 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   const sincePerf = backtest.periods?.since_launch?.performance;
   const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
-  const isEchoTrend = id === 'echotrend_240';
+  const isEchoTrend = id === 'echotrend_240' || id === 'echotrend_240_v2';
+  const isEchoTrendV2 = id === 'echotrend_240_v2';
   const isRetracted = status === 'retracted';
   const isDeprecated = status === 'deprecated';
 
@@ -47,6 +49,7 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
     sinceDateIso,
     returnPct,
     isEchoTrend,
+    isEchoTrendV2,
     status,
     statusReason,
     isRetracted,
@@ -78,7 +81,7 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   <section class="mb-12">
     <h2 id="strategies" class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, status, statusReason, isRetracted, isDeprecated }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, isEchoTrendV2, status, statusReason, isRetracted, isDeprecated }) => (
         <a href={href} class="block">
           <div class={`relative overflow-hidden border rounded-xl p-6 transition-colors ${
             isRetracted ? 'retracted-card border-gray-700/70 bg-gray-900/35 hover:border-gray-600' :
@@ -102,7 +105,9 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
             <div class={`relative z-10 flex items-center justify-between mb-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
                 <h3 class={`text-lg font-semibold ${isRetracted ? 'text-gray-400' : ''}`}>{strategy.name}</h3>
-                <p class={`text-sm ${isRetracted ? 'text-gray-500' : 'text-gray-400'}`}>{isEchoTrend
+                <p class={`text-sm ${isRetracted ? 'text-gray-500' : 'text-gray-400'}`}>{isEchoTrendV2
+                  ? `${strategy.symbol} · ${strategy.timeframe} · BTC 4H Regime Gate (CAP1.0)`
+                  : isEchoTrend
                   ? `${strategy.symbol} · ${strategy.timeframe} · BTC Regime Gate + V6 Scoring`
                   : `${strategy.symbol} · ${strategy.timeframe} · MA${strategy.ma_window}`}</p>
               </div>
@@ -139,7 +144,14 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
                   <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.ma_value.toLocaleString()}</p>
                 </div>
               )}
-              {isEchoTrend ? (
+              {isEchoTrendV2 ? (
+                <div>
+                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_prefix">Signal</p>
+                  <p class={`text-lg font-mono capitalize ${isRetracted ? 'text-gray-400' : signal.action === 'buy' ? 'text-green-400' : signal.action === 'sell' ? 'text-red-400' : 'text-gray-300'}`}>
+                    {signal.action || '—'}
+                  </p>
+                </div>
+              ) : isEchoTrend ? (
                 <div>
                   <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
                   <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>

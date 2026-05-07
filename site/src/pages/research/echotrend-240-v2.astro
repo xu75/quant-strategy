@@ -1,0 +1,92 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'js-yaml';
+
+const paper = {
+  title: 'EchoTrend 240 V2: BTC 4H SMA240 Regime Gate + V6 Execution',
+  strategyName: 'EchoTrend 240 V2',
+  canonicalUrl: '',
+  sourceProject: 'https://github.com/xu75',
+  strategyUrl: '/strategy/echotrend-240-v2',
+};
+---
+
+<Layout title="Research - EchoTrend 240 V2" description="Research memo for EchoTrend 240 V2">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-gray-400">{paper.strategyName}</p>
+    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
+      Method, assumptions, and evidence chain behind this strategy.
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <p class="text-gray-300 leading-7">
+      EchoTrend 240 V2 是一个跨资产趋势跟踪策略：利用 BTC 4H SMA240 作为 regime gate（核心 alpha），
+      在牛市 100% 持有 MSTR、熊市 0% 清仓（CAP1.0）。V6 执行包（cooldown/EMA/reentry）作为边际增强，
+      优化交易节奏但不改变仓位大小。核心假设是 MSTR 作为 BTC 的杠杆代理，其趋势方向
+      可由 BTC 均线信号有效预测。策略仅在美股常规交易时段执行，使用 next-bar open 语义。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>BTC 4H SMA240 regime gate 是唯一核心 alpha 来源——单独通过 4 窗口验证（avg excess +98.5%）。</li>
+      <li>V6 执行包在长窗口（3Y/5Y）提供边际改善，但不构成独立 alpha。</li>
+      <li>三组归因对比：A（纯趋势）、B（V6 无减仓 = CAP1.0）、C（V6 含减仓）。推荐 B 组。</li>
+      <li>4 窗口全部 PASS：avg excess +168.5%，avg DD improvement +24.6pp。</li>
+      <li>confirm_bars=3 有效过滤假突破，减少无效交易。</li>
+      <li>RD-8 参数敏感性测试 25/26 pass，walk-forward Sharpe stability 0.87。</li>
+      <li>成本模型：commission 0.05% + slippage 0.05% = 0.1%/side（项目标准），策略对成本不敏感。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>双数据源：BTC 1H（OKX）重采样为 4H 计算 SMA240，MSTR 1H 作为执行标的。</li>
+      <li>MSTR 数据过滤至美股常规交易时段（US/Eastern 09:30-16:00），排除盘前盘后。</li>
+      <li>信号延迟：shift(1) 确保信号在 4H bar 收盘后才可用，避免前视偏差。</li>
+      <li>执行语义：regime 翻转后在下一根常规时段 bar 的 open 价执行。</li>
+      <li>交易成本：commission 0.05% + slippage 0.05% = 0.1%/side（项目标准）。</li>
+      <li>CAP1.0 二元持仓：bull regime = 100% MSTR，bear regime = 0%。无杠杆，无部分仓位。</li>
+      <li>V6 执行包：cooldown 39 bars，EMA alpha 0.30，step constraints，fast reentry。仅优化节奏。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">Alpha Attribution</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>Group A（纯 BTC SMA240 趋势）：单独通过 4 窗口验证，avg excess +98.5%。</li>
+      <li>Group B（regime gate + V6 无减仓 = CAP1.0）：avg excess +168.5%，DD improvement +24.6pp。</li>
+      <li>Group C（V6 含减仓）：V6 bull reduction 无正贡献，反而降低收益。</li>
+      <li>结论：regime gate 是核心 alpha，V6 execution 是边际增强，V6 减仓无效。选择 B 组（CAP1.0）。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>MSTR-BTC 结构性风险：若 MicroStrategy 改变 BTC 持仓策略，相关性可能断裂。</li>
+      <li>参数在 2020-2026 数据上优化，未来市场结构可能变化。</li>
+      <li>MSTR 在非美股交易时段流动性较低，1H 执行可能面临额外滑点。</li>
+      <li>回测使用 next-bar open 执行，实际交易可能有额外延迟或滑点。</li>
+      <li>V1 归因错误教训：V6 多因子评分不构成独立 alpha，仅为执行优化。</li>
+    </ul>
+  </section>
+
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
+      <a href={paper.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.source_project">Source research project</a>
+    </div>
+  </section>
+</Layout>
