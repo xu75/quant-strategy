@@ -98,6 +98,22 @@ class TestManifestIsolation:
                 f"{path}: no data_source with local_file for primary symbol '{primary_symbol}'"
             )
 
+    def test_status_field_valid(self, manifests):
+        valid_statuses = ("active", "experimental", "deprecated", "retracted")
+        for path, data in manifests:
+            status = data.get("status", "active")
+            assert status in valid_statuses, (
+                f"{path}: status '{status}' must be one of {valid_statuses}"
+            )
+
+    def test_deprecated_retracted_must_be_disabled(self, manifests):
+        for path, data in manifests:
+            status = data.get("status", "active")
+            if status in ("deprecated", "retracted"):
+                assert not data.get("enabled", True), (
+                    f"{path}: status '{status}' requires enabled: false"
+                )
+
 
 class TestImportBoundaries:
     """Platform code must not import strategy-specific modules."""

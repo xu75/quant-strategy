@@ -63,7 +63,11 @@ min_lookback_years: 5
 warmup_bars: 960
 
 launch_date: "2026-05-04"
-enabled: true
+enabled: false
+status: retracted
+status_reason: "V6 多因子归因不成立——策略实际逻辑为纯 BTC SMA240 趋势跟踪，与 V6 仓位管理无关"
+status_date: "2026-05-07"
+superseded_by: ""
 
 research:
   paper_title: "EchoTrend 240: BTC 4H SMA240 Regime Gate + V6 Position Management"

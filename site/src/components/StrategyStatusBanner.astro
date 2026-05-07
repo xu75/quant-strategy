@@ -1,0 +1,35 @@
+---
+interface Props {
+  status: 'deprecated' | 'retracted';
+  reason?: string;
+  date?: string;
+  supersededBy?: { name: string; href: string } | null;
+}
+
+const { status, reason, date, supersededBy } = Astro.props;
+
+const isRetracted = status === 'retracted';
+const borderColor = isRetracted ? 'border-red-700' : 'border-yellow-700';
+const bgColor = isRetracted ? 'bg-red-950/40' : 'bg-yellow-950/40';
+const iconColor = isRetracted ? 'text-red-400' : 'text-yellow-400';
+const label = isRetracted ? 'RETRACTED' : 'DEPRECATED';
+const labelBg = isRetracted ? 'bg-red-800/60 text-red-200' : 'bg-yellow-800/60 text-yellow-200';
+---
+
+<div class={`border ${borderColor} ${bgColor} rounded-xl p-5 mb-6`}>
+  <div class="flex items-start gap-3">
+    <span class={`text-2xl ${iconColor}`}>{isRetracted ? '⊘' : '⚠'}</span>
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class={`px-2 py-0.5 rounded text-xs font-bold uppercase ${labelBg}`}>{label}</span>
+        {date && <span class="text-xs text-gray-500">{date}</span>}
+      </div>
+      {reason && <p class="text-gray-300 text-sm leading-relaxed">{reason}</p>}
+      {supersededBy && (
+        <p class="text-sm text-gray-400 mt-2">
+          Superseded by: <a href={supersededBy.href} class="text-blue-400 hover:underline">{supersededBy.name}</a>
+        </p>
+      )}
+    </div>
+  </div>
+</div>

@@ -19,6 +19,9 @@ _SAFE_ID_RE = re.compile(r"^[a-z0-9_]+$")
 _SAFE_SLUG_RE = re.compile(r"^[a-z0-9-]+$")
 
 
+VALID_STATUSES = ("active", "experimental", "deprecated", "retracted")
+
+
 @dataclass
 class StrategyManifest:
     """Parsed strategy manifest metadata."""
@@ -31,6 +34,10 @@ class StrategyManifest:
     display: dict
     launch_date: str
     enabled: bool = True
+    status: str = "active"
+    status_reason: str = ""
+    status_date: str = ""
+    superseded_by: str = ""
     manifest_path: Path = field(default_factory=lambda: Path("."))
     _raw_data: dict = field(default_factory=dict, repr=False)
 
@@ -120,6 +127,18 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
             f"manifest {manifest_path}: data_sources must declare a local_file for primary symbol '{primary_symbol}'"
         )
 
+    status = data.get("status", "active")
+    if status not in VALID_STATUSES:
+        raise ValueError(
+            f"manifest {manifest_path}: status '{status}' must be one of {VALID_STATUSES}"
+        )
+
+    enabled = data.get("enabled", True)
+    if status in ("deprecated", "retracted") and enabled:
+        raise ValueError(
+            f"manifest {manifest_path}: status '{status}' requires enabled: false"
+        )
+
     return StrategyManifest(
         id=data["id"],
         name=data["name"],
@@ -128,7 +147,11 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
         config=data["config"],
         display=data["display"],
         launch_date=data["launch_date"],
-        enabled=data.get("enabled", True),
+        enabled=enabled,
+        status=status,
+        status_reason=data.get("status_reason", ""),
+        status_date=data.get("status_date", ""),
+        superseded_by=data.get("superseded_by", ""),
         manifest_path=manifest_path,
         _raw_data=data,
     )
