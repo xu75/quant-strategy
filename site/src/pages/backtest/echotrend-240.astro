@@ -1,7 +1,15 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
 import fs from 'node:fs';
 import path from 'node:path';
+import yaml from 'js-yaml';
+
+const manifestPath = path.resolve(process.cwd(), '../strategies/echotrend_240/manifest.yaml');
+const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf-8'));
+const status = manifest.status || 'active';
+const statusReason = manifest.status_reason || '';
+const statusDate = manifest.status_date || '';
 
 const dataDir = path.resolve(process.cwd(), '../data/echotrend_240');
 const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
@@ -13,6 +21,9 @@ const strategy = backtest.strategy;
 ---
 
 <Layout title="Backtest - EchoTrend 240" description="Backtest results for EchoTrend 240">
+  {(status === 'deprecated' || status === 'retracted') && (
+    <StrategyStatusBanner status={status} reason={statusReason} date={statusDate} />
+  )}
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
       <a href="/strategy/echotrend-240" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="backtest.back">&larr; Strategy</a>

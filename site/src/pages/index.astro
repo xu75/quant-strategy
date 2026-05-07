@@ -37,8 +37,22 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
   const isEchoTrend = id === 'echotrend_240';
+  const isRetracted = status === 'retracted';
+  const isDeprecated = status === 'deprecated';
 
-  return [{ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, status, statusReason }];
+  return [{
+    href,
+    latest,
+    signal,
+    strategy,
+    sinceDateIso,
+    returnPct,
+    isEchoTrend,
+    status,
+    statusReason,
+    isRetracted,
+    isDeprecated,
+  }];
 });
 ---
 
@@ -65,31 +79,38 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
   <section class="mb-12">
     <h2 id="strategies" class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, status, statusReason }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, status, statusReason, isRetracted, isDeprecated }) => (
         <a href={href} class="block">
-          <div class={`border rounded-xl p-6 transition-colors ${
-            status === 'retracted' ? 'border-red-800/60 opacity-70 hover:border-red-700' :
-            status === 'deprecated' ? 'border-yellow-800/60 opacity-80 hover:border-yellow-700' :
+          <div class={`relative overflow-hidden border rounded-xl p-6 transition-colors ${
+            isRetracted ? 'retracted-card border-gray-700/70 bg-gray-900/35 hover:border-gray-600' :
+            isDeprecated ? 'border-yellow-800/60 opacity-80 hover:border-yellow-700' :
             'border-gray-800 hover:border-gray-600'
           }`}>
-            {(status === 'retracted' || status === 'deprecated') && (
-              <div class={`flex items-center gap-2 mb-3 text-xs font-bold uppercase ${
-                status === 'retracted' ? 'text-red-400' : 'text-yellow-400'
+            {isRetracted && (
+              <div class="retracted-stamp pointer-events-none absolute right-5 top-5 rotate-12 rounded border-2 border-gray-500/70 px-4 py-1 text-sm font-black uppercase tracking-[0.2em] text-gray-400/90">
+                Retracted
+              </div>
+            )}
+            {(isRetracted || isDeprecated) && (
+              <div class={`relative z-10 flex items-center gap-2 mb-3 text-xs font-bold uppercase ${
+                isRetracted ? 'text-gray-400' : 'text-yellow-400'
               }`}>
-                <span>{status === 'retracted' ? '⊘' : '⚠'}</span>
-                <span>{status === 'retracted' ? 'RETRACTED' : 'DEPRECATED'}</span>
+                <span>{isRetracted ? '⊘' : '⚠'}</span>
+                <span>{isRetracted ? 'Archived Snapshot' : 'DEPRECATED'}</span>
                 {statusReason && <span class="font-normal text-gray-500">— {statusReason}</span>}
               </div>
             )}
-            <div class="flex items-center justify-between mb-4">
+            <div class={`relative z-10 flex items-center justify-between mb-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
-                <h3 class="text-lg font-semibold">{strategy.name}</h3>
-                <p class="text-sm text-gray-400">{isEchoTrend
+                <h3 class={`text-lg font-semibold ${isRetracted ? 'text-gray-400' : ''}`}>{strategy.name}</h3>
+                <p class={`text-sm ${isRetracted ? 'text-gray-500' : 'text-gray-400'}`}>{isEchoTrend
                   ? `${strategy.symbol} · ${strategy.timeframe} · BTC Regime Gate + V6 Scoring`
                   : `${strategy.symbol} · ${strategy.timeframe} · MA${strategy.ma_window}`}</p>
               </div>
               <span class={`px-3 py-1 rounded-full text-sm font-medium ${
-                signal.action === 'hold' && latest.position.in_position
+                isRetracted
+                  ? 'border border-gray-700 bg-gray-800/70 text-gray-400'
+                  : signal.action === 'hold' && latest.position.in_position
                   ? 'bg-green-900/50 text-green-400'
                   : signal.action === 'buy'
                     ? 'bg-green-900/50 text-green-400'
@@ -97,48 +118,48 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
                       ? 'bg-red-900/50 text-red-400'
                       : 'bg-gray-800 text-gray-400'
               }`} data-i18n={latest.position.in_position ? 'label.in_position' : 'label.no_position'}>
-                {latest.position.in_position ? 'In Position' : 'No Position'}
+                {isRetracted ? 'Archived Snapshot' : latest.position.in_position ? 'In Position' : 'No Position'}
               </span>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div class={`relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
-                <p class="text-lg font-mono">${signal.price.toLocaleString()}</p>
+                <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.price.toLocaleString()}</p>
               </div>
               {isEchoTrend ? (
                 <div>
                   <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
-                  <p class={`text-lg font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : signal.regime === 'bear' ? 'text-red-400' : 'text-gray-300'}`}>
+                  <p class={`text-lg font-mono capitalize ${isRetracted ? 'text-gray-400' : signal.regime === 'bull' ? 'text-green-400' : signal.regime === 'bear' ? 'text-red-400' : 'text-gray-300'}`}>
                     {signal.regime || '—'}
                   </p>
                 </div>
               ) : (
                 <div>
                   <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
-                  <p class="text-lg font-mono">${signal.ma_value.toLocaleString()}</p>
+                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.ma_value.toLocaleString()}</p>
                 </div>
               )}
               {isEchoTrend ? (
                 <div>
                   <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
-                  <p class="text-lg font-mono">{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
+                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
                 </div>
               ) : (
                 <div>
                   <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
-                  <p class="text-lg font-mono">{signal.hold_bars ?? '—'}</p>
+                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>{signal.hold_bars ?? '—'}</p>
                 </div>
               )}
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
-                <p class={`text-lg font-mono ${returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {returnPct > 0 ? '+' : ''}{returnPct}%
                 </p>
               </div>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.since">Since</p>
-                <p class="text-lg font-mono js-local-date" data-iso={sinceDateIso ?? ''} data-fallback="—">
+                <p class={`text-lg font-mono js-local-date ${isRetracted ? 'text-gray-400' : ''}`} data-iso={sinceDateIso ?? ''} data-fallback="—">
                   {sinceDateIso ?? '—'}
                 </p>
               </div>
