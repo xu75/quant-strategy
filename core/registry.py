@@ -138,6 +138,16 @@ def validate_manifest(manifest_path: Path) -> StrategyManifest:
         raise ValueError(
             f"manifest {manifest_path}: status '{status}' requires enabled: false"
         )
+    if status in ("deprecated", "retracted"):
+        missing_status_fields = [
+            field for field in ("status_reason", "status_date")
+            if not data.get(field)
+        ]
+        if missing_status_fields:
+            raise ValueError(
+                f"manifest {manifest_path}: status '{status}' missing required audit fields: "
+                f"{missing_status_fields}"
+            )
 
     return StrategyManifest(
         id=data["id"],
