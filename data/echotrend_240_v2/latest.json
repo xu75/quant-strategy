@@ -1,0 +1,32 @@
+{
+  "updated_at": "2026-05-07T12:25:01.749188+00:00",
+  "strategy": {
+    "name": "EchoTrend 240 V2",
+    "code": "echotrend_240_v2",
+    "timeframe": "1H",
+    "symbol": "MSTR",
+    "ma_window": 240
+  },
+  "current_signal": {
+    "action": "hold",
+    "price": 186.78,
+    "ma_value": 0.0,
+    "timestamp": "2026-05-06T19:30:00+00:00",
+    "hold_bars": 0,
+    "reason": "Exposure 1.00, mode=bull, regime=bull",
+    "regime": "bull",
+    "mode": "bull",
+    "target_exposure": 1.0,
+    "scores": {
+      "trend": 90.0,
+      "risk": 0.0,
+      "rs": 65.0,
+      "raw": 1.0,
+      "target": 1.0
+    }
+  },
+  "position": {
+    "in_position": true,
+    "entry_bar_idx": 0
+  }
+}

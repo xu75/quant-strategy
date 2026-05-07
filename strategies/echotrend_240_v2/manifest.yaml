@@ -1,19 +1,19 @@
-# strategies/echotrend_240/manifest.yaml
-id: echotrend_240
-name: "EchoTrend 240"
-version: "2.0.0"
-description: "BTC 4H SMA240 regime gate + V6 多因子仓位管理 (v9 trend_regime)"
+# strategies/echotrend_240_v2/manifest.yaml
+id: echotrend_240_v2
+name: "EchoTrend 240 V2"
+version: "1.0.0"
+description: "BTC 4H SMA240 regime gate — MSTR 趋势跟踪（CAP1.0，无杠杆）"
 
 config:
   ma_window: 240
   bear_confirm_bars: 3
   bull_confirm_bars: 3
   bear_ceiling: 0.0
-  bull_ceiling: 1.00
+  bull_ceiling: 1.0
   hysteresis_pct: 0.0
   freeze_bars: 0
-  commission_rate: 0.0002
-  slippage_rate: 0.0003
+  commission_rate: 0.0005
+  slippage_rate: 0.0005
   timeframe: "1H"
   exec_timeframe: "1H"
   regime_timeframe: "4H"
@@ -55,22 +55,19 @@ data_sources:
     local_file: "QQQ_1d.csv"
 
 display:
-  slug: "echotrend-240"
+  slug: "echotrend-240-v2"
   category: "trend-following"
-  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate + V6 仓位管理）"
+  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate，CAP1.0 无杠杆）"
 
 min_lookback_years: 5
 warmup_bars: 960
 
-launch_date: "2026-05-04"
-enabled: false
-status: retracted
-status_reason: "V6 多因子归因不成立——策略实际逻辑为纯 BTC SMA240 趋势跟踪，与 V6 仓位管理无关"
-status_date: "2026-05-07"
-superseded_by: "/strategy/echotrend-240-v2"
+launch_date: "2026-05-07"
+enabled: true
+status: active
 
 research:
-  paper_title: "EchoTrend 240: BTC 4H SMA240 Regime Gate + V6 Position Management"
-  website_path: "/research/echotrend-240"
-  canonical_doc: "docs/research/strategies/echotrend_240.md"
+  paper_title: "EchoTrend 240 V2: BTC 4H SMA240 Regime Gate (CAP1.0)"
+  website_path: "/research/echotrend-240-v2"
+  canonical_doc: "docs/research/strategies/echotrend_240_v2.md"
   source_project: "https://github.com/xu75/mstr-strategy-clowder"

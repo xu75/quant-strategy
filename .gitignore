@@ -37,6 +37,8 @@ Thumbs.db
 *.log
 
 # Node (site)
+node_modules/
+.astro/
 site/node_modules/
 site/.astro/
 site/dist/
