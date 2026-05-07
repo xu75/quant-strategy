@@ -7,8 +7,8 @@ import yaml from 'js-yaml';
 const strategyEntries = [
   { id: 'btc_ma_trend', href: '/strategy/btc-ma240-4d' },
   { id: 'btc_ma_trend_plus', href: '/strategy/btc-ma240-ecb2' },
-  { id: 'echotrend_240', href: '/strategy/echotrend-240' },
   { id: 'echotrend_240_v2', href: '/strategy/echotrend-240-v2' },
+  { id: 'echotrend_240', href: '/strategy/echotrend-240' },
 ];
 
 const strategyCards = strategyEntries.flatMap(({ id, href }) => {
@@ -56,6 +56,9 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
     isDeprecated,
   }];
 });
+
+const statusOrder = { active: 0, experimental: 0, deprecated: 1, retracted: 2 };
+strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0));
 ---
 
 <Layout title="Quant Strategy">
