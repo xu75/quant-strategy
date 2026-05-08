@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-08T03:49:00.081170+00:00",
+  "updated_at": "2026-05-08T06:06:44.838157+00:00",
   "strategy": {
     "name": "EchoTrend 240 V2",
     "code": "echotrend_240_v2",
@@ -13,12 +13,12 @@
     "ma_value": 0.0,
     "timestamp": "2026-05-07T19:30:00+00:00",
     "hold_bars": 0,
-    "reason": "Exposure 1.00, mode=neutral, regime=bull",
+    "reason": "Exposure 1.00, mode=bull, regime=bull",
     "regime": "bull",
-    "mode": "neutral",
+    "mode": "bull",
     "target_exposure": 1.0,
     "scores": {
-      "trend": 20.0,
+      "trend": 90.0,
       "risk": 0.0,
       "rs": 65.0,
       "raw": 1.0,
