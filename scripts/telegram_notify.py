@@ -129,7 +129,7 @@ def main():
         new_action = signal_info.get("action", "")
         old_action = get_previous_signal(sid)
 
-        if old_action and old_action != new_action:
+        if old_action and old_action != new_action and new_action in ("buy", "sell"):
             changes.append((strategy_info.get("name", sid), sid, old_action, new_action, signal_info))
 
     if not changes:
