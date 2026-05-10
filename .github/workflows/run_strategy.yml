@@ -96,10 +96,8 @@ jobs:
           fi
 
       - name: Notify on signal changes
-        if: env.TELEGRAM_BOT_TOKEN != '' || env.WXPUSHER_APP_TOKEN != ''
+        if: env.TELEGRAM_BOT_TOKEN != ''
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
-          WXPUSHER_TOPIC_ID: ${{ secrets.WXPUSHER_TOPIC_ID }}
         run: python scripts/telegram_notify.py
