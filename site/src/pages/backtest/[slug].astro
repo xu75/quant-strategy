@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
 import { loadAllStrategies, getStrategyType } from '../../lib/strategies';
 
 export async function getStaticPaths() {
@@ -21,15 +22,20 @@ const trades = backtest.trades;
 const period = backtest.period;
 const strategy = backtest.strategy;
 const strategySlug = manifest.display.slug;
+const status = manifest.status || 'active';
+const statusReason = manifest.status_reason || '';
+const statusDate = manifest.status_date || '';
 
-const subtitle = strategyType === 'ma-trend'
-  ? `${strategy.symbol} · ${strategy.timeframe} · MA${strategy.ma_window}`
-  : manifest.id === 'echotrend_240_v2'
-    ? `${strategy.symbol} · ${strategy.timeframe} · BTC 4H SMA240 Regime Gate (CAP1.0)`
-    : `${strategy.symbol} · ${strategy.timeframe} · BTC 4H Regime Gate + V6 Scoring`;
+const subtitle = manifest.display.short_desc
+  ? `${strategy.symbol} · ${manifest.display.short_desc}`
+  : `${strategy.symbol} · ${strategy.timeframe} · ${manifest.name}`;
 ---
 
 <Layout title={`Backtest - ${manifest.name}`} description={`Backtest results for ${manifest.name}`}>
+  {(status === 'deprecated' || status === 'retracted') && (
+    <StrategyStatusBanner status={status} reason={statusReason} date={statusDate} />
+  )}
+
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
       <a href={`/strategy/${strategySlug}`} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="backtest.back">&larr; Strategy</a>

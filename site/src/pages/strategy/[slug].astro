@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import PerformanceSummary from '../../components/PerformanceSummary.astro';
 import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
-import { loadAllStrategies, getStrategyType } from '../../lib/strategies';
+import { loadAllStrategies, interpolateTemplate } from '../../lib/strategies';
 
 export async function getStaticPaths() {
   const strategies = loadAllStrategies();
@@ -16,19 +16,16 @@ export async function getStaticPaths() {
 
 const { strategyData } = Astro.props;
 const { manifest, latest, backtest } = strategyData;
-const strategyType = getStrategyType(manifest);
 
 const signal = latest.current_signal;
 const position = latest.position;
 const strategy = latest.strategy;
-const perf = backtest.performance;
-const period = backtest.period;
 const periods = backtest.periods || {};
 
-const defaultPerf = periods.since_launch?.performance || perf;
+const defaultPerf = periods.since_launch?.performance || backtest.performance;
 const defaultRange = periods.since_launch
   ? { start: periods.since_launch.start, end: periods.since_launch.end }
-  : period;
+  : backtest.period;
 
 const sinceDateIso = backtest.since_date ?? null;
 const periodsJson = JSON.stringify(periods);
@@ -45,6 +42,39 @@ const research = manifest.research ? {
 } : null;
 
 const backtestHref = `/backtest/${manifest.display.slug}`;
+const page = manifest.page;
+const templateVars = { ...strategy, ...manifest.config };
+const subtitle = page?.subtitle
+  ? interpolateTemplate(page.subtitle, templateVars)
+  : `${manifest.display.short_desc}`;
+
+function formatSignalValue(value: any, format: string): string {
+  if (value == null) return '—';
+  switch (format) {
+    case 'currency': return `$${Number(value).toLocaleString()}`;
+    case 'percent': return `${Math.round(Number(value) * 100)}%`;
+    case 'regime': return String(value);
+    case 'mode': return String(value);
+    case 'plain': return String(value);
+    case 'datetime': return String(value);
+    default: return String(value);
+  }
+}
+
+function getSignalColor(value: any, format: string): string {
+  if (value == null) return 'text-gray-300';
+  if (format === 'regime') return value === 'bull' ? 'text-green-400' : 'text-red-400';
+  if (format === 'mode') {
+    if (value === 'bull') return 'text-green-400';
+    if (value === 'crash' || value === 'risk_off') return 'text-red-400';
+    return 'text-gray-300';
+  }
+  return '';
+}
+
+const signalFields = page?.signal_fields || [];
+const rules = page?.rules || [];
+const dataSourceDesc = page?.data_source_desc || '';
 ---
 
 <Layout title={`${manifest.name} Strategy`} description={`Live signal status for ${manifest.name}`}>
@@ -57,17 +87,7 @@ const backtestHref = `/backtest/${manifest.display.slug}`;
       <a href="/" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="strategy.back">&larr; Home</a>
     </div>
     <h1 class="text-3xl font-bold mb-1">{strategy.name}</h1>
-    {strategyType === 'ma-trend' ? (
-      <p class="text-gray-400">
-        {strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window}
-        {strategy.exit_confirm_bars && ` · Exit Confirm ${strategy.exit_confirm_bars}`}
-        {strategy.min_hold_days && ` · Min hold ${strategy.min_hold_days}D`}
-      </p>
-    ) : manifest.id === 'echotrend_240_v2' ? (
-      <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} Execution · BTC 4H Regime Gate (CAP1.0)</p>
-    ) : (
-      <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} Execution · BTC 4H Regime Gate + V6 Scoring</p>
-    )}
+    <p class="text-gray-400">{subtitle}</p>
     <p class="text-xs text-gray-600 mt-2">
       {sinceDateIso && <><span data-i18n="strategy.live_since">Live since:</span> <span class="js-local-date" data-iso={sinceDateIso}>{sinceDateIso}</span> · </>}
       <span data-i18n="strategy.updated">Last updated:</span>
@@ -95,77 +115,26 @@ const backtestHref = `/backtest/${manifest.display.slug}`;
         </span>
       </div>
 
-      {strategyType === 'ma-trend' ? (
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
-            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
-            <p class="text-xl font-mono">${signal.ma_value.toLocaleString()}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
-            <p class="text-xl font-mono">{signal.hold_bars ?? '—'}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_time">Signal Time</p>
-            <p class="text-sm font-mono mt-1 js-local-datetime" data-iso={signal.timestamp}>{signal.timestamp}</p>
-          </div>
-        </div>
-      ) : manifest.id === 'echotrend_240_v2' ? (
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-6">
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">MSTR Price</p>
-            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
-            <p class={`text-xl font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : 'text-red-400'}`}>{signal.regime || '—'}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.mode">Mode</p>
-            <p class={`text-xl font-mono capitalize ${
-              signal.mode === 'bull' ? 'text-green-400'
-                : signal.mode === 'crash' || signal.mode === 'risk_off' ? 'text-red-400'
-                : 'text-gray-300'
-            }`}>{signal.mode || '—'}</p>
-          </div>
-        </div>
-      ) : (
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">MSTR Price</p>
-            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
-            <p class="text-xl font-mono">{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.mode">Mode</p>
-            <p class={`text-xl font-mono capitalize ${
-              signal.mode === 'bull' ? 'text-green-400'
-                : signal.mode === 'crash' || signal.mode === 'risk_off' ? 'text-red-400'
-                : 'text-gray-300'
-            }`}>{signal.mode || '—'}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
-            <p class={`text-xl font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : 'text-red-400'}`}>{signal.regime || '—'}</p>
-          </div>
-        </div>
-      )}
-
-      {strategyType !== 'ma-trend' && (
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-4">
-          <div>
-            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_time">Signal Time</p>
-            <p class="text-sm font-mono mt-1 js-local-datetime" data-iso={signal.timestamp}>{signal.timestamp}</p>
-          </div>
-        </div>
-      )}
+      <div class={`grid grid-cols-2 sm:grid-cols-${Math.min(signalFields.length, 4)} gap-6`}>
+        {signalFields.map(field => {
+          const value = signal[field.key];
+          const label = interpolateTemplate(field.label, templateVars);
+          const color = getSignalColor(value, field.format);
+          const isDatetime = field.format === 'datetime';
+          return (
+            <div>
+              <p class="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
+              {isDatetime ? (
+                <p class="text-sm font-mono mt-1 js-local-datetime" data-iso={value}>{value}</p>
+              ) : (
+                <p class={`text-xl font-mono capitalize ${color}`}>
+                  {formatSignalValue(value, field.format)}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <p class="text-sm text-gray-400 mt-4">{signal.reason}</p>
     </div>
@@ -196,83 +165,19 @@ const backtestHref = `/backtest/${manifest.display.slug}`;
     });
   </script>
 
-  <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.rules">Strategy Rules</h2>
-    <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
-      {manifest.id === 'btc_ma_trend' && (
-        <>
+  {rules.length > 0 && (
+    <section class="mb-10">
+      <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.rules">Strategy Rules</h2>
+      <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
+        {rules.map(rule => (
           <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
-            <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+            <p class="text-white font-medium mb-1">{rule.title}</p>
+            <p>{rule.description}</p>
           </div>
-          <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
-            <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
-            <p>Asymmetric entry/exit: entry requires crossover confirmation to reduce whipsaws, exit only requires price below MA. Minimum hold period prevents premature exits during consolidation.</p>
-          </div>
-        </>
-      )}
-      {manifest.id === 'btc_ma_trend_plus' && (
-        <>
-          <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
-            <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
-            <p>After minimum hold of {strategy.min_hold_days} days ({strategy.min_hold_bars} bars), require {strategy.exit_confirm_bars} consecutive bars with close &lt; MA{strategy.ma_window}.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
-            <p>Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime.</p>
-          </div>
-        </>
-      )}
-      {manifest.id === 'echotrend_240_v2' && (
-        <>
-          <div>
-            <p class="text-white font-medium mb-1">Regime Gate (Core Alpha — BTC 4H SMA240)</p>
-            <p>BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead. Bull = 100% MSTR, Bear = 0%.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">V6 Execution Package (Rhythm Optimization)</p>
-            <p>Cooldown (39 bars), EMA smoothing (alpha 0.30), step constraints, and fast reentry logic. Optimizes trade timing within regime-determined direction. Does not alter position size — CAP1.0 means 100% or 0% only.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">Position Management (CAP1.0)</p>
-            <p>Binary position: 100% MSTR in bull regime, 0% in bear regime. No leverage, no partial positions. Symmetric rebalancing at next regular-hours bar open when regime flips.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">Design Philosophy</p>
-            <p>Two-layer architecture: BTC regime gate (primary alpha) determines direction, V6 execution package (marginal enhancement) optimizes entry/exit rhythm. Alpha attribution: regime gate alone passes 4-window validation; V6 adds execution quality without altering core returns.</p>
-          </div>
-        </>
-      )}
-      {manifest.id === 'echotrend_240' && (
-        <>
-          <div>
-            <p class="text-white font-medium mb-1">Regime Gate (BTC 4H SMA240)</p>
-            <p>BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead. Regime sets exposure ceiling: bull=1.00, bear=0.00.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">V6 Exposure Scoring</p>
-            <p>Three-dimensional scoring (trend + risk + relative strength) produces a continuous exposure target between 0.70 and 1.00. EMA smoothing and cooldown prevent overtrading.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">Execution</p>
-            <p>Symmetric rebalancing: when target exposure diverges from current by more than 3.5%, a market order is placed at next regular-hours bar open. Regime flip to bear forces exposure to 0.</p>
-          </div>
-          <div>
-            <p class="text-white font-medium mb-1">Design</p>
-            <p>Two-layer architecture: BTC regime gate (primary alpha) sets directional ceiling, V6 multi-factor scoring (trend/risk/RS) fine-tunes position size within that ceiling. Four modes (bull/neutral/risk_off/crash) apply floor/ceiling constraints. Continuous exposure management, not binary in/out.</p>
-          </div>
-        </>
-      )}
-    </div>
-  </section>
+        ))}
+      </div>
+    </section>
+  )}
 
   {research && (
     <section class="mb-10">
@@ -292,25 +197,10 @@ const backtestHref = `/backtest/${manifest.display.slug}`;
     </section>
   )}
 
-  <section>
-    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
-    {strategyType === 'ma-trend' ? (
-      <p class="text-gray-400 text-sm">
-        All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
-        Signals are generated automatically every 4 hours via GitHub Actions.
-        <a href="https://github.com/xu75" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">GitHub</a>.
-      </p>
-    ) : (
-      <>
-        <p class="text-gray-400 text-sm mb-2">
-          Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D bars.
-          CI pipeline updates data via Yahoo Finance (equities) and OKX (crypto) every 4 hours.
-          Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
-        </p>
-        <p class="text-gray-500 text-xs">
-          Note: CI runs update-data → full-backtest every 4 hours. {manifest.name} supports incremental daily-signal mode (state.json resume) for faster updates.
-        </p>
-      </>
-    )}
-  </section>
+  {dataSourceDesc && (
+    <section>
+      <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
+      <p class="text-gray-400 text-sm">{dataSourceDesc}</p>
+    </section>
+  )}
 </Layout>

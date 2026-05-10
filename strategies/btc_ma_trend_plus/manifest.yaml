@@ -34,3 +34,27 @@ research:
   paper_title: "TrendLock 40 Plus 出场确认优化研究"
   website_path: "/research/btc-ma240-ecb2"
   canonical_doc: "docs/research/strategies/btc_ma_trend_plus.md"
+
+page:
+  subtitle: "{symbol} · {timeframe} · MA{ma_window} · Exit Confirm {exit_confirm_bars} · Min hold {min_hold_days}D"
+  signal_fields:
+    - label: "Price"
+      key: "price"
+      format: "currency"
+    - label: "MA{ma_window}"
+      key: "ma_value"
+      format: "currency"
+    - label: "Hold Bars"
+      key: "hold_bars"
+      format: "plain"
+    - label: "Signal Time"
+      key: "timestamp"
+      format: "datetime"
+  rules:
+    - title: "Entry (Buy)"
+      description: "Crossover confirmation: previous close ≤ previous MA240, current close > MA240."
+    - title: "Exit (Sell)"
+      description: "After minimum hold of 2 days (12 bars), require 2 consecutive bars with close < MA240."
+    - title: "Design"
+      description: "Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime."
+  data_source_desc: "All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used. Signals are generated automatically every 4 hours via GitHub Actions."

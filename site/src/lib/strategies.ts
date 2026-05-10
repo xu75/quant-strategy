@@ -2,6 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
+export interface SignalFieldDef {
+  label: string;
+  key: string;
+  format: 'currency' | 'percent' | 'regime' | 'mode' | 'plain' | 'datetime';
+}
+
+export interface RuleDef {
+  title: string;
+  description: string;
+}
+
+export interface PageConfig {
+  subtitle: string;
+  signal_fields: SignalFieldDef[];
+  rules: RuleDef[];
+  data_source_desc: string;
+}
+
 export interface StrategyManifest {
   id: string;
   name: string;
@@ -22,6 +40,7 @@ export interface StrategyManifest {
     source_project?: string;
     source_docx?: string;
   };
+  page?: PageConfig;
 }
 
 export interface StrategyData {
@@ -72,4 +91,11 @@ export function getStrategyType(manifest: StrategyManifest): 'ma-trend' | 'echot
   const id = manifest.id;
   if (id.startsWith('echotrend')) return 'echotrend';
   return 'ma-trend';
+}
+
+export function interpolateTemplate(template: string, vars: Record<string, any>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const val = vars[key];
+    return val != null ? String(val) : '';
+  });
 }
