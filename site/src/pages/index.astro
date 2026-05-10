@@ -1,47 +1,25 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import fs from 'node:fs';
-import path from 'node:path';
-import yaml from 'js-yaml';
+import { loadAllStrategies, getStrategyType } from '../lib/strategies';
 
-const strategyEntries = [
-  { id: 'btc_ma_trend', href: '/strategy/btc-ma240-4d' },
-  { id: 'btc_ma_trend_plus', href: '/strategy/btc-ma240-ecb2' },
-  { id: 'echotrend_240_v2', href: '/strategy/echotrend-240-v2' },
-  { id: 'echotrend_240', href: '/strategy/echotrend-240' },
-];
+const allStrategies = loadAllStrategies().filter(s => s.hasData);
 
-const strategyCards = strategyEntries.flatMap(({ id, href }) => {
-  const manifestPath = path.resolve(process.cwd(), `../strategies/${id}/manifest.yaml`);
-  const dataDir = path.resolve(process.cwd(), `../data/${id}`);
-  const latestPath = path.join(dataDir, 'latest.json');
-  const backtestPath = path.join(dataDir, 'backtest.json');
-
-  if (!fs.existsSync(latestPath) || !fs.existsSync(backtestPath)) {
-    return [];
-  }
-
-  let status = 'active';
-  let statusReason = '';
-  if (fs.existsSync(manifestPath)) {
-    const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf-8'));
-    status = manifest.status || 'active';
-    statusReason = manifest.status_reason || '';
-  }
-
-  const latest = JSON.parse(fs.readFileSync(latestPath, 'utf-8'));
-  const backtest = JSON.parse(fs.readFileSync(backtestPath, 'utf-8'));
+const strategyCards = allStrategies.map(({ manifest, latest, backtest }) => {
+  const href = `/strategy/${manifest.display.slug}`;
   const signal = latest.current_signal;
   const strategy = latest.strategy;
   const sincePerf = backtest.periods?.since_launch?.performance;
   const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
-  const isEchoTrend = id === 'echotrend_240' || id === 'echotrend_240_v2';
-  const isEchoTrendV2 = id === 'echotrend_240_v2';
+  const strategyType = getStrategyType(manifest);
+  const isEchoTrend = strategyType === 'echotrend';
+  const isEchoTrendV2 = manifest.id === 'echotrend_240_v2';
+  const status = manifest.status || 'active';
+  const statusReason = manifest.status_reason || '';
   const isRetracted = status === 'retracted';
   const isDeprecated = status === 'deprecated';
 
-  return [{
+  return {
     href,
     latest,
     signal,
@@ -54,7 +32,7 @@ const strategyCards = strategyEntries.flatMap(({ id, href }) => {
     statusReason,
     isRetracted,
     isDeprecated,
-  }];
+  };
 });
 
 const statusOrder = { active: 0, experimental: 0, deprecated: 1, retracted: 2 };

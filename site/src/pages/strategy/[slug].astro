@@ -1,0 +1,316 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PerformanceSummary from '../../components/PerformanceSummary.astro';
+import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
+import { loadAllStrategies, getStrategyType } from '../../lib/strategies';
+
+export async function getStaticPaths() {
+  const strategies = loadAllStrategies();
+  return strategies
+    .filter(s => s.hasData)
+    .map(s => ({
+      params: { slug: s.manifest.display.slug },
+      props: { strategyData: s },
+    }));
+}
+
+const { strategyData } = Astro.props;
+const { manifest, latest, backtest } = strategyData;
+const strategyType = getStrategyType(manifest);
+
+const signal = latest.current_signal;
+const position = latest.position;
+const strategy = latest.strategy;
+const perf = backtest.performance;
+const period = backtest.period;
+const periods = backtest.periods || {};
+
+const defaultPerf = periods.since_launch?.performance || perf;
+const defaultRange = periods.since_launch
+  ? { start: periods.since_launch.start, end: periods.since_launch.end }
+  : period;
+
+const sinceDateIso = backtest.since_date ?? null;
+const periodsJson = JSON.stringify(periods);
+const defaultRangeJson = JSON.stringify(defaultRange);
+
+const status = manifest.status || 'active';
+const statusReason = manifest.status_reason || '';
+const statusDate = manifest.status_date || '';
+
+const research = manifest.research ? {
+  title: manifest.research.paper_title,
+  route: manifest.research.website_path,
+  sourceProject: manifest.research.source_project,
+} : null;
+
+const backtestHref = `/backtest/${manifest.display.slug}`;
+---
+
+<Layout title={`${manifest.name} Strategy`} description={`Live signal status for ${manifest.name}`}>
+  {(status === 'deprecated' || status === 'retracted') && (
+    <StrategyStatusBanner status={status} reason={statusReason} date={statusDate} />
+  )}
+
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="/" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="strategy.back">&larr; Home</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{strategy.name}</h1>
+    {strategyType === 'ma-trend' ? (
+      <p class="text-gray-400">
+        {strategy.symbol} · {strategy.timeframe} · MA{strategy.ma_window}
+        {strategy.exit_confirm_bars && ` · Exit Confirm ${strategy.exit_confirm_bars}`}
+        {strategy.min_hold_days && ` · Min hold ${strategy.min_hold_days}D`}
+      </p>
+    ) : manifest.id === 'echotrend_240_v2' ? (
+      <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} Execution · BTC 4H Regime Gate (CAP1.0)</p>
+    ) : (
+      <p class="text-gray-400">{strategy.symbol} · {strategy.timeframe} Execution · BTC 4H Regime Gate + V6 Scoring</p>
+    )}
+    <p class="text-xs text-gray-600 mt-2">
+      {sinceDateIso && <><span data-i18n="strategy.live_since">Live since:</span> <span class="js-local-date" data-iso={sinceDateIso}>{sinceDateIso}</span> · </>}
+      <span data-i18n="strategy.updated">Last updated:</span>
+      <span class="js-local-datetime" data-iso={latest.updated_at}>{latest.updated_at}</span>
+    </p>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.signal">Current Signal</h2>
+    <div class="border border-gray-800 rounded-xl p-6">
+      <div class="flex items-center gap-4 mb-6">
+        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+          position.in_position
+            ? 'bg-green-900/50 text-green-400'
+            : 'bg-gray-800 text-gray-400'
+        }`} data-i18n={position.in_position ? 'label.in_position' : 'label.no_position'}>
+          {position.in_position ? 'In Position' : 'No Position'}
+        </span>
+        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+          signal.action === 'buy' ? 'bg-green-900/50 text-green-400'
+            : signal.action === 'sell' ? 'bg-red-900/50 text-red-400'
+            : 'bg-gray-800 text-gray-400'
+        }`}>
+          <span data-i18n="strategy.signal_prefix">Signal:</span> {signal.action.toUpperCase()}
+        </span>
+      </div>
+
+      {strategyType === 'ma-trend' ? (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
+            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
+            <p class="text-xl font-mono">${signal.ma_value.toLocaleString()}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
+            <p class="text-xl font-mono">{signal.hold_bars ?? '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_time">Signal Time</p>
+            <p class="text-sm font-mono mt-1 js-local-datetime" data-iso={signal.timestamp}>{signal.timestamp}</p>
+          </div>
+        </div>
+      ) : manifest.id === 'echotrend_240_v2' ? (
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-6">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">MSTR Price</p>
+            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
+            <p class={`text-xl font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : 'text-red-400'}`}>{signal.regime || '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.mode">Mode</p>
+            <p class={`text-xl font-mono capitalize ${
+              signal.mode === 'bull' ? 'text-green-400'
+                : signal.mode === 'crash' || signal.mode === 'risk_off' ? 'text-red-400'
+                : 'text-gray-300'
+            }`}>{signal.mode || '—'}</p>
+          </div>
+        </div>
+      ) : (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">MSTR Price</p>
+            <p class="text-xl font-mono">${signal.price.toLocaleString()}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
+            <p class="text-xl font-mono">{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.mode">Mode</p>
+            <p class={`text-xl font-mono capitalize ${
+              signal.mode === 'bull' ? 'text-green-400'
+                : signal.mode === 'crash' || signal.mode === 'risk_off' ? 'text-red-400'
+                : 'text-gray-300'
+            }`}>{signal.mode || '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
+            <p class={`text-xl font-mono capitalize ${signal.regime === 'bull' ? 'text-green-400' : 'text-red-400'}`}>{signal.regime || '—'}</p>
+          </div>
+        </div>
+      )}
+
+      {strategyType !== 'ma-trend' && (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-4">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_time">Signal Time</p>
+            <p class="text-sm font-mono mt-1 js-local-datetime" data-iso={signal.timestamp}>{signal.timestamp}</p>
+          </div>
+        </div>
+      )}
+
+      <p class="text-sm text-gray-400 mt-4">{signal.reason}</p>
+    </div>
+  </section>
+
+  <PerformanceSummary
+    defaultPerf={defaultPerf}
+    periods={periods}
+    periodsJson={periodsJson}
+    defaultRangeJson={defaultRangeJson}
+    backtestHref={backtestHref}
+  />
+
+  <script>
+    const fmtDateTime = (iso) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' });
+    document.querySelectorAll('.js-local-datetime[data-iso]').forEach((el) => {
+      const iso = el.dataset.iso;
+      if (!iso) return;
+      const dt = new Date(iso);
+      if (!Number.isNaN(dt.getTime())) el.textContent = fmtDateTime(iso);
+    });
+    document.querySelectorAll('.js-local-date[data-iso]').forEach((el) => {
+      const iso = el.dataset.iso;
+      if (!iso) return;
+      const dt = new Date(iso);
+      if (!Number.isNaN(dt.getTime())) el.textContent = fmtDate(iso);
+    });
+  </script>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.rules">Strategy Rules</h2>
+    <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-3">
+      {manifest.id === 'btc_ma_trend' && (
+        <>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
+            <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
+            <p>Close &lt; MA{strategy.ma_window} after minimum hold of {strategy.min_hold_days} days ({backtest.strategy.min_hold_bars} bars on {strategy.timeframe} timeframe).</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
+            <p>Asymmetric entry/exit: entry requires crossover confirmation to reduce whipsaws, exit only requires price below MA. Minimum hold period prevents premature exits during consolidation.</p>
+          </div>
+        </>
+      )}
+      {manifest.id === 'btc_ma_trend_plus' && (
+        <>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.entry">Entry (Buy)</p>
+            <p>Crossover confirmation: previous close &le; previous MA{strategy.ma_window}, current close &gt; MA{strategy.ma_window}.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.exit">Exit (Sell)</p>
+            <p>After minimum hold of {strategy.min_hold_days} days ({strategy.min_hold_bars} bars), require {strategy.exit_confirm_bars} consecutive bars with close &lt; MA{strategy.ma_window}.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1" data-i18n="strategy.design">Design</p>
+            <p>Exit confirmation filters false breakdowns near the MA without delaying real exits. Combined with a shorter min hold (2D vs 4D), the strategy responds faster while maintaining whipsaw protection throughout the entire position lifetime.</p>
+          </div>
+        </>
+      )}
+      {manifest.id === 'echotrend_240_v2' && (
+        <>
+          <div>
+            <p class="text-white font-medium mb-1">Regime Gate (Core Alpha — BTC 4H SMA240)</p>
+            <p>BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead. Bull = 100% MSTR, Bear = 0%.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">V6 Execution Package (Rhythm Optimization)</p>
+            <p>Cooldown (39 bars), EMA smoothing (alpha 0.30), step constraints, and fast reentry logic. Optimizes trade timing within regime-determined direction. Does not alter position size — CAP1.0 means 100% or 0% only.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">Position Management (CAP1.0)</p>
+            <p>Binary position: 100% MSTR in bull regime, 0% in bear regime. No leverage, no partial positions. Symmetric rebalancing at next regular-hours bar open when regime flips.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">Design Philosophy</p>
+            <p>Two-layer architecture: BTC regime gate (primary alpha) determines direction, V6 execution package (marginal enhancement) optimizes entry/exit rhythm. Alpha attribution: regime gate alone passes 4-window validation; V6 adds execution quality without altering core returns.</p>
+          </div>
+        </>
+      )}
+      {manifest.id === 'echotrend_240' && (
+        <>
+          <div>
+            <p class="text-white font-medium mb-1">Regime Gate (BTC 4H SMA240)</p>
+            <p>BTC 1H data resampled to 4H, SMA240 computed. Bull regime when close &gt; SMA240 for 3 consecutive bars. Bear regime when close &lt; SMA240 for 3 consecutive bars. Signal shifted by 1 bar to avoid lookahead. Regime sets exposure ceiling: bull=1.00, bear=0.00.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">V6 Exposure Scoring</p>
+            <p>Three-dimensional scoring (trend + risk + relative strength) produces a continuous exposure target between 0.70 and 1.00. EMA smoothing and cooldown prevent overtrading.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">Execution</p>
+            <p>Symmetric rebalancing: when target exposure diverges from current by more than 3.5%, a market order is placed at next regular-hours bar open. Regime flip to bear forces exposure to 0.</p>
+          </div>
+          <div>
+            <p class="text-white font-medium mb-1">Design</p>
+            <p>Two-layer architecture: BTC regime gate (primary alpha) sets directional ceiling, V6 multi-factor scoring (trend/risk/RS) fine-tunes position size within that ceiling. Four modes (bull/neutral/risk_off/crash) apply floor/ceiling constraints. Continuous exposure management, not binary in/out.</p>
+          </div>
+        </>
+      )}
+    </div>
+  </section>
+
+  {research && (
+    <section class="mb-10">
+      <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.research">Research Source</h2>
+      <div class="border border-gray-800 rounded-xl p-6 text-gray-400 space-y-4">
+        <p>Every live strategy must have a versioned research memo and a public summary page.</p>
+        <div>
+          <p class="text-white font-medium mb-1">{research.title}</p>
+          <div class="flex flex-wrap gap-3 text-sm">
+            <a href={research.route} class="text-blue-400 hover:text-blue-300" data-i18n="strategy.research_open">Read summary on this site</a>
+            {research.sourceProject && (
+              <a href={research.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">Source research project</a>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section>
+    <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.datasource">Data Source</h2>
+    {strategyType === 'ma-trend' ? (
+      <p class="text-gray-400 text-sm">
+        All data is fetched from OKX public API (no authentication required). Only confirmed/closed candles are used.
+        Signals are generated automatically every 4 hours via GitHub Actions.
+        <a href="https://github.com/xu75" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300">GitHub</a>.
+      </p>
+    ) : (
+      <>
+        <p class="text-gray-400 text-sm mb-2">
+          Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D bars.
+          CI pipeline updates data via Yahoo Finance (equities) and OKX (crypto) every 4 hours.
+          Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution).
+        </p>
+        <p class="text-gray-500 text-xs">
+          Note: CI runs update-data → full-backtest every 4 hours. {manifest.name} supports incremental daily-signal mode (state.json resume) for faster updates.
+        </p>
+      </>
+    )}
+  </section>
+</Layout>
