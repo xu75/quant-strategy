@@ -1,8 +1,32 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { loadAllStrategies, getStrategyType } from '../lib/strategies';
+import { loadAllStrategies, interpolateTemplate } from '../lib/strategies';
 
 const allStrategies = loadAllStrategies().filter(s => s.hasData);
+
+function formatCardValue(value: any, format: string): string {
+  if (value == null) return '—';
+  switch (format) {
+    case 'currency': return `$${Number(value).toLocaleString()}`;
+    case 'percent': return `${Math.round(Number(value) * 100)}%`;
+    case 'regime': return String(value);
+    case 'mode': return String(value);
+    case 'plain': return String(value);
+    default: return String(value);
+  }
+}
+
+function getCardFieldColor(value: any, format: string, isRetracted: boolean): string {
+  if (isRetracted) return 'text-gray-400';
+  if (value == null) return 'text-gray-300';
+  if (format === 'regime') return value === 'bull' ? 'text-green-400' : value === 'bear' ? 'text-red-400' : 'text-gray-300';
+  if (format === 'mode') {
+    if (value === 'buy' || value === 'bull') return 'text-green-400';
+    if (value === 'sell' || value === 'crash' || value === 'risk_off' || value === 'bear') return 'text-red-400';
+    return 'text-gray-300';
+  }
+  return '';
+}
 
 const strategyCards = allStrategies.map(({ manifest, latest, backtest }) => {
   const href = `/strategy/${manifest.display.slug}`;
@@ -11,27 +35,25 @@ const strategyCards = allStrategies.map(({ manifest, latest, backtest }) => {
   const sincePerf = backtest.periods?.since_launch?.performance;
   const sinceDateIso = backtest.since_date ?? null;
   const returnPct = sincePerf?.total_return_pct ?? backtest.performance.total_return_pct;
-  const strategyType = getStrategyType(manifest);
-  const isEchoTrend = strategyType === 'echotrend';
-  const isEchoTrendV2 = manifest.id === 'echotrend_240_v2';
   const status = manifest.status || 'active';
   const statusReason = manifest.status_reason || '';
   const isRetracted = status === 'retracted';
   const isDeprecated = status === 'deprecated';
 
+  const templateVars = { ...strategy, ...manifest.config };
+  const cardSubtitle = manifest.page?.card_subtitle
+    ? interpolateTemplate(manifest.page.card_subtitle, templateVars)
+    : manifest.display.short_desc;
+  const cardFields = (manifest.page?.card_fields || []).map(field => ({
+    label: interpolateTemplate(field.label, templateVars),
+    value: signal[field.key],
+    format: field.format,
+  }));
+
   return {
-    href,
-    latest,
-    signal,
-    strategy,
-    sinceDateIso,
-    returnPct,
-    isEchoTrend,
-    isEchoTrendV2,
-    status,
-    statusReason,
-    isRetracted,
-    isDeprecated,
+    href, latest, signal, strategy, sinceDateIso, returnPct,
+    status, statusReason, isRetracted, isDeprecated,
+    cardSubtitle, cardFields,
   };
 });
 
@@ -66,7 +88,7 @@ strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.statu
   <section class="mb-12">
     <h2 id="strategies" class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, isEchoTrend, isEchoTrendV2, status, statusReason, isRetracted, isDeprecated }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, status, statusReason, isRetracted, isDeprecated, cardSubtitle, cardFields }) => (
         <a href={href} class="block">
           <div class={`relative overflow-hidden border rounded-xl p-6 transition-colors ${
             isRetracted ? 'retracted-card border-gray-700/70 bg-gray-900/35 hover:border-gray-600' :
@@ -90,11 +112,7 @@ strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.statu
             <div class={`relative z-10 flex items-center justify-between mb-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
                 <h3 class={`text-lg font-semibold ${isRetracted ? 'text-gray-400' : ''}`}>{strategy.name}</h3>
-                <p class={`text-sm ${isRetracted ? 'text-gray-500' : 'text-gray-400'}`}>{isEchoTrendV2
-                  ? `${strategy.symbol} · ${strategy.timeframe} · BTC 4H Regime Gate (CAP1.0)`
-                  : isEchoTrend
-                  ? `${strategy.symbol} · ${strategy.timeframe} · BTC Regime Gate + V6 Scoring`
-                  : `${strategy.symbol} · ${strategy.timeframe} · MA${strategy.ma_window}`}</p>
+                <p class={`text-sm ${isRetracted ? 'text-gray-500' : 'text-gray-400'}`}>{cardSubtitle}</p>
               </div>
               <span class={`px-3 py-1 rounded-full text-sm font-medium ${
                 isRetracted
@@ -111,42 +129,19 @@ strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.statu
               </span>
             </div>
 
-            <div class={`relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-4 ${isRetracted ? 'retracted-muted' : ''}`}>
+            <div class={`relative z-10 grid grid-cols-2 sm:grid-cols-${2 + cardFields.length + 1} gap-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
                 <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.price.toLocaleString()}</p>
               </div>
-              {isEchoTrend ? (
+              {cardFields.map(field => (
                 <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.regime">BTC Regime</p>
-                  <p class={`text-lg font-mono capitalize ${isRetracted ? 'text-gray-400' : signal.regime === 'bull' ? 'text-green-400' : signal.regime === 'bear' ? 'text-red-400' : 'text-gray-300'}`}>
-                    {signal.regime || '—'}
+                  <p class="text-xs text-gray-500 uppercase tracking-wide">{field.label}</p>
+                  <p class={`text-lg font-mono capitalize ${getCardFieldColor(field.value, field.format, isRetracted)}`}>
+                    {formatCardValue(field.value, field.format)}
                   </p>
                 </div>
-              ) : (
-                <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide">MA{strategy.ma_window}</p>
-                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.ma_value.toLocaleString()}</p>
-                </div>
-              )}
-              {isEchoTrendV2 ? (
-                <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.signal_prefix">Signal</p>
-                  <p class={`text-lg font-mono capitalize ${isRetracted ? 'text-gray-400' : signal.action === 'buy' ? 'text-green-400' : signal.action === 'sell' ? 'text-red-400' : 'text-gray-300'}`}>
-                    {signal.action || '—'}
-                  </p>
-                </div>
-              ) : isEchoTrend ? (
-                <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.exposure">Exposure</p>
-                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>{signal.target_exposure != null ? `${Math.round(signal.target_exposure * 100)}%` : '—'}</p>
-                </div>
-              ) : (
-                <div>
-                  <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="strategy.hold_bars">Hold Bars</p>
-                  <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>{signal.hold_bars ?? '—'}</p>
-                </div>
-              )}
+              ))}
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.return">Return (MTM)</p>
                 <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : returnPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>

@@ -15,6 +15,8 @@ export interface RuleDef {
 
 export interface PageConfig {
   subtitle: string;
+  card_subtitle?: string;
+  card_fields?: SignalFieldDef[];
   signal_fields: SignalFieldDef[];
   rules: RuleDef[];
   data_source_desc: string;
@@ -85,12 +87,6 @@ export function loadStrategyData(strategyId: string): StrategyData {
 
 export function loadAllStrategies(): StrategyData[] {
   return discoverStrategies().map(m => loadStrategyData(m.id));
-}
-
-export function getStrategyType(manifest: StrategyManifest): 'ma-trend' | 'echotrend' {
-  const id = manifest.id;
-  if (id.startsWith('echotrend')) return 'echotrend';
-  return 'ma-trend';
 }
 
 export function interpolateTemplate(template: string, vars: Record<string, any>): string {

@@ -77,6 +77,14 @@ research:
 
 page:
   subtitle: "{symbol} · {timeframe} Execution · BTC 4H Regime Gate + V6 Scoring"
+  card_subtitle: "{symbol} · {timeframe} · BTC Regime Gate + V6 Scoring"
+  card_fields:
+    - label: "BTC Regime"
+      key: "regime"
+      format: "regime"
+    - label: "Exposure"
+      key: "target_exposure"
+      format: "percent"
   signal_fields:
     - label: "MSTR Price"
       key: "price"

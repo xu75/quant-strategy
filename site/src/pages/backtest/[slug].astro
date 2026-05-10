@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
-import { loadAllStrategies, getStrategyType } from '../../lib/strategies';
+import { loadAllStrategies } from '../../lib/strategies';
 
 export async function getStaticPaths() {
   const strategies = loadAllStrategies();
@@ -15,7 +15,6 @@ export async function getStaticPaths() {
 
 const { strategyData } = Astro.props;
 const { manifest, backtest } = strategyData;
-const strategyType = getStrategyType(manifest);
 
 const perf = backtest.performance;
 const trades = backtest.trades;

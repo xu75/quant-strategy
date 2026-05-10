@@ -37,6 +37,14 @@ research:
 
 page:
   subtitle: "{symbol} · {timeframe} · MA{ma_window} · Exit Confirm {exit_confirm_bars} · Min hold {min_hold_days}D"
+  card_subtitle: "{symbol} · {timeframe} · MA{ma_window}"
+  card_fields:
+    - label: "MA{ma_window}"
+      key: "ma_value"
+      format: "currency"
+    - label: "Hold Bars"
+      key: "hold_bars"
+      format: "plain"
   signal_fields:
     - label: "Price"
       key: "price"

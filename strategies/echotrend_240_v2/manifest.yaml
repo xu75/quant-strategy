@@ -74,6 +74,14 @@ research:
 
 page:
   subtitle: "{symbol} · {timeframe} Execution · BTC 4H Regime Gate (CAP1.0)"
+  card_subtitle: "{symbol} · {timeframe} · BTC 4H Regime Gate (CAP1.0)"
+  card_fields:
+    - label: "BTC Regime"
+      key: "regime"
+      format: "regime"
+    - label: "Signal"
+      key: "action"
+      format: "mode"
   signal_fields:
     - label: "MSTR Price"
       key: "price"
