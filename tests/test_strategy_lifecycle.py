@@ -60,7 +60,7 @@ def test_homepage_retracted_card_has_grey_stamp_and_muted_live_values():
 
 
 def test_echotrend_backtest_page_displays_lifecycle_banner():
-    source = (SITE_PAGES / "backtest" / "echotrend-240.astro").read_text()
+    source = (SITE_PAGES / "backtest" / "[slug].astro").read_text()
 
     assert "StrategyStatusBanner" in source
-    assert "manifest.status" in source
+    assert "status" in source

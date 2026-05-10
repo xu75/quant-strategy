@@ -1,29 +1,47 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import fs from 'node:fs';
-import path from 'node:path';
-import yaml from 'js-yaml';
+import StrategyStatusBanner from '../../components/StrategyStatusBanner.astro';
+import { loadAllStrategies } from '../../lib/strategies';
 
-const manifestPath = path.resolve(process.cwd(), '../strategies/echotrend_240_v2/manifest.yaml');
-const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf-8'));
+export async function getStaticPaths() {
+  const strategies = loadAllStrategies();
+  return strategies
+    .filter(s => s.hasData)
+    .map(s => ({
+      params: { slug: s.manifest.display.slug },
+      props: { strategyData: s },
+    }));
+}
 
-const dataDir = path.resolve(process.cwd(), '../data/echotrend_240_v2');
-const backtest = JSON.parse(fs.readFileSync(path.join(dataDir, 'backtest.json'), 'utf-8'));
+const { strategyData } = Astro.props;
+const { manifest, backtest } = strategyData;
 
 const perf = backtest.performance;
 const trades = backtest.trades;
 const period = backtest.period;
 const strategy = backtest.strategy;
+const strategySlug = manifest.display.slug;
+const status = manifest.status || 'active';
+const statusReason = manifest.status_reason || '';
+const statusDate = manifest.status_date || '';
+
+const subtitle = manifest.display.short_desc
+  ? `${strategy.symbol} · ${manifest.display.short_desc}`
+  : `${strategy.symbol} · ${strategy.timeframe} · ${manifest.name}`;
 ---
 
-<Layout title="Backtest - EchoTrend 240 V2" description="Backtest results for EchoTrend 240 V2">
+<Layout title={`Backtest - ${manifest.name}`} description={`Backtest results for ${manifest.name}`}>
+  {(status === 'deprecated' || status === 'retracted') && (
+    <StrategyStatusBanner status={status} reason={statusReason} date={statusDate} />
+  )}
+
   <section class="mb-8">
     <div class="flex items-center gap-3 mb-2">
-      <a href="/strategy/echotrend-240-v2" class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="backtest.back">&larr; Strategy</a>
+      <a href={`/strategy/${strategySlug}`} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="backtest.back">&larr; Strategy</a>
     </div>
     <h1 class="text-3xl font-bold mb-1" data-i18n="backtest.title">Backtest Results</h1>
     <p class="text-gray-400">
-      {strategy.symbol} · {strategy.timeframe} · BTC 4H SMA240 Regime Gate (CAP1.0) ·
+      {subtitle} ·
       <span class="js-local-date" data-iso={period.start}>{period.start}</span> —
       <span class="js-local-date" data-iso={period.end}>{period.end}</span>
     </p>
@@ -83,14 +101,14 @@ const strategy = backtest.strategy;
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.equity">Equity Curve</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
-      <img src="/charts/echotrend_240_v2/equity.png" alt="Equity curve" class="w-full rounded" />
+      <img src={`/charts/${manifest.id}/equity.png`} alt="Equity curve" class="w-full rounded" />
     </div>
   </section>
 
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="backtest.overlay">Price & MA Overlay</h2>
     <div class="border border-gray-800 rounded-xl p-4 bg-gray-900/50">
-      <img src="/charts/echotrend_240_v2/price_ma.png" alt="Price and MA overlay with trade markers" class="w-full rounded" />
+      <img src={`/charts/${manifest.id}/price_ma.png`} alt="Price and MA overlay with trade markers" class="w-full rounded" />
     </div>
   </section>
 
