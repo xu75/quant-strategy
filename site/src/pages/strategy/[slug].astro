@@ -75,6 +75,14 @@ function getSignalColor(value: any, format: string): string {
 const signalFields = page?.signal_fields || [];
 const rules = page?.rules || [];
 const dataSourceDesc = page?.data_source_desc || '';
+
+const smGridClass: Record<number, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+  5: 'sm:grid-cols-5',
+};
+const signalGridCols = Math.min(signalFields.length, 4);
 ---
 
 <Layout title={`${manifest.name} Strategy`} description={`Live signal status for ${manifest.name}`}>
@@ -115,7 +123,7 @@ const dataSourceDesc = page?.data_source_desc || '';
         </span>
       </div>
 
-      <div class={`grid grid-cols-2 sm:grid-cols-${Math.min(signalFields.length, 4)} gap-6`}>
+      <div class={`grid grid-cols-2 ${smGridClass[signalGridCols] || 'sm:grid-cols-4'} gap-6`}>
         {signalFields.map(field => {
           const value = signal[field.key];
           const label = interpolateTemplate(field.label, templateVars);

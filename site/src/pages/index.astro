@@ -50,15 +50,24 @@ const strategyCards = allStrategies.map(({ manifest, latest, backtest }) => {
     format: field.format,
   }));
 
+  const gridCols = 1 + cardFields.length + 2;
+
   return {
     href, latest, signal, strategy, sinceDateIso, returnPct,
     status, statusReason, isRetracted, isDeprecated,
-    cardSubtitle, cardFields,
+    cardSubtitle, cardFields, gridCols,
   };
 });
 
 const statusOrder = { active: 0, experimental: 0, deprecated: 1, retracted: 2 };
 strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0));
+
+const smGridClass: Record<number, string> = {
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+  5: 'sm:grid-cols-5',
+  6: 'sm:grid-cols-6',
+};
 ---
 
 <Layout title="Quant Strategy">
@@ -88,7 +97,7 @@ strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.statu
   <section class="mb-12">
     <h2 id="strategies" class="text-2xl font-semibold mb-6" data-i18n="home.strategies">Strategies</h2>
     <div class="grid gap-4">
-      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, status, statusReason, isRetracted, isDeprecated, cardSubtitle, cardFields }) => (
+      {strategyCards.map(({ href, latest, signal, strategy, sinceDateIso, returnPct, status, statusReason, isRetracted, isDeprecated, cardSubtitle, cardFields, gridCols }) => (
         <a href={href} class="block">
           <div class={`relative overflow-hidden border rounded-xl p-6 transition-colors ${
             isRetracted ? 'retracted-card border-gray-700/70 bg-gray-900/35 hover:border-gray-600' :
@@ -129,7 +138,7 @@ strategyCards.sort((a, b) => (statusOrder[a.status] ?? 0) - (statusOrder[b.statu
               </span>
             </div>
 
-            <div class={`relative z-10 grid grid-cols-2 sm:grid-cols-${2 + cardFields.length + 1} gap-4 ${isRetracted ? 'retracted-muted' : ''}`}>
+            <div class={`relative z-10 grid grid-cols-2 ${smGridClass[gridCols] || 'sm:grid-cols-5'} gap-4 ${isRetracted ? 'retracted-muted' : ''}`}>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.price">Price</p>
                 <p class={`text-lg font-mono ${isRetracted ? 'text-gray-400' : ''}`}>${signal.price.toLocaleString()}</p>
