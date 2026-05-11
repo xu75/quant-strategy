@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 
 DATA_DIR = Path("data")
+SUBSCRIBERS_FILE = Path("config/subscribers.json")
 SITE_URL = "https://quant-strategy.mesh-hub.xyz"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -108,10 +109,115 @@ def strategy_slug(strategy_id: str) -> str:
     return strategy_id.replace("_", "-")
 
 
+def load_subscribers() -> list[dict]:
+    """Load webhook subscribers from config file."""
+    if not SUBSCRIBERS_FILE.exists():
+        return []
+    try:
+        with open(SUBSCRIBERS_FILE) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def format_webhook_json(strategy_name: str, slug: str,
+                        old_action: str, new_action: str, signal_data: dict) -> dict:
+    """Format a JSON payload for generic webhooks."""
+    return {
+        "event": "signal_change",
+        "strategy": strategy_name,
+        "symbol": signal_data.get("symbol", ""),
+        "old_signal": old_action,
+        "new_signal": new_action,
+        "price": signal_data.get("price", 0),
+        "reason": signal_data.get("reason", ""),
+        "url": f"{SITE_URL}/strategy/{slug}",
+    }
+
+
+def format_webhook_text(strategy_name: str, slug: str,
+                        old_action: str, new_action: str, signal_data: dict) -> str:
+    """Format a plain text message."""
+    price = signal_data.get("price", 0)
+    symbol = signal_data.get("symbol", "")
+    return (
+        f"{strategy_name} | {old_action.upper()} → {new_action.upper()} | "
+        f"{symbol} ${price:,.2f} | {SITE_URL}/strategy/{slug}"
+    )
+
+
+def format_webhook_discord(strategy_name: str, slug: str,
+                           old_action: str, new_action: str, signal_data: dict) -> dict:
+    """Format a Discord webhook payload."""
+    color = 0x00FF00 if new_action == "buy" else 0xFF0000
+    price = signal_data.get("price", 0)
+    symbol = signal_data.get("symbol", "")
+    return {
+        "embeds": [{
+            "title": f"{strategy_name} — Signal Change",
+            "description": f"**{old_action.upper()} → {new_action.upper()}**",
+            "color": color,
+            "fields": [
+                {"name": "Symbol", "value": symbol, "inline": True},
+                {"name": "Price", "value": f"${price:,.2f}", "inline": True},
+                {"name": "Reason", "value": signal_data.get("reason", "—"), "inline": False},
+            ],
+            "url": f"{SITE_URL}/strategy/{slug}",
+        }],
+    }
+
+
+def format_webhook_bark(strategy_name: str, slug: str,
+                        old_action: str, new_action: str, signal_data: dict) -> None:
+    """Bark uses URL path, returns None — URL is constructed at send time."""
+    return None
+
+
+def send_webhook(subscriber: dict, strategy_name: str, slug: str,
+                 old_action: str, new_action: str, signal_data: dict) -> bool:
+    """Send notification to a single webhook subscriber."""
+    sub_url = subscriber["url"]
+    fmt = subscriber.get("format", "json")
+
+    try:
+        if fmt == "bark":
+            title = f"{strategy_name} Signal"
+            body = f"{old_action.upper()} → {new_action.upper()} | {signal_data.get('symbol', '')} ${signal_data.get('price', 0):,.2f}"
+            bark_url = f"{sub_url.rstrip('/')}/{title}/{body}"
+            req = Request(bark_url, method="GET")
+            with urlopen(req, timeout=10) as resp:
+                return resp.status == 200
+        elif fmt == "discord":
+            payload = format_webhook_discord(strategy_name, slug, old_action, new_action, signal_data)
+        elif fmt == "text":
+            text = format_webhook_text(strategy_name, slug, old_action, new_action, signal_data)
+            payload = {"text": text, "content": text}
+        else:
+            payload = format_webhook_json(strategy_name, slug, old_action, new_action, signal_data)
+
+        data = json.dumps(payload).encode()
+        req = Request(sub_url, data=data, headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=10) as resp:
+            return resp.status < 300
+    except (URLError, OSError) as e:
+        print(f"[webhook] Failed for {subscriber.get('id', '?')}: {e}")
+        return False
+
+
 def main():
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("[notify] No credentials configured, skipping")
+    has_telegram = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
+    subscribers = load_subscribers()
+
+    if not has_telegram and not subscribers:
+        print("[notify] No channels configured, skipping")
         sys.exit(0)
+
+    channels = []
+    if has_telegram:
+        channels.append("Telegram")
+    if subscribers:
+        channels.append(f"Webhooks({len(subscribers)})")
+    print(f"[notify] Active channels: {', '.join(channels)}")
 
     strategy_dirs = [d for d in DATA_DIR.iterdir()
                      if d.is_dir() and (d / "latest.json").exists()
@@ -144,8 +250,11 @@ def main():
     print(f"[notify] Detected {len(changes)} signal change(s)")
     for name, sid, old, new, signal_data in changes:
         slug = strategy_slug(sid)
-        msg = format_message(name, slug, old, new, signal_data)
-        send_telegram(msg)
+        if has_telegram:
+            msg = format_message(name, slug, old, new, signal_data)
+            send_telegram(msg)
+        for sub in subscribers:
+            send_webhook(sub, name, slug, old, new, signal_data)
 
 
 if __name__ == "__main__":
