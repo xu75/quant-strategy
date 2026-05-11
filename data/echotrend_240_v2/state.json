@@ -1,16 +1,16 @@
 {
   "engine": {
-    "bar_index": 11020,
+    "bar_index": 11023,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 10.0,
+      "trend": 5.0,
       "risk": 0.0,
       "rs": 60.0,
       "raw": 1.0,
       "target": 1.0
     },
-    "mode": "bull",
-    "mode_counter": 4,
+    "mode": "neutral",
+    "mode_counter": 0,
     "trend_regime": "bull",
     "regime_counter": 0,
     "regime_change_bar": 10858,
@@ -25,7 +25,7 @@
     "initial_capital": 10000.0,
     "total_costs": 9588.17727486378
   },
-  "watermark": "2026-05-11T16:30:00+00:00",
+  "watermark": "2026-05-11T19:30:00+00:00",
   "strategy_id": "echotrend_240_v2",
   "strategy_version": "1.0.0",
   "config_hash": "6cf8210ed3794cb0",
