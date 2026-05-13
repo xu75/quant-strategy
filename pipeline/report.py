@@ -215,7 +215,7 @@ def generate_price_ma_chart(
 
     df = df.copy().sort_values("timestamp").reset_index(drop=True)
 
-    ma_window = getattr(config, 'ma_window', None)
+    ma_window = getattr(config, 'ma_window', None) or getattr(config, 'sma_window', None)
     if ma_window is not None:
         df["ma"] = df["close"].rolling(window=ma_window, min_periods=ma_window).mean()
 
@@ -232,6 +232,7 @@ def generate_price_ma_chart(
 
     # Plot extra series (e.g. SPY for multi-asset strategies)
     extra_colors = ["#6366f1", "#ec4899", "#14b8a6"]
+    extra_ts_indices = {}
     if extra_series:
         for i, (label, edf) in enumerate(extra_series.items()):
             edf_sorted = edf.copy().sort_values("timestamp")
@@ -240,13 +241,19 @@ def generate_price_ma_chart(
             if not edf_window.empty:
                 color = extra_colors[i % len(extra_colors)]
                 ax.plot(edf_window["timestamp"], edf_window["close"], color=color, linewidth=0.7, alpha=0.7, label=f"{label} Close")
+                extra_ts_indices[label.upper()] = edf_window.set_index("timestamp")["close"]
 
-    # Mark trades — snap markers to the chart's close price so they sit on the curve
-    # (for multi-asset strategies, entry/exit prices may be a different asset)
-    ts_index = df.set_index("timestamp")["close"]
+    # Mark trades — snap markers to the correct asset's curve
+    primary_ts = df.set_index("timestamp")["close"]
     for t in trades:
         entry_time = t.entry_time if isinstance(t.entry_time, pd.Timestamp) else pd.Timestamp(t.entry_time)
         exit_time = t.exit_time if isinstance(t.exit_time, pd.Timestamp) else pd.Timestamp(t.exit_time)
+
+        trade_asset = getattr(t, 'asset', None)
+        if trade_asset and trade_asset.upper() in extra_ts_indices:
+            ts_index = extra_ts_indices[trade_asset.upper()]
+        else:
+            ts_index = primary_ts
 
         if entry_time >= df.iloc[0]["timestamp"]:
             entry_y = ts_index.asof(entry_time) if entry_time not in ts_index.index else ts_index[entry_time]
