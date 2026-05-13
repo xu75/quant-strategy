@@ -55,7 +55,7 @@ strategy_name: "DualMom-B FastRe (QQQ/SPY/CASH)"
 
 ## 7. 生产语义对齐
 
-- 当前为研究阶段，未接入 pipeline 自动化信号生成
+- 已接入 GitHub Actions pipeline，每 4 小时自动生成信号与回测数据
 - A 股执行映射：513100（QQQ）/ 513500（SPY）/ 511880（CASH）
 - 执行频率：月末 1 次 + 空仓期每周 1 次
 
