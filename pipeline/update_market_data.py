@@ -32,6 +32,7 @@ EQUITY_SOURCES = [
     ("QQQ_1h.csv", "QQQ", "1h", "60d"),
     ("MSTR_1d.csv", "MSTR", "1d", "1y"),
     ("QQQ_1d.csv", "QQQ", "1d", "1y"),
+    ("SPY_1d.csv", "SPY", "1d", "1y"),
 ]
 
 CRYPTO_SOURCES = [
