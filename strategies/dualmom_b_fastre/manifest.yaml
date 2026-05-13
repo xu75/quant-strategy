@@ -1,0 +1,79 @@
+# strategies/dualmom_b_fastre/manifest.yaml
+id: dualmom_b_fastre
+name: "DualMom-B FastRe"
+version: "1.1.0"
+description: "QQQ/SPY/CASH 非对称频率动量轮动：月频出场 + 周频回场"
+
+config:
+  sma_window: 225
+  momentum_lookback_months: 12
+  reentry_freq: "W"
+  require_abs_momentum: true
+  fee_rate: 0.001
+  timeframe: "1D"
+  symbol: "QQQ"
+  secondary_symbol: "SPY"
+
+data_sources:
+  qqq:
+    symbol: "QQQ"
+    timeframe: "1D"
+    source: "external"
+    local_file: "QQQ_1d.csv"
+    note: "yfinance, auto_adjust=True"
+  spy:
+    symbol: "SPY"
+    timeframe: "1D"
+    source: "external"
+    local_file: "SPY_1d.csv"
+    note: "yfinance, auto_adjust=True"
+
+display:
+  slug: "dualmom-b-fastre"
+  category: "momentum-rotation"
+  short_desc: "QQQ/SPY/CASH 非对称频率动量轮动（月频出场 + 周频回场）"
+
+min_lookback_years: 1
+warmup_bars: 225
+
+launch_date: "2026-05-13"
+enabled: true
+status: active
+
+research:
+  paper_title: "DualMom-B FastRe: 非对称频率动量轮动策略"
+  website_path: "/research/dualmom-b-fastre"
+  canonical_doc: "docs/research/strategies/dualmom_b_fastre.md"
+  source_project: "https://github.com/xu75/ndx100etf-a-strategy-clowder"
+
+page:
+  subtitle: "{symbol}/{secondary_symbol}/CASH · {timeframe} · 月频出场 + 周频回场"
+  card_subtitle: "{symbol}/{secondary_symbol}/CASH · 动量轮动"
+  card_fields:
+    - label: "Position"
+      key: "action"
+      format: "mode"
+    - label: "Holding"
+      key: "holding"
+      format: "plain"
+  signal_fields:
+    - label: "QQQ Price"
+      key: "price"
+      format: "currency"
+    - label: "SMA225"
+      key: "ma_value"
+      format: "currency"
+    - label: "QQQ 12m"
+      key: "qqq_12m"
+      format: "plain"
+    - label: "SPY 12m"
+      key: "spy_12m"
+      format: "plain"
+  rules:
+    - title: "月末出场判断（月频）"
+      description: "每月最后一个交易日收盘后：QQQ ≤ SMA225 → 次月初转 CASH。QQQ > SMA225 → risk-on，比较 QQQ 12m vs SPY 12m，持有更强者。"
+    - title: "空仓期快速回场（周频）"
+      description: "仅在 CASH 状态时，每周最后一个交易日检查：QQQ > SMA225 且 SPY 12m > 0 → 次交易日回场。回场后按 QQQ 12m vs SPY 12m 选择持仓。"
+    - title: "设计原理"
+      description: "月频出场避免均线附近 whipsaw（横盘磨损）。周频回场加速反弹捕捉（平均提前 2-3 周）。SPY 12m > 0 确认过滤持续性熊市假突破。"
+  data_source_desc: "QQQ 和 SPY 日线数据来自 yfinance（auto_adjust=True）。信号基于收盘价生成，次交易日开盘执行（Next Open）。当前为手动更新，未接入自动 pipeline。"
