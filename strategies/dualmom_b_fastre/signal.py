@@ -38,6 +38,7 @@ class Signal:
     price: float
     ma_value: float
     timestamp: pd.Timestamp
+    hold_bars: int = 0
     holding: str = "CASH"
     qqq_12m: str = ""
     spy_12m: str = ""
@@ -164,7 +165,7 @@ def compute_signals(
                 action="rebalance",
                 price=qqq_close.loc[date],
                 ma_value=sma.loc[date] if not pd.isna(sma.loc[date]) else 0.0,
-                timestamp=pd.Timestamp(date),
+                timestamp=pd.Timestamp(date, tz="UTC"),
                 holding=holding,
                 reason=f"signal={val}",
             ))
@@ -226,7 +227,7 @@ def get_current_signal(
         action="hold",
         price=qqq_close.iloc[-1],
         ma_value=sma.iloc[-1],
-        timestamp=pd.Timestamp(last_date),
+        timestamp=pd.Timestamp(last_date, tz="UTC"),
         holding=holding,
         qqq_12m=qqq_12m_str,
         spy_12m=spy_12m_str,
@@ -306,7 +307,7 @@ def run_backtest(
     num_trades = int(is_trade_day.sum())
 
     equity_curve = pd.DataFrame({
-        "timestamp": sig.index,
+        "timestamp": sig.index.tz_localize("UTC"),
         "equity": nav.values,
     })
 
@@ -326,9 +327,9 @@ def run_backtest(
         total_trades=num_trades,
         avg_hold_bars=round(len(nav) / max(num_trades, 1), 1),
         sharpe_ratio=round(sharpe, 2),
-        start_date=str(sig.index[0].date()),
-        end_date=str(sig.index[-1].date()),
+        start_date=pd.Timestamp(sig.index[0], tz="UTC"),
+        end_date=pd.Timestamp(sig.index[-1], tz="UTC"),
         buy_hold_return_pct=round(bh_return, 2),
         buy_hold_max_drawdown_pct=round(abs(bh_dd), 2),
-        has_open_position=(position.iloc[-1] > 0),
+        has_open_position=bool(position.iloc[-1] > 0),
     )

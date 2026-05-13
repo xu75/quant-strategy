@@ -76,6 +76,14 @@ def generate_status_json(
     if hasattr(signal, 'scores') and signal.scores:
         signal_dict["scores"] = {k: round(v, 2) if isinstance(v, float) else v for k, v in signal.scores.items()}
 
+    # DualMom-specific fields
+    if hasattr(signal, 'holding') and signal.holding:
+        signal_dict["holding"] = signal.holding
+    if hasattr(signal, 'qqq_12m') and signal.qqq_12m:
+        signal_dict["qqq_12m"] = signal.qqq_12m
+    if hasattr(signal, 'spy_12m') and signal.spy_12m:
+        signal_dict["spy_12m"] = signal.spy_12m
+
     status = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "strategy": {

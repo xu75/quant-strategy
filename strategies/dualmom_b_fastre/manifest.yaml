@@ -76,4 +76,4 @@ page:
       description: "仅在 CASH 状态时，每周最后一个交易日检查：QQQ > SMA225 且 SPY 12m > 0 → 次交易日回场。回场后按 QQQ 12m vs SPY 12m 选择持仓。"
     - title: "设计原理"
       description: "月频出场避免均线附近 whipsaw（横盘磨损）。周频回场加速反弹捕捉（平均提前 2-3 周）。SPY 12m > 0 确认过滤持续性熊市假突破。"
-  data_source_desc: "QQQ 和 SPY 日线数据来自 yfinance（auto_adjust=True）。信号基于收盘价生成，次交易日开盘执行（Next Open）。当前为手动更新，未接入自动 pipeline。"
+  data_source_desc: "QQQ 和 SPY 日线数据来自 yfinance（auto_adjust=True）。信号基于收盘价生成，次交易日开盘执行（Next Open）。由 GitHub Actions 每 4 小时自动更新。"
