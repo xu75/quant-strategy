@@ -1,0 +1,347 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const paper = {
+  title: 'DualMom-B FastRe (QQQ/SPY/CASH)',
+  subtitle: '非对称频率动量轮动：月频出场 + 周频回场',
+  tagline: '月频出场保护本金，周频回场捕捉反弹，SPY 12m > 0 过滤熊市假突破',
+  dataAsOf: '2026-05-11',
+  reportVersion: 'v1.1',
+};
+---
+
+<Layout title="DualMom-B FastRe Strategy" description="DualMom-B FastRe: 月频出场+周频回场的非对称动量轮动策略，适用于纳指/标普 A 股场内基金投资者">
+
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Home</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-lg text-gray-300 mb-1">{paper.subtitle}</p>
+    <p class="text-gray-400 text-sm">{paper.tagline}</p>
+    <p class="text-xs text-gray-600 mt-2">
+      Research {paper.reportVersion} · Data as of {paper.dataAsOf} · 含交易成本 0.1%/side
+    </p>
+  </section>
+
+  <!-- Summary Cards -->
+  <section class="mb-10">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">CAGR (27yr)</p>
+        <p class="text-2xl font-mono text-green-400">10.22%</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Max Drawdown</p>
+        <p class="text-2xl font-mono text-red-400">-32.28%</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Sharpe</p>
+        <p class="text-2xl font-mono">0.65</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Calmar</p>
+        <p class="text-2xl font-mono">0.32</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">年均交易</p>
+        <p class="text-xl font-mono">~2.5 次</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">持仓占比</p>
+        <p class="text-xl font-mono">76.6%</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">当前持仓</p>
+        <p class="text-xl font-mono text-green-400">QQQ</p>
+      </div>
+      <div class="border border-gray-800 rounded-xl p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide">样本区间</p>
+        <p class="text-xl font-mono">1999–2026</p>
+      </div>
+    </div>
+    <p class="text-xs text-gray-600 mt-2">成本模型：0.1%/side（保守假设，含佣金及滑点），68 次交易/27 年</p>
+  </section>
+
+  <!-- Strategy Logic -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">策略逻辑</h2>
+    <div class="border border-gray-800 rounded-xl p-6 space-y-6">
+      <div>
+        <p class="text-white font-medium mb-2">月末出场判断（月频）</p>
+        <div class="text-gray-300 space-y-2 text-sm">
+          <p>每月最后一个交易日收盘后执行：</p>
+          <ol class="list-decimal pl-6 space-y-1">
+            <li>QQQ 收盘价 ≤ SMA225 → 次月第一个交易日转 CASH</li>
+            <li>QQQ 收盘价 &gt; SMA225 → risk-on，进入相对强弱判断：
+              <ul class="list-disc pl-6 mt-1">
+                <li>QQQ 12m &gt; SPY 12m → 持有 QQQ</li>
+                <li>QQQ 12m ≤ SPY 12m → 持有 SPY</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-white font-medium mb-2">空仓期快速回场（周频）</p>
+        <div class="text-gray-300 space-y-2 text-sm">
+          <p>仅在 CASH 状态时，每周最后一个交易日收盘后检查：</p>
+          <ol class="list-decimal pl-6 space-y-1">
+            <li>QQQ 收盘 &gt; SMA225（趋势确认）</li>
+            <li>SPY 过去 12 个月收益 &gt; 0（绝对动量确认）</li>
+            <li>两者同时满足 → 次交易日开盘回场</li>
+            <li>回场后按 QQQ 12m vs SPY 12m 选择持仓</li>
+          </ol>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-white font-medium mb-2">设计原理</p>
+        <div class="text-gray-400 text-sm space-y-1">
+          <p>• 月频出场避免均线附近 whipsaw（横盘磨损）</p>
+          <p>• 周频回场加速反弹捕捉（平均提前 2–3 周）</p>
+          <p>• SPY 12m &gt; 0 确认过滤持续性熊市假突破（2001、2002、2008、2022 均不触发）</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Backtest Performance -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">回测表现</h2>
+    <div class="border border-gray-800 rounded-xl p-6">
+      <p class="text-white font-medium mb-3">全样本 1999–2026（27 年，含 0.1%/side 交易成本）</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-gray-300">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="py-2 px-3 text-left">策略</th>
+              <th class="py-2 px-3 text-center">CAGR</th>
+              <th class="py-2 px-3 text-center">MaxDD</th>
+              <th class="py-2 px-3 text-center">Sharpe</th>
+              <th class="py-2 px-3 text-center">Calmar</th>
+              <th class="py-2 px-3 text-center">年均交易</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-gray-800 bg-green-900/10">
+              <td class="py-2 px-3 text-white font-medium">DualMom-B FastRe</td>
+              <td class="py-2 px-3 text-center text-green-400">10.22%</td>
+              <td class="py-2 px-3 text-center">-32.28%</td>
+              <td class="py-2 px-3 text-center">0.65</td>
+              <td class="py-2 px-3 text-center">0.32</td>
+              <td class="py-2 px-3 text-center">2.5</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 px-3">DualMom-B（旧版）</td>
+              <td class="py-2 px-3 text-center">8.69%</td>
+              <td class="py-2 px-3 text-center">-32.28%</td>
+              <td class="py-2 px-3 text-center">0.58</td>
+              <td class="py-2 px-3 text-center">0.27</td>
+              <td class="py-2 px-3 text-center">2.4</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3">Buy & Hold QQQ</td>
+              <td class="py-2 px-3 text-center">10.90%</td>
+              <td class="py-2 px-3 text-center text-red-400">-82.96%</td>
+              <td class="py-2 px-3 text-center">0.52</td>
+              <td class="py-2 px-3 text-center">0.13</td>
+              <td class="py-2 px-3 text-center">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-xs text-gray-500 mt-3">* 成本模型：0.1%/side（保守假设，含佣金及滑点）。Buy & Hold 仅 1 次买入，成本可忽略。</p>
+
+      <p class="text-white font-medium mt-6 mb-3">多窗口验证（含交易成本）</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-gray-300">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="py-2 px-3 text-left">窗口</th>
+              <th class="py-2 px-3 text-center">CAGR</th>
+              <th class="py-2 px-3 text-center">MaxDD</th>
+              <th class="py-2 px-3 text-center">Sharpe</th>
+              <th class="py-2 px-3 text-center">Calmar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">全样本 1999–2026</td><td class="py-2 px-3 text-center">10.22%</td><td class="py-2 px-3 text-center">-32.28%</td><td class="py-2 px-3 text-center">0.65</td><td class="py-2 px-3 text-center">0.32</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2014 至今（12 年）</td><td class="py-2 px-3 text-center">14.07%</td><td class="py-2 px-3 text-center">-28.56%</td><td class="py-2 px-3 text-center">0.83</td><td class="py-2 px-3 text-center">0.49</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2020 至今（6 年）</td><td class="py-2 px-3 text-center">16.94%</td><td class="py-2 px-3 text-center">-13.56%</td><td class="py-2 px-3 text-center">1.13</td><td class="py-2 px-3 text-center">1.25</td></tr>
+            <tr><td class="py-2 px-3">2022 至今（4 年）</td><td class="py-2 px-3 text-center">22.50%</td><td class="py-2 px-3 text-center">-13.56%</td><td class="py-2 px-3 text-center">1.38</td><td class="py-2 px-3 text-center">1.66</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why It Works -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">为什么有效</h2>
+    <div class="border border-gray-800 rounded-xl p-6 space-y-4">
+      <div>
+        <p class="text-white font-medium mb-1">快速反弹年份提前回场</p>
+        <p class="text-gray-300 text-sm">2019 年 FastRe 比旧版多赚 +17.39%，2026 YTD 多赚 +9.32%（4/10 回场 vs 5/1 回场）。这些年份的共同特征：短暂回调后 V 型反弹，月频信号来不及反应。</p>
+      </div>
+      <div>
+        <p class="text-white font-medium mb-1">SPY 12m &gt; 0 过滤熊市假突破</p>
+        <p class="text-gray-300 text-sm">2001–2002 互联网泡沫、2008 金融危机、2022 加息熊市期间，SPY 12m 持续为负，FastRe 不会误入。策略在这些年份与旧版表现完全相同（MaxDD 不恶化）。</p>
+      </div>
+      <div>
+        <p class="text-white font-medium mb-1">非对称频率优于对称频率</p>
+        <p class="text-gray-300 text-sm">完整周频 DualMom-B 的 MaxDD 恶化到 -38%（whipsaw），完整日频更差（-44%）。只有"慢出快进"的非对称设计同时保留了保护能力和反弹捕捉能力。</p>
+      </div>
+
+      <p class="text-white font-medium mt-4 mb-2">关键年份对比</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-gray-300">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="py-2 px-3 text-left">年份</th>
+              <th class="py-2 px-3 text-center">FastRe</th>
+              <th class="py-2 px-3 text-center">旧 DualMom-B</th>
+              <th class="py-2 px-3 text-left">原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2001</td><td class="py-2 px-3 text-center">0.00%</td><td class="py-2 px-3 text-center">0.00%</td><td class="py-2 px-3 text-gray-400">SPY 12m &lt; 0，不触发</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2008</td><td class="py-2 px-3 text-center">-19.38%</td><td class="py-2 px-3 text-center">-19.38%</td><td class="py-2 px-3 text-gray-400">SPY 12m &lt; 0，不触发</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2010</td><td class="py-2 px-3 text-center text-green-400">+8.63%</td><td class="py-2 px-3 text-center">-2.85%</td><td class="py-2 px-3 text-gray-400">提前回场吃到反弹</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2019</td><td class="py-2 px-3 text-center text-green-400">+26.41%</td><td class="py-2 px-3 text-center">+9.02%</td><td class="py-2 px-3 text-gray-400">大幅提前回场</td></tr>
+            <tr class="border-b border-gray-800"><td class="py-2 px-3">2022</td><td class="py-2 px-3 text-center">-8.07%</td><td class="py-2 px-3 text-center">-8.07%</td><td class="py-2 px-3 text-gray-400">SPY 12m &lt; 0，不触发</td></tr>
+            <tr><td class="py-2 px-3">2026 YTD</td><td class="py-2 px-3 text-center text-green-400">+9.81%</td><td class="py-2 px-3 text-center">+0.49%</td><td class="py-2 px-3 text-gray-400">4/10 回场 vs 5/1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Current Signal -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">当前信号</h2>
+    <div class="border border-gray-800 rounded-xl p-6">
+      <div class="flex items-center gap-4 mb-4">
+        <span class="px-4 py-2 rounded-full text-sm font-semibold bg-green-900/50 text-green-400">
+          Risk-On · 持有 QQQ
+        </span>
+        <span class="text-xs text-gray-500">截至 2026-05-11</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">QQQ 收盘</p>
+          <p class="text-lg font-mono">$713.29</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">SMA225</p>
+          <p class="text-lg font-mono">$600.50</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">QQQ 12m</p>
+          <p class="text-lg font-mono text-green-400">+38.07%</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">SPY 12m</p>
+          <p class="text-lg font-mono text-green-400">+26.87%</p>
+        </div>
+      </div>
+      <p class="text-sm text-gray-400 mt-4">QQQ &gt; SMA225 且 QQQ 12m &gt; SPY 12m → 持有 QQQ 对应标的（A 股：513100）</p>
+    </div>
+  </section>
+
+  <!-- A-Share Implementation -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">A 股执行映射</h2>
+    <div class="border border-gray-800 rounded-xl p-6 space-y-4">
+      <div>
+        <p class="text-white font-medium mb-2">推荐标的</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-gray-300">
+            <thead>
+              <tr class="border-b border-gray-700 text-gray-400">
+                <th class="py-2 px-3 text-left">信号</th>
+                <th class="py-2 px-3 text-left">美股标的</th>
+                <th class="py-2 px-3 text-left">A 股 ETF</th>
+                <th class="py-2 px-3 text-left">代码</th>
+                <th class="py-2 px-3 text-left">管理人</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-gray-800"><td class="py-2 px-3">QQQ</td><td class="py-2 px-3">Invesco QQQ Trust</td><td class="py-2 px-3">国泰纳指100</td><td class="py-2 px-3 font-mono">513100</td><td class="py-2 px-3">国泰基金</td></tr>
+              <tr class="border-b border-gray-800"><td class="py-2 px-3">SPY</td><td class="py-2 px-3">SPDR S&P 500</td><td class="py-2 px-3">博时标普500</td><td class="py-2 px-3 font-mono">513500</td><td class="py-2 px-3">博时基金</td></tr>
+              <tr><td class="py-2 px-3">CASH</td><td class="py-2 px-3">零收益</td><td class="py-2 px-3">银华日利</td><td class="py-2 px-3 font-mono">511880</td><td class="py-2 px-3">银华基金</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-white font-medium mb-2">为什么选择规模大的 ETF 而非溢价率低的</p>
+        <div class="text-gray-300 text-sm space-y-2">
+          <p>A 股跨境 ETF（QDII）的选择应优先考虑<span class="text-white">规模和流动性</span>，而非单纯追求低溢价率：</p>
+          <ul class="list-disc pl-6 space-y-1">
+            <li><span class="text-white">513100（国泰纳指100）</span>：规模最大的纳指 ETF，日均成交额高，买卖价差小，大额交易冲击成本低。即使偶尔溢价略高，流动性优势使实际执行成本更低。</li>
+            <li><span class="text-white">513500（博时标普500）</span>：标普500 ETF 中规模较大者，流动性充足。</li>
+            <li>小规模 ETF 虽然溢价率可能更低，但存在流动性不足（买卖价差大）、QDII 额度更紧张（更容易限购）、跟踪误差更大等问题。</li>
+            <li>对于月频/周频调仓的策略，单次交易金额可能较大，流动性是第一优先级。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-white font-medium mb-2">执行注意事项</p>
+        <div class="text-gray-400 text-sm space-y-1">
+          <p>• 限购风险：QDII 额度紧张时可能暂停申购，需提前关注基金公告</p>
+          <p>• 溢价风险：场内价格 &gt; 净值时买入相当于多付成本，建议溢价 &gt; 3% 时等待回落</p>
+          <p>• 交易成本：ETF 场内佣金约万3，年均 2.5 次调仓，年化成本 &lt; 0.1%</p>
+          <p>• 跟踪误差：A 股 ETF 与美股标的年度差异约 ±5–9%，主要来自汇率波动和 QDII 溢价</p>
+          <p>• 执行频率：月末最后一个交易日检查一次（出场），空仓时每周最后一个交易日检查一次（回场）</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risk Disclaimer -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">风险提示</h2>
+    <div class="border border-yellow-900/50 rounded-xl p-6 text-gray-400 text-sm space-y-3">
+      <p class="text-yellow-400/80 font-medium">以下风险因素可能导致实际表现与回测结果显著偏离：</p>
+      <ul class="list-disc pl-6 space-y-2">
+        <li><span class="text-gray-300">历史回测不代表未来表现。</span>策略基于 1999–2026 年历史数据优化，未来市场结构可能发生根本性变化。</li>
+        <li><span class="text-gray-300">QDII 溢价与汇率风险。</span>A 股跨境 ETF 与美股标的存在 5–9% 的年度跟踪误差，人民币汇率波动会放大或缩小实际收益。</li>
+        <li><span class="text-gray-300">执行误差。</span>信号基于收盘价生成、次日开盘执行，实际成交价可能偏离。限购、停牌等事件可能导致无法及时调仓。</li>
+        <li><span class="text-gray-300">策略选择偏差。</span>FastRe 是从多个候选策略中选出的最优方案，存在一定的事后选择偏差（selection bias）。</li>
+        <li><span class="text-gray-300">失效场景。</span>如果市场进入长期横盘（非趋势市），SMA225 过滤器会频繁误判。如果 QQQ 和 SPY 高度同步，轮动价值消失。</li>
+        <li><span class="text-gray-300">数据延迟。</span>A 股投资者获取美股收盘数据存在时差，需在次日 A 股开盘前完成判断。</li>
+      </ul>
+      <p class="mt-4 text-gray-500 italic">本页面仅为量化研究记录，不构成任何投资建议。投资者应根据自身风险承受能力独立决策。</p>
+    </div>
+  </section>
+
+  <!-- Research Source -->
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-4">研究来源</h2>
+    <div class="border border-gray-800 rounded-xl p-6 text-gray-400 text-sm space-y-2">
+      <p><span class="text-gray-300">研究报告：</span><a href="https://github.com/xu75/quant-strategy/blob/main/docs/research/strategies/dualmom_b_fastre.md" class="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">Canonical 研究文档</a> · 源报告 v1.1（2026-05-13）</p>
+      <p><span class="text-gray-300">数据截至：</span>2026-05-11</p>
+      <p><span class="text-gray-300">数据来源：</span>yfinance（QQQ、SPY 日线，auto_adjust=True）</p>
+      <p><span class="text-gray-300">回测方法：</span>Next Open 执行模型，交易成本 0.1%/side（保守假设，含佣金及滑点），年均交易 2.5 次</p>
+      <p><span class="text-gray-300">回测代码：</span><a href="https://github.com/xu75/ndx100etf-a-strategy-clowder/blob/main/src/backtest_qqq_relstrength.py" class="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">backtest_qqq_relstrength.py</a>（dual_momentum_riskon_b_fast_reentry_signal）</p>
+      <p><span class="text-gray-300">研究团队：</span>opus (布偶猫/宪宪) + gpt52 (缅因猫/砚砚)</p>
+      <p class="mt-2"><span class="text-gray-300">v1.1 变更：</span>新增 DualMom-B FastRe 策略（非对称快速回场），从 DualMom-B 升级为推荐策略。CAGR +1.53%，MaxDD 不变，Calmar +19%。</p>
+    </div>
+  </section>
+
+  <!-- Disclaimer footer -->
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">声明</h2>
+    <p class="text-gray-400 text-sm leading-6">
+      本页面为独立量化研究记录，所有回测结果基于历史数据和特定假设。策略规则完全公开透明，任何人可使用公开数据复现结果。本页面不构成投资建议，不承诺任何收益，不对使用本策略产生的任何损失承担责任。实际交易需考虑交易成本、流动性、汇率风险、QDII 额度限制和个人风险承受能力。
+    </p>
+  </section>
+
+</Layout>
