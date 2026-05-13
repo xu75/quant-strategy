@@ -227,16 +227,22 @@ def generate_price_ma_chart(
     if ma_window is not None and "ma" in df.columns:
         ax.plot(df["timestamp"], df["ma"], color="#f59e0b", linewidth=1.2, label=f"MA{ma_window}")
 
-    # Mark trades
+    # Mark trades — snap markers to the chart's close price so they sit on the curve
+    # (for multi-asset strategies, entry/exit prices may be a different asset)
+    ts_index = df.set_index("timestamp")["close"]
     for t in trades:
         entry_time = t.entry_time if isinstance(t.entry_time, pd.Timestamp) else pd.Timestamp(t.entry_time)
         exit_time = t.exit_time if isinstance(t.exit_time, pd.Timestamp) else pd.Timestamp(t.exit_time)
 
         if entry_time >= df.iloc[0]["timestamp"]:
-            ax.scatter(entry_time, t.entry_price, color="#10b981", marker="^", s=80, zorder=5)
+            entry_y = ts_index.asof(entry_time) if entry_time not in ts_index.index else ts_index[entry_time]
+            if pd.notna(entry_y):
+                ax.scatter(entry_time, entry_y, color="#10b981", marker="^", s=80, zorder=5)
         if exit_time >= df.iloc[0]["timestamp"]:
-            color = "#ef4444" if t.pnl_pct < 0 else "#10b981"
-            ax.scatter(exit_time, t.exit_price, color=color, marker="v", s=80, zorder=5)
+            exit_y = ts_index.asof(exit_time) if exit_time not in ts_index.index else ts_index[exit_time]
+            if pd.notna(exit_y):
+                color = "#ef4444" if t.pnl_pct < 0 else "#10b981"
+                ax.scatter(exit_time, exit_y, color=color, marker="v", s=80, zorder=5)
 
     ax.set_title(
         f"{symbol.replace('-', '/')} {config.timeframe} - {config.display_name}",
