@@ -440,7 +440,16 @@ def _run_full_backtest(adapter):
         provenance=provenance,
     )
     generate_equity_chart(result, charts_dir / "equity.png", benchmark_prices=df_sorted[["timestamp", "close"]])
-    generate_price_ma_chart(df_backtest, config, result.trades, charts_dir / "price_ma.png")
+    # Build extra_series for multi-asset chart overlay (only secondary_symbol)
+    chart_extra_series = None
+    secondary_symbol = getattr(config, 'secondary_symbol', None)
+    if secondary_symbol and extra_data:
+        for key, edf in extra_data.items():
+            if key.upper() == secondary_symbol.upper() or key == secondary_symbol.lower():
+                if "timestamp" in edf.columns and "close" in edf.columns:
+                    chart_extra_series = {secondary_symbol: edf[["timestamp", "close"]]}
+                    break
+    generate_price_ma_chart(df_backtest, config, result.trades, charts_dir / "price_ma.png", extra_series=chart_extra_series)
     sync_public_charts(manifest.id, charts_dir)
 
     # 7. Export engine state for future daily-signal runs

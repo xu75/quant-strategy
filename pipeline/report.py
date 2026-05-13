@@ -200,6 +200,7 @@ def generate_price_ma_chart(
     trades: list,
     output_path: Path,
     last_n_bars: int = 500,
+    extra_series: dict[str, pd.DataFrame] | None = None,
 ) -> None:
     """Generate price chart with optional MA overlay and trade markers.
 
@@ -207,6 +208,8 @@ def generate_price_ma_chart(
         config: Strategy configuration (duck-typed).
             Required: timeframe, display_name, symbol.
             Optional: ma_window (if absent, MA overlay is skipped).
+        extra_series: Optional dict of {label: DataFrame} with 'timestamp' and 'close' columns
+            to plot as secondary lines.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -226,6 +229,17 @@ def generate_price_ma_chart(
     ax.plot(df["timestamp"], df["close"], color="#374151", linewidth=0.8, label=f"{base_asset} Close")
     if ma_window is not None and "ma" in df.columns:
         ax.plot(df["timestamp"], df["ma"], color="#f59e0b", linewidth=1.2, label=f"MA{ma_window}")
+
+    # Plot extra series (e.g. SPY for multi-asset strategies)
+    extra_colors = ["#6366f1", "#ec4899", "#14b8a6"]
+    if extra_series:
+        for i, (label, edf) in enumerate(extra_series.items()):
+            edf_sorted = edf.copy().sort_values("timestamp")
+            mask = (edf_sorted["timestamp"] >= df.iloc[0]["timestamp"]) & (edf_sorted["timestamp"] <= df.iloc[-1]["timestamp"])
+            edf_window = edf_sorted[mask]
+            if not edf_window.empty:
+                color = extra_colors[i % len(extra_colors)]
+                ax.plot(edf_window["timestamp"], edf_window["close"], color=color, linewidth=0.7, alpha=0.7, label=f"{label} Close")
 
     # Mark trades — snap markers to the chart's close price so they sit on the curve
     # (for multi-asset strategies, entry/exit prices may be a different asset)
