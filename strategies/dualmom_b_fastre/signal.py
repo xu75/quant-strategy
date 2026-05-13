@@ -306,6 +306,77 @@ def run_backtest(
     sharpe = strat_ret.mean() / strat_ret.std() * np.sqrt(252) if strat_ret.std() > 0 else 0
     num_trades = int(is_trade_day.sum())
 
+    def _asset_for_position(pos_val: float) -> str:
+        if pos_val == 1.0:
+            return "QQQ"
+        if pos_val == 0.5:
+            return "SPY"
+        return "CASH"
+
+    def _asset_open(asset: str, date: pd.Timestamp) -> float:
+        frame = qqq_df_aligned if asset == "QQQ" else spy_df_aligned
+        return float(frame.loc[date, "open"])
+
+    def _asset_close(asset: str, date: pd.Timestamp) -> float:
+        series = qqq_close if asset == "QQQ" else spy_close
+        return float(series.loc[date])
+
+    trades: list[Trade] = []
+    open_asset: str | None = None
+    open_entry_date: pd.Timestamp | None = None
+    open_entry_price = 0.0
+    open_entry_idx = 0
+
+    for idx, date in enumerate(sig.index):
+        if not bool(is_trade_day.iloc[idx]):
+            continue
+
+        prev_pos = float(prev_position.iloc[idx])
+        pos = float(position.iloc[idx])
+
+        if prev_pos > 0 and open_asset is not None and open_entry_date is not None:
+            exit_price = _asset_open(open_asset, date)
+            entry_cost = open_entry_price * (1 + fee_rate)
+            exit_value = exit_price * (1 - fee_rate)
+            pnl_pct = (exit_value - entry_cost) / entry_cost * 100
+            trades.append(Trade(
+                entry_time=pd.Timestamp(open_entry_date, tz="UTC"),
+                entry_price=open_entry_price,
+                exit_time=pd.Timestamp(date, tz="UTC"),
+                exit_price=exit_price,
+                hold_bars=max(1, idx - open_entry_idx),
+                pnl_pct=pnl_pct,
+                pnl_abs=initial_capital * pnl_pct / 100,
+                asset=open_asset,
+            ))
+            open_asset = None
+            open_entry_date = None
+            open_entry_price = 0.0
+            open_entry_idx = idx
+
+        if pos > 0:
+            open_asset = _asset_for_position(pos)
+            open_entry_date = date
+            open_entry_price = _asset_open(open_asset, date)
+            open_entry_idx = idx
+
+    if open_asset is not None and open_entry_date is not None:
+        last_date = sig.index[-1]
+        exit_price = _asset_close(open_asset, last_date)
+        entry_cost = open_entry_price * (1 + fee_rate)
+        pnl_pct = (exit_price - entry_cost) / entry_cost * 100
+        trades.append(Trade(
+            entry_time=pd.Timestamp(open_entry_date, tz="UTC"),
+            entry_price=open_entry_price,
+            exit_time=pd.Timestamp(last_date, tz="UTC"),
+            exit_price=exit_price,
+            hold_bars=max(1, len(sig.index) - 1 - open_entry_idx),
+            pnl_pct=pnl_pct,
+            pnl_abs=initial_capital * pnl_pct / 100,
+            asset=open_asset,
+            status="open",
+        ))
+
     equity_curve = pd.DataFrame({
         "timestamp": sig.index.tz_localize("UTC"),
         "equity": nav.values,
@@ -315,17 +386,23 @@ def run_backtest(
     bh_nav = (1 + qqq_ret).cumprod()
     bh_return = (bh_nav.iloc[-1] - 1) * 100
     bh_dd = ((bh_nav / bh_nav.cummax() - 1).min()) * 100
+    closed_trades = [t for t in trades if t.status == "closed"]
+    win_rate = (
+        sum(1 for t in closed_trades if t.pnl_pct > 0) / len(closed_trades) * 100
+        if closed_trades else 0.0
+    )
+    avg_hold = sum(t.hold_bars for t in trades) / len(trades) if trades else 0.0
 
     return BacktestResult(
         config=config,
-        trades=[],
+        trades=trades,
         equity_curve=equity_curve,
         total_return_pct=round(total_return_pct, 2),
         realized_return_pct=round(total_return_pct, 2),
         max_drawdown_pct=round(abs(max_dd_pct), 2),
-        win_rate=0.0,
+        win_rate=round(win_rate, 2),
         total_trades=num_trades,
-        avg_hold_bars=round(len(nav) / max(num_trades, 1), 1),
+        avg_hold_bars=round(avg_hold, 1),
         sharpe_ratio=round(sharpe, 2),
         start_date=pd.Timestamp(sig.index[0], tz="UTC"),
         end_date=pd.Timestamp(sig.index[-1], tz="UTC"),
