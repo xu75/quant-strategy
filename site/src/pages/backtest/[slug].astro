@@ -21,6 +21,8 @@ const trades = backtest.trades;
 const period = backtest.period;
 const strategy = backtest.strategy;
 const strategySlug = manifest.display.slug;
+const hasTradeAssets = trades.some((t: any) => t.asset);
+const hasTradeStatus = trades.some((t: any) => t.status);
 const status = manifest.status || 'active';
 const statusReason = manifest.status_reason || '';
 const statusDate = manifest.status_date || '';
@@ -119,11 +121,13 @@ const subtitle = manifest.display.short_desc
         <thead>
           <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase tracking-wide">
             <th class="text-left py-3 px-3" data-i18n="backtest.col.num">#</th>
+            {hasTradeAssets && <th class="text-left py-3 px-3">Asset</th>}
             <th class="text-left py-3 px-3" data-i18n="backtest.col.entry">Entry</th>
             <th class="text-right py-3 px-3" data-i18n="backtest.col.entry_price">Entry Price</th>
             <th class="text-left py-3 px-3" data-i18n="backtest.col.exit">Exit</th>
             <th class="text-right py-3 px-3" data-i18n="backtest.col.exit_price">Exit Price</th>
             <th class="text-right py-3 px-3" data-i18n="backtest.col.hold">Hold</th>
+            {hasTradeStatus && <th class="text-right py-3 px-3">Status</th>}
             <th class="text-right py-3 px-3" data-i18n="backtest.col.pnl">P&L</th>
           </tr>
         </thead>
@@ -131,6 +135,7 @@ const subtitle = manifest.display.short_desc
           {trades.map((t: any, i: number) => (
             <tr class="border-b border-gray-800/50 hover:bg-gray-900/50">
               <td class="py-3 px-3 text-gray-500">{i + 1}</td>
+              {hasTradeAssets && <td class="py-3 px-3 font-mono">{t.asset || '—'}</td>}
               <td class="py-3 px-3 font-mono text-xs">
                 <span class="js-local-date" data-iso={t.entry_time}>{t.entry_time}</span>
               </td>
@@ -140,6 +145,7 @@ const subtitle = manifest.display.short_desc
               </td>
               <td class="py-3 px-3 font-mono text-right">${t.exit_price.toLocaleString()}</td>
               <td class="py-3 px-3 font-mono text-right">{t.hold_bars}b</td>
+              {hasTradeStatus && <td class="py-3 px-3 font-mono text-right uppercase text-gray-400">{t.status || 'closed'}</td>}
               <td class={`py-3 px-3 font-mono text-right ${t.pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {t.pnl_pct > 0 ? '+' : ''}{t.pnl_pct}%
               </td>

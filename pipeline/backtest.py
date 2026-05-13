@@ -23,6 +23,8 @@ class Trade:
     hold_bars: int
     pnl_pct: float  # percentage return
     pnl_abs: float  # absolute return per unit
+    asset: str = ""
+    status: str = "closed"
 
 
 @dataclass
@@ -285,16 +287,31 @@ def compute_period_metrics(
     Returns:
         Dict with period metrics, or None if no activity in period.
     """
+    closed_trades = [
+        t for t in trades
+        if getattr(t, "status", "closed") != "open"
+    ]
+    open_trades = [
+        t for t in trades
+        if getattr(t, "status", "closed") == "open" and t.exit_time >= period_start
+    ]
+
     # Trades fully within the period
-    in_period = [t for t in trades if t.entry_time >= period_start]
+    in_period = [t for t in closed_trades if t.entry_time >= period_start]
 
     # Trades crossing the boundary (entered before period, exited within)
     cross_boundary = [
-        t for t in trades
+        t for t in closed_trades
         if t.entry_time < period_start and t.exit_time >= period_start
     ]
 
     # Open position contributes regardless of when it was entered
+    open_trade = open_trades[-1] if open_trades else None
+    open_exit_price = end_price
+    if open_entry_time is None and open_trade is not None:
+        open_entry_time = open_trade.entry_time
+        open_entry_price = open_trade.entry_price
+        open_exit_price = open_trade.exit_price
     include_open = open_entry_time is not None
     open_crosses_boundary = include_open and open_entry_time < period_start
 
@@ -342,11 +359,11 @@ def compute_period_metrics(
     if include_open:
         if open_crosses_boundary:
             # Entered before period — measure from start_price (no entry fee)
-            unrealized_ret = (end_price * (1 - fee_rate) - start_price) / start_price
+            unrealized_ret = (open_exit_price * (1 - fee_rate) - start_price) / start_price
         else:
             # Entered within period — use actual entry with fee
             entry_cost = open_entry_price * (1 + fee_rate)
-            exit_value = end_price * (1 - fee_rate)
+            exit_value = open_exit_price * (1 - fee_rate)
             unrealized_ret = (exit_value - entry_cost) / entry_cost
         equity *= (1 + unrealized_ret)
         if equity > peak:
@@ -432,6 +449,8 @@ def result_to_dict(result: BacktestResult) -> dict:
                 "exit_price": round(t.exit_price, 2),
                 "hold_bars": t.hold_bars,
                 "pnl_pct": round(t.pnl_pct, 2),
+                **({"asset": t.asset} if getattr(t, "asset", "") else {}),
+                **({"status": t.status} if getattr(t, "status", "closed") != "closed" else {}),
             }
             for t in result.trades
         ],
