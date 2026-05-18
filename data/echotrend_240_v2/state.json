@@ -1,11 +1,11 @@
 {
   "engine": {
-    "bar_index": 11055,
+    "bar_index": 11058,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 20.0,
-      "risk": 15.0,
-      "rs": 65.0,
+      "trend": 15.0,
+      "risk": 0.0,
+      "rs": 50.0,
       "raw": 1.0,
       "target": 1.0
     },
@@ -25,7 +25,7 @@
     "initial_capital": 10000.0,
     "total_costs": 9701.525189597602
   },
-  "watermark": "2026-05-18T16:30:00+00:00",
+  "watermark": "2026-05-18T19:30:00+00:00",
   "strategy_id": "echotrend_240_v2",
   "strategy_version": "1.0.0",
   "config_hash": "6cf8210ed3794cb0",
