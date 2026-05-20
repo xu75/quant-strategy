@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-20T18:28:42.477781+00:00",
+  "updated_at": "2026-05-20T22:03:57.476217+00:00",
   "strategy": {
     "name": "TrendLock 40",
     "code": "btc_ma_trend",
@@ -11,14 +11,14 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 77569.5,
-    "ma_value": 77619.84,
-    "timestamp": "2026-05-20T16:00:00+00:00",
-    "hold_bars": 0,
-    "reason": "No position, price below MA240"
+    "price": 77501.9,
+    "ma_value": 77639.05,
+    "timestamp": "2026-05-20T20:00:00+00:00",
+    "hold_bars": 1,
+    "reason": "Holding 1/24 bars, min hold not met"
   },
   "position": {
-    "in_position": false,
-    "entry_bar_idx": null
+    "in_position": true,
+    "entry_bar_idx": 13989
   }
 }
