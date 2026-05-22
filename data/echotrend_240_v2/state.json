@@ -3,7 +3,7 @@
     "bar_index": 11079,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 5.0,
+      "trend": 25.0,
       "risk": 0.0,
       "rs": 50.0,
       "raw": 1.0,
