@@ -1,6 +1,6 @@
 {
   "engine": {
-    "bar_index": 11083,
+    "bar_index": 11086,
     "exposure_ema": 1.0,
     "last_scores": {
       "trend": 5.0,
@@ -25,7 +25,7 @@
     "initial_capital": 10000.0,
     "total_costs": 9701.525189597602
   },
-  "watermark": "2026-05-22T16:30:00+00:00",
+  "watermark": "2026-05-22T19:30:00+00:00",
   "strategy_id": "echotrend_240_v2",
   "strategy_version": "1.0.0",
   "config_hash": "6cf8210ed3794cb0",
