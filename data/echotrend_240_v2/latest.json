@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-22T21:20:43.841674+00:00",
+  "updated_at": "2026-05-23T04:04:32.008468+00:00",
   "strategy": {
     "name": "EchoTrend 240 V2",
     "code": "echotrend_240_v2",
@@ -18,8 +18,8 @@
     "mode": "neutral",
     "target_exposure": 0.0,
     "scores": {
-      "trend": 5.0,
-      "risk": 0.0,
+      "trend": 25.0,
+      "risk": 15.0,
       "rs": 50.0,
       "raw": 1.0,
       "target": 1.0
