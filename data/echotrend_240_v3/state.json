@@ -1,0 +1,37 @@
+{
+  "engine": {
+    "bar_index": 11031,
+    "exposure_ema": 1.0,
+    "last_scores": {
+      "trend": 5.0,
+      "risk": 0.0,
+      "rs": 50.0,
+      "raw": 1.0,
+      "target": 1.0
+    },
+    "mode": "bull",
+    "mode_counter": 1,
+    "trend_regime": "bull",
+    "regime_counter": 0,
+    "regime_change_bar": 10864,
+    "regime_flips": 104,
+    "last_rebalance_bar": 10866,
+    "cb_triggered": false,
+    "cb_trigger_date": "2026-02-05",
+    "prev_bar_high": 182.47999572753903,
+    "prev_bar_low": 175.57000732421875,
+    "intraday_high": 182.47999572753903,
+    "current_date": "2026-05-13"
+  },
+  "portfolio": {
+    "cash": 1002.570154578565,
+    "shares": 1787.6639035932803,
+    "initial_capital": 10000.0,
+    "total_costs": 16449.18614003581
+  },
+  "watermark": "2026-05-13T13:30:00+00:00",
+  "strategy_id": "echotrend_240_v3",
+  "strategy_version": "1.0.0",
+  "config_hash": "d89e8ddbbb365abe",
+  "mode": "full-backtest"
+}

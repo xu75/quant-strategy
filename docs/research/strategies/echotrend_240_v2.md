@@ -3,10 +3,14 @@ feature_ids: [F001]
 topics: ["strategy", "research", "backtest", "MSTR", "BTC", "trend-following", "regime-gate", "CAP1.0"]
 doc_kind: "strategy-research"
 created: "2026-05-07"
-updated: "2026-05-07"
+updated: "2026-05-22"
 strategy_id: "echotrend_240_v2"
 strategy_name: "EchoTrend 240 V2"
+status: deprecated
+superseded_by: "echotrend_240_v3"
 ---
+
+> **DEPRECATED** — This strategy has been superseded by [EchoTrend 240 V3](/research/echotrend-240-v3) (decision_row execution model, circuit breaker, crash mode confirm). See V3 research doc for current specification.
 
 # EchoTrend 240 V2: BTC 4H SMA240 Regime Gate + V6 Execution Package
 

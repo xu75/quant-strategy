@@ -63,8 +63,11 @@ min_lookback_years: 5
 warmup_bars: 960
 
 launch_date: "2026-05-07"
-enabled: true
-status: active
+enabled: false
+status: deprecated
+status_reason: "Superseded by echotrend_240_v3 (decision_row execution model, CB, crash mode confirm)"
+status_date: "2026-05-22"
+superseded_by: /strategy/echotrend-240-v3
 
 research:
   paper_title: "EchoTrend 240 V2: BTC 4H SMA240 Regime Gate (CAP1.0)"

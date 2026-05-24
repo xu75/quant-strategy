@@ -1,0 +1,93 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const paper = {
+  title: 'EchoTrend 240 V3: Decision-Row Execution + Circuit Breaker + Crash Confirm',
+  strategyName: 'EchoTrend 240 V3',
+  canonicalUrl: '',
+  sourceProject: 'https://github.com/xu75',
+  strategyUrl: '/strategy/echotrend-240-v3',
+};
+---
+
+<Layout title="Research - EchoTrend 240 V3" description="Research memo for EchoTrend 240 V3">
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <a href={paper.strategyUrl} class="text-gray-500 hover:text-gray-300 text-sm" data-i18n="research.back">&larr; Strategy</a>
+    </div>
+    <h1 class="text-3xl font-bold mb-1">{paper.title}</h1>
+    <p class="text-gray-400">{paper.strategyName}</p>
+    <p class="text-sm text-gray-500 mt-3" data-i18n="research.subtitle">
+      Method, assumptions, and evidence chain behind this strategy.
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.abstract">Abstract</h2>
+    <p class="text-gray-300 leading-7">
+      EchoTrend 240 V3 是 V2 的全量升级：保留 BTC 4H SMA240 regime gate 作为核心 alpha（CAP1.0 二元持仓），
+      将执行模型从 pending order / next-bar open 升级为 decision_row / current-bar open 立即执行。
+      新增 Circuit Breaker（RTH 日内 -10% 熔断保护）、Crash Mode 1-bar 确认（step_down=0.80）、
+      非对称确认（bear=3, bull=9 MSTR 1H bars）、Strong Reentry（3/5 votes → step_up=0.90），
+      并将仓位 sizing 改为 current equity。BTC 4H 信号通过 shift(1)+ffill 在当前 bar open 时已知。
+    </p>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.findings">Key Findings</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>Decision-row 执行消除 1-bar 延迟，BTC 4H 信号 shift(1)+ffill 后当前 bar open 已可用。</li>
+      <li>非对称确认（bear=3, bull=9）：快速止损、慎重入场，减少牛市假突破。</li>
+      <li>Circuit Breaker：RTH 日内从 intraday_high 到 bar_low 跌幅超 -10% 触发熔断，次日重置。</li>
+      <li>Crash Mode 1-bar 确认：score>=70 即进入（回测验证优于 3-bar），step_down 从 0.50 提升至 0.80。</li>
+      <li>Strong Reentry 3/5 votes → step_up=0.90：快速重建仓位。</li>
+      <li>Current equity sizing：仓位随权益增长/缩减，非固定初始股数。</li>
+      <li>归因实验确认：微杠杆是增量来源（91%），bull 内减仓为负贡献（-17.8pp）。保持 CAP1.0。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.method">Method & Assumptions</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>双数据源：BTC 1H（OKX）重采样为 4H 计算 SMA240，MSTR 1H 作为执行标的。</li>
+      <li>MSTR 数据过滤至美股常规交易时段（US/Eastern 09:30-16:00）。</li>
+      <li>信号延迟：shift(1)+ffill 确保 BTC 4H 信号在当前 bar open 时已知。</li>
+      <li>执行语义：decision_row — 当前 bar open 价立即执行（非 next-bar）。</li>
+      <li>交易成本：commission 0.05% + slippage 0.05% = 0.1%/side（项目标准）。</li>
+      <li>CAP1.0 二元持仓：bull regime = 100% MSTR，bear regime = 0%。无杠杆。</li>
+      <li>Circuit Breaker：RTH intraday_high → bar_low 跌幅 >= 10% 触发，reset_next_day。</li>
+      <li>Crash score >= 70 即确认（1-bar confirm）→ crash mode（step_down=0.80）。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3">V2 → V3 Changes</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>执行模型：pending order / next-bar open → decision_row / current-bar open。</li>
+      <li>Confirm bars：symmetric 3/3 → asymmetric bear=3, bull=9（MSTR 1H 计数）。</li>
+      <li>Cooldown：39 bars → 0（移除）。</li>
+      <li>Circuit Breaker：无 → RTH intraday -10%，reset_next_day。</li>
+      <li>Crash mode confirm：3 bars → 1 bar（回测验证）。Step down：0.50 → 0.80。调仓按 gap*step 分步执行。</li>
+      <li>Position sizing：fixed initial_shares → current equity。</li>
+    </ul>
+  </section>
+
+  <section class="mb-8 border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.limits">Limits</h2>
+    <ul class="list-disc pl-6 space-y-2 text-gray-300">
+      <li>MSTR-BTC 结构性风险：若 MicroStrategy 改变 BTC 持仓策略，相关性可能断裂。</li>
+      <li>参数在 2020-2026 数据上优化，未来市场结构可能变化。</li>
+      <li>Circuit Breaker -10% 阈值基于历史波动率，极端行情可能不足。</li>
+      <li>Crash mode 1-bar confirm（回测验证优于 3-bar），step_down=0.80 加速卖出但不改变目标仓位。</li>
+      <li>Decision-row 执行假设 bar open 价可获得，实际交易可能有微小延迟。</li>
+    </ul>
+  </section>
+
+  <section class="border border-gray-800 rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-3" data-i18n="research.links">Source Links</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <a href={paper.strategyUrl} class="text-blue-400 hover:text-blue-300" data-i18n="research.link.site">Strategy page</a>
+      <a href={paper.sourceProject} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300" data-i18n="research.link.source_project">Source research project</a>
+    </div>
+  </section>
+</Layout>

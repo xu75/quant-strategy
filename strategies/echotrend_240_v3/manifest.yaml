@@ -1,0 +1,111 @@
+# strategies/echotrend_240_v3/manifest.yaml
+id: echotrend_240_v3
+name: "EchoTrend 240 V3"
+version: "1.0.0"
+description: "BTC 4H SMA240 regime gate — MSTR 趋势跟踪（decision_row 即時執行，CB，crash mode confirm，CAP1.0）"
+
+config:
+  ma_window: 240
+  bear_confirm_bars: 3
+  bull_confirm_bars: 9
+  bear_ceiling: 0.0
+  bull_ceiling: 1.0
+  hysteresis_pct: 0.0
+  freeze_bars: 0
+  commission_rate: 0.0005
+  slippage_rate: 0.0005
+  timeframe: "1H"
+  exec_timeframe: "1H"
+  regime_timeframe: "4H"
+  symbol: "MSTR"
+  regime_symbol: "BTC-USDT"
+  data_source: "local"
+  regular_hours_only: true
+
+data_sources:
+  mstr:
+    symbol: "MSTR"
+    timeframe: "1H"
+    source: "local"
+    local_file: "MSTR_1h.csv"
+  btc:
+    symbol: "BTC-USDT"
+    timeframe: "1H"
+    source: "local"
+    local_file: "BTC-USD_1h.csv"
+  qqq:
+    symbol: "QQQ"
+    timeframe: "1H"
+    source: "local"
+    local_file: "QQQ_1h.csv"
+  mstr_daily:
+    symbol: "MSTR"
+    timeframe: "1D"
+    source: "local"
+    local_file: "MSTR_1d.csv"
+  btc_daily:
+    symbol: "BTC-USD"
+    timeframe: "1D"
+    source: "local"
+    local_file: "BTC-USD_1d.csv"
+  qqq_daily:
+    symbol: "QQQ"
+    timeframe: "1D"
+    source: "local"
+    local_file: "QQQ_1d.csv"
+
+display:
+  slug: "echotrend-240-v3"
+  category: "trend-following"
+  short_desc: "MSTR 趋势跟踪（BTC 4H SMA240 regime gate，decision_row 即時執行，CB + crash confirm，CAP1.0）"
+
+min_lookback_years: 5
+warmup_bars: 960
+
+launch_date: "2026-05-23"
+enabled: true
+status: active
+
+research:
+  paper_title: "EchoTrend 240 V3: Decision-Row Execution + Circuit Breaker + Crash Confirm"
+  website_path: "/research/echotrend-240-v3"
+  canonical_doc: "docs/research/strategies/echotrend_240_v3.md"
+  source_project: "https://github.com/xu75/mstr-strategy-clowder"
+
+page:
+  subtitle: "{symbol} · {timeframe} Execution · BTC 4H Regime Gate (Decision-Row, CB, CAP1.0)"
+  card_subtitle: "{symbol} · {timeframe} · BTC 4H Regime Gate (V3)"
+  card_fields:
+    - label: "BTC Regime"
+      key: "regime"
+      format: "regime"
+    - label: "Signal"
+      key: "action"
+      format: "mode"
+  signal_fields:
+    - label: "MSTR Price"
+      key: "price"
+      format: "currency"
+    - label: "BTC Regime"
+      key: "regime"
+      format: "regime"
+    - label: "Mode"
+      key: "mode"
+      format: "mode"
+    - label: "Signal Time"
+      key: "timestamp"
+      format: "datetime"
+  rules:
+    - title: "Regime Gate (Core Alpha — BTC 4H SMA240)"
+      description: "BTC 1H data resampled to 4H, SMA240 computed. Bear regime confirmed after 3 consecutive MSTR 1H bars below SMA. Bull regime confirmed after 9 consecutive MSTR 1H bars above SMA. Signal shifted by 1 bar (shift(1)+ffill) — already known at current bar open. Bull = 100% MSTR, Bear = 0%."
+    - title: "Decision-Row Execution (Current-Bar Open)"
+      description: "Signals execute at current bar's open price immediately (decision_row model). No pending order / next-bar delay. BTC 4H signal via shift(1)+ffill is already available when the MSTR 1H bar opens."
+    - title: "Circuit Breaker (Intraday Protection)"
+      description: "If RTH intraday_high to bar_low drop exceeds -10%, circuit breaker triggers (target_exposure=0). Sells via gap*step execution, not instant full exit. Resets at next trading day open."
+    - title: "Crash Mode (1-Bar Confirm)"
+      description: "When crash score >= 70 (回测验证 1-bar confirm 优于 3-bar), enters crash mode with step_down = 0.80. Scoring: MSTR/BTC/QQQ returns + RS + amplitude conditions."
+    - title: "Strong Reentry (3/5 Votes)"
+      description: "When >= 3 of 5 reentry conditions met, step_up = 0.90 for fast position rebuild. Conditions: MSTR 1H >= +3.5%, BTC 1H >= +1.0%, QQQ 1H >= +0.3%, MSTR/BTC RS >= +1.0%, MSTR close >= VWAP."
+    - title: "Position Management (CAP1.0)"
+      description: "Target position is binary: 100% MSTR in bull regime, 0% in bear regime. No leverage. Execution uses gap*step, so transitional partial positions exist during regime flips. Position sizing uses current equity (cash + shares * price), not fixed initial_shares."
+  data_source_desc: "Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D bars. CI pipeline updates data via Yahoo Finance (equities) and OKX (crypto) every 4 hours. Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution)."
