@@ -33,5 +33,5 @@
   "strategy_id": "echotrend_240_v3",
   "strategy_version": "1.0.0",
   "config_hash": "d89e8ddbbb365abe",
-  "mode": "daily-signal"
+  "mode": "full-backtest"
 }
