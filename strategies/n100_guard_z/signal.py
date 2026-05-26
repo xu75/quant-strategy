@@ -15,6 +15,21 @@ from pipeline.backtest import BacktestResult, Trade
 # Config
 # ---------------------------------------------------------------------------
 
+ETF_NAMES = {
+    "513100": "国泰纳指100",
+    "159941": "易方达纳指100",
+    "513300": "华夏纳指100",
+    "159501": "富国纳指100",
+    "159513": "鹏华纳指100",
+    "159659": "景顺纳指100",
+    "159632": "中欧纳指100",
+    "159660": "博时纳指100",
+    "159696": "华安纳指100",
+    "513110": "华安纳指100ETF",
+    "513390": "天弘纳指100",
+}
+
+
 @dataclass
 class StrategyConfig:
     sma_window: int = 225
@@ -51,6 +66,7 @@ class Signal:
     spy_12m: float = 0.0
     state: str = ""  # NDX_INVESTED / TRUE_CASH_STRETCH
     current_etf: str = ""
+    holding: str = ""
     current_zscore: float = 0.0
     current_premium: float = 0.0
 
@@ -146,7 +162,9 @@ def _zscore_rotation(etf_df: pd.DataFrame, nav_df: pd.DataFrame,
     etf_codes = [c for c in etf_df.columns if c != "timestamp"]
     nav_codes = [c for c in nav_df.columns if c != "timestamp"]
 
-    dates = etf_df["timestamp"].values
+    # Keep timezone-aware pandas timestamps; `.values` strips tz info and breaks
+    # timestamp-keyed joins used by current-signal reporting.
+    dates = etf_df["timestamp"].reset_index(drop=True)
     n = len(dates)
 
     selected_etfs = [""] * n
@@ -319,21 +337,43 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     # QQQ daily returns for premium estimation
     qqq_returns = signal_layer["qqq_close"].pct_change().fillna(0)
 
-    # Align etf_df/nav_df to signal_layer timestamps
-    etf_aligned = etf_df[etf_df["timestamp"].isin(signal_layer["timestamp"])].reset_index(drop=True)
-    nav_aligned = nav_df[nav_df["timestamp"].isin(signal_layer["timestamp"])].reset_index(drop=True)
-    qqq_ret_aligned = qqq_returns.iloc[:len(etf_aligned)]
+    # Align execution data by timestamp. ETF histories start later than QQQ/SPY,
+    # so row-number alignment would drop the latest rotation state.
+    common_dates = (
+        set(signal_layer["timestamp"])
+        & set(etf_df["timestamp"])
+        & set(nav_df["timestamp"])
+    )
+    signal_aligned = (
+        signal_layer[signal_layer["timestamp"].isin(common_dates)]
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
+    etf_aligned = (
+        etf_df[etf_df["timestamp"].isin(common_dates)]
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
+    nav_aligned = (
+        nav_df[nav_df["timestamp"].isin(common_dates)]
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
+    qqq_ret_aligned = signal_aligned["qqq_close"].pct_change().fillna(0)
 
     # Execution layer
-    risk_on_mask = signal_layer["risk_on"].iloc[:len(etf_aligned)]
+    risk_on_mask = signal_aligned["risk_on"]
     rotation = _zscore_rotation(etf_aligned, nav_aligned, qqq_ret_aligned, config, risk_on_mask)
+    rotation_by_ts = rotation.set_index("timestamp")
 
     # Build signal list
     signals = []
     for i in range(len(signal_layer)):
         row = signal_layer.iloc[i]
-        etf_info = rotation.iloc[i] if i < len(rotation) else None
+        row_ts = row["timestamp"]
+        etf_info = rotation_by_ts.loc[row_ts] if row_ts in rotation_by_ts.index else None
 
+        etf_code = etf_info["selected_etf"] if etf_info is not None else ""
         action = "risk_on" if row["risk_on"] else "risk_off"
         sig = Signal(
             action=action,
@@ -344,7 +384,8 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
             qqq_12m=row["qqq_12m"] if not pd.isna(row["qqq_12m"]) else 0.0,
             spy_12m=row["spy_12m"] if not pd.isna(row["spy_12m"]) else 0.0,
             state=row["state"],
-            current_etf=etf_info["selected_etf"] if etf_info is not None else "",
+            current_etf=etf_code,
+            holding=ETF_NAMES.get(etf_code, etf_code) if etf_code else "—",
             current_zscore=etf_info["zscore"] if etf_info is not None else 0.0,
             current_premium=etf_info["premium"] if etf_info is not None else 0.0,
         )

@@ -393,6 +393,16 @@ def compute_period_metrics(
                 if eq_start > 0:
                     equity = eq_end / eq_start
                     realized_equity = equity
+        elif use_equity_curve_returns:
+            # Native-backtest strategies use normalized Trade prices incompatible
+            # with market start_price — discard the trade-based fallback entirely.
+            equity = 1.0
+            realized_equity = 1.0
+            max_dd = 0.0
+            sharpe = 0.0
+            closed_count = 0
+            wins = 0
+            returns_list = []
 
     buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
     buy_hold_max_dd = _max_drawdown(benchmark_prices) * 100 if benchmark_prices is not None else 0.0

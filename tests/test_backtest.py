@@ -316,3 +316,48 @@ class TestSharpeAnnualization:
         # Correct Sharpe should be ~sqrt(1829/8766) ≈ 0.46x of naive
         ratio = sharpe_correct / sharpe_naive if sharpe_naive != 0 else 0
         assert 0.35 < ratio < 0.55
+
+
+class TestNativeBacktestEquityCurveFallback:
+    """Regression: native-backtest strategies with normalized Trade prices must
+    not produce garbage when equity curve has < 2 points for a period."""
+
+    def test_normalized_trade_not_used_when_equity_curve_insufficient(self):
+        """When use_equity_curve_returns=True and equity curve has only 1 point
+        (period_start == last data point), the cross-boundary trade fallback
+        must be discarded — not computed against incompatible start_price."""
+        trade = Trade(
+            entry_time=pd.Timestamp("2026-04-20", tz="UTC"),
+            entry_price=1.0,
+            exit_time=pd.Timestamp("2026-05-23", tz="UTC"),
+            exit_price=1.0,
+            hold_bars=28,
+            pnl_pct=0.0,
+            pnl_abs=0.0,
+        )
+        period_start = pd.Timestamp("2026-05-22", tz="UTC")
+        start_price = 717.54
+        end_price = 717.54
+
+        equity_curve = pd.DataFrame({
+            "timestamp": [pd.Timestamp("2026-05-22", tz="UTC")],
+            "equity": [1.5],
+        })
+
+        result = compute_period_metrics(
+            trades=[trade],
+            period_start=period_start,
+            end_price=end_price,
+            start_price=start_price,
+            equity_curve=equity_curve,
+            use_equity_curve_returns=True,
+            timeframe="1D",
+        )
+
+        assert result is not None
+        assert result["total_return_pct"] == 0.0
+        assert result["realized_return_pct"] == 0.0
+        assert result["max_drawdown_pct"] == 0.0
+        assert result["total_trades"] == 0
+        assert result["avg_hold_bars"] == 0.0
+        assert result["sharpe_ratio"] == 0.0
