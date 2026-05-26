@@ -211,21 +211,39 @@ def load_local_history(
     df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
     df = df.set_index("datetime").sort_index()
 
+    # Non-OHLCV files (e.g. NAV wide tables): return as-is with timestamp column
+    ohlcv_cols = {"open", "high", "low", "close", "volume"}
+    if not ohlcv_cols.issubset(set(df.columns)):
+        return df.reset_index().rename(columns={"datetime": "timestamp"})
+
     resample_map = {"4H": "4h", "1H": "1h", "1D": "1D"}
     freq = resample_map.get(target_bar, target_bar.lower())
 
     if freq == "1h":
         # 1H source data: preserve original timestamps (including half-hour bars)
         resampled = df.reset_index().rename(columns={"datetime": "timestamp"})
-        return resampled[["timestamp", "open", "high", "low", "close", "volume"]]
+        base_cols = ["timestamp", "open", "high", "low", "close", "volume"]
+        extra_cols = [c for c in resampled.columns if c not in base_cols and c != "datetime"]
+        return resampled[base_cols + extra_cols]
 
-    resampled = df.resample(freq, offset="0h").agg({
+    # For 1D target on 1D source, no resample needed — return as-is preserving all columns
+    source_freq = pd.infer_freq(df.index[:min(50, len(df))])
+    if freq.upper() in ("1D", "1d") and source_freq and source_freq.startswith(("B", "D", "C")):
+        result = df.reset_index().rename(columns={"datetime": "timestamp"})
+        return result
+
+    agg_dict = {
         "open": "first",
         "high": "max",
         "low": "min",
         "close": "last",
         "volume": "sum",
-    }).dropna()
+    }
+    # Preserve adj_close if present
+    if "adj_close" in df.columns:
+        agg_dict["adj_close"] = "last"
+
+    resampled = df.resample(freq, offset="0h").agg(agg_dict).dropna()
 
     resampled = resampled.reset_index().rename(columns={"datetime": "timestamp"})
     return resampled

@@ -1,0 +1,23 @@
+{
+  "updated_at": "2026-05-26T09:03:07.569502+00:00",
+  "strategy": {
+    "name": "N100 Guard-Z",
+    "code": "n100_guard_z",
+    "timeframe": "1D",
+    "symbol": "QQQ"
+  },
+  "current_signal": {
+    "action": "risk_on",
+    "price": 717.54,
+    "ma_value": 607.43,
+    "timestamp": "2026-05-22T00:00:00+00:00",
+    "hold_bars": 0,
+    "reason": "NDX_INVESTED",
+    "qqq_12m": 0.40537410479477787,
+    "spy_12m": 0.2939431206161578
+  },
+  "position": {
+    "in_position": true,
+    "entry_bar_idx": 0
+  }
+}

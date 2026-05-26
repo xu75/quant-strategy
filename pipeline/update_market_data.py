@@ -61,6 +61,20 @@ def _update_crypto(filename: str, symbol: str, bar: str, limit: int) -> int:
     return n
 
 
+def _update_ashare() -> int:
+    """Update A-share ETF data (N100 Guard-Z). Returns new row count."""
+    from pipeline.update_ashare_data import run_update as run_ashare_update
+    print(f"{LOG_PREFIX} Updating A-share ETF data...")
+    try:
+        updated = run_ashare_update()
+        return 1 if updated else 0
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f"{LOG_PREFIX} FAILED: A-share update — {e}")
+        raise
+
+
 def run_update() -> bool:
     """Update all canonical market data files. Returns True if any updated."""
     if not CANONICAL_MARKET_DIR.exists():
@@ -91,6 +105,12 @@ def run_update() -> bool:
         except Exception as e:
             print(f"{LOG_PREFIX} FAILED: {filename} — {e}")
             failed.append(filename)
+
+    # A-share ETF data (N100 Guard-Z)
+    try:
+        total_new += _update_ashare()
+    except Exception as e:
+        failed.append("ashare-etf")
 
     print(f"{LOG_PREFIX} Total new rows appended: {total_new}")
 
