@@ -337,6 +337,12 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     # QQQ daily returns for premium estimation
     qqq_returns = signal_layer["qqq_close"].pct_change().fillna(0)
 
+    # Normalize timestamps to date-only (midnight UTC) for alignment.
+    # QQQ may carry 04:00Z while A-share ETFs use 00:00Z.
+    signal_layer["timestamp"] = signal_layer["timestamp"].dt.normalize()
+    etf_df["timestamp"] = etf_df["timestamp"].dt.normalize()
+    nav_df["timestamp"] = nav_df["timestamp"].dt.normalize()
+
     # Align execution data by timestamp. ETF histories start later than QQQ/SPY,
     # so row-number alignment would drop the latest rotation state.
     common_dates = (
@@ -429,8 +435,17 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     signal_layer = _fastre_signals(df, spy_df, config)
     qqq_returns = signal_layer["qqq_close"].pct_change().fillna(0)
 
+    # Normalize timestamps to date-only (midnight UTC) for alignment.
+    signal_layer["timestamp"] = signal_layer["timestamp"].dt.normalize()
+    etf_df["timestamp"] = etf_df["timestamp"].dt.normalize()
+    nav_df["timestamp"] = nav_df["timestamp"].dt.normalize()
+    if etf_open_df is not None:
+        etf_open_df["timestamp"] = etf_open_df["timestamp"].dt.normalize()
+    if etf_adj_df is not None:
+        etf_adj_df["timestamp"] = etf_adj_df["timestamp"].dt.normalize()
+
     # Align data
-    common_dates = set(signal_layer["timestamp"]) & set(etf_df["timestamp"])
+    common_dates = set(signal_layer["timestamp"]) & set(etf_df["timestamp"]) & set(nav_df["timestamp"])
     signal_layer = signal_layer[signal_layer["timestamp"].isin(common_dates)].reset_index(drop=True)
     etf_aligned = etf_df[etf_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
     nav_aligned = nav_df[nav_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
