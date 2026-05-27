@@ -84,6 +84,12 @@ def generate_status_json(
     if hasattr(signal, 'spy_12m') and signal.spy_12m:
         signal_dict["spy_12m"] = signal.spy_12m
 
+    # N100 Guard-Z execution-layer fields
+    for attr in ("current_etf", "current_zscore", "current_premium"):
+        value = getattr(signal, attr, None)
+        if value is not None and value != "":
+            signal_dict[attr] = value
+
     status = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "strategy": {
