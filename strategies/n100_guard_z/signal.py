@@ -372,15 +372,25 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     rotation = _zscore_rotation(etf_aligned, nav_aligned, qqq_ret_aligned, config, risk_on_mask)
     rotation_by_ts = rotation.set_index("timestamp")
 
-    # Build signal list
+    # Build signal list with as-of carry-forward for rotation state.
+    # QQQ may have more recent dates than ETF/NAV; carry last known rotation.
     signals = []
+    last_etf_code = ""
+    last_zscore = 0.0
+    last_premium = 0.0
     for i in range(len(signal_layer)):
         row = signal_layer.iloc[i]
         row_ts = row["timestamp"]
         etf_info = rotation_by_ts.loc[row_ts] if row_ts in rotation_by_ts.index else None
 
-        etf_code = etf_info["selected_etf"] if etf_info is not None else ""
-        action = "risk_on" if row["risk_on"] else "risk_off"
+        if etf_info is not None:
+            last_etf_code = etf_info["selected_etf"]
+            last_zscore = etf_info["zscore"]
+            last_premium = etf_info["premium"]
+
+        is_risk_on = bool(row["risk_on"])
+        etf_code = last_etf_code if is_risk_on else ""
+        action = "risk_on" if is_risk_on else "risk_off"
         sig = Signal(
             action=action,
             price=row["qqq_close"],
@@ -392,8 +402,8 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
             state=row["state"],
             current_etf=etf_code,
             holding=ETF_NAMES.get(etf_code, etf_code) if etf_code else "—",
-            current_zscore=etf_info["zscore"] if etf_info is not None else 0.0,
-            current_premium=etf_info["premium"] if etf_info is not None else 0.0,
+            current_zscore=last_zscore if is_risk_on else 0.0,
+            current_premium=last_premium if is_risk_on else 0.0,
         )
         signals.append(sig)
 

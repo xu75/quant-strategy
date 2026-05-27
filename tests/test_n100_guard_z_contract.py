@@ -88,3 +88,49 @@ def test_n100_latest_signal_keeps_rotation_state_when_etfs_start_later():
     latest = signals[-1]
     assert latest.action == "risk_on"
     assert latest.current_etf == "513100"
+
+
+def test_n100_carry_forward_rotation_when_qqq_leads_etf():
+    """When QQQ has more recent dates than ETF/NAV (and different time-of-day),
+    the latest signal should carry forward the last known rotation state."""
+    # QQQ with 04:00Z timestamps (yfinance style), 260 bars
+    qqq_dates = pd.date_range("2024-01-01 04:00", periods=260, freq="D", tz="UTC")
+    qqq_close = pd.Series(range(100, 360), dtype=float).to_numpy()
+    qqq = pd.DataFrame({"timestamp": qqq_dates, "close": qqq_close})
+
+    # SPY same range
+    spy_close = pd.Series(range(100, 360), dtype=float).mul(0.5).add(100).to_numpy()
+    spy = pd.DataFrame({"timestamp": qqq_dates, "close": spy_close})
+
+    # ETF/NAV with 00:00Z timestamps, stops 5 days earlier than QQQ
+    etf_dates = pd.date_range("2024-01-01", periods=255, freq="D", tz="UTC")
+    nav = pd.Series(range(100, 355), dtype=float).reset_index(drop=True)
+    premium_wave = pd.Series([0.002, 0.004, -0.003, 0.001, -0.002] * 52)
+    etf_close = nav * (1 + premium_wave.iloc[:len(nav)].reset_index(drop=True))
+    etf = pd.DataFrame({"timestamp": etf_dates, "close": etf_close})
+    nav_df = pd.DataFrame({"timestamp": etf_dates, "513100": nav})
+
+    config = StrategyConfig(
+        sma_window=20,
+        momentum_lookback_months=1,
+        zscore_lookback=5,
+        ipo_warmup=5,
+    )
+
+    signals = compute_signals(
+        qqq,
+        config,
+        extra_data={
+            "spy": spy,
+            "etf_513100": etf,
+            "etf_nav": nav_df,
+        },
+    )
+
+    latest = signals[-1]
+    # Latest signal should be on the most recent QQQ date
+    assert latest.timestamp == qqq_dates[-1].normalize()
+    assert latest.action == "risk_on"
+    # Must carry forward last known ETF, not be empty
+    assert latest.current_etf == "513100"
+    assert latest.holding != "—"
