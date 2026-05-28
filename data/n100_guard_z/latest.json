@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-28T03:42:41.699424+00:00",
+  "updated_at": "2026-05-28T12:06:53.449654+00:00",
   "strategy": {
     "name": "N100 Guard-Z",
     "code": "n100_guard_z",
@@ -7,18 +7,18 @@
     "symbol": "QQQ"
   },
   "current_signal": {
-    "action": "risk_on",
-    "price": 730.28,
-    "ma_value": 608.24,
-    "timestamp": "2026-05-26T00:00:00+00:00",
+    "action": "hold",
+    "price": 729.45,
+    "ma_value": 609.02,
+    "timestamp": "2026-05-27T00:00:00+00:00",
     "hold_bars": 0,
     "reason": "NDX_INVESTED",
     "holding": "\u535a\u65f6\u7eb3\u6307100",
-    "qqq_12m": 0.4276553471663336,
-    "spy_12m": 0.30201912658386787,
+    "qqq_12m": 0.4393622138311848,
+    "spy_12m": 0.3107407179198094,
     "current_etf": "159660",
-    "current_zscore": 0.8620981043529959,
-    "current_premium": 0.04036241414991171
+    "current_zscore": 2.7330034329657487,
+    "current_premium": 0.0659558734228265
   },
   "position": {
     "in_position": true,
