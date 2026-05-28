@@ -126,11 +126,11 @@ const smGridClass: Record<number, string> = {
               <span class={`px-3 py-1 rounded-full text-sm font-medium ${
                 isRetracted
                   ? 'border border-gray-700 bg-gray-800/70 text-gray-400'
-                  : signal.action === 'hold' && latest.position.in_position
+                  : (signal.action === 'hold' || signal.action === 'risk_on') && latest.position.in_position
                   ? 'bg-green-900/50 text-green-400'
-                  : signal.action === 'buy'
+                  : signal.action === 'buy' || signal.action === 'risk_on'
                     ? 'bg-green-900/50 text-green-400'
-                    : signal.action === 'sell'
+                    : signal.action === 'sell' || signal.action === 'risk_off'
                       ? 'bg-red-900/50 text-red-400'
                       : 'bg-gray-800 text-gray-400'
               }`} data-i18n={latest.position.in_position ? 'label.in_position' : 'label.no_position'}>
