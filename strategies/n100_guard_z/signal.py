@@ -614,15 +614,19 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
             entry_eq = equity[min(entry_eq_idx, len(equity) - 1)]
             exit_eq = equity[min(exit_eq_idx, len(equity) - 1)]
             pnl_pct = (exit_eq / entry_eq - 1) * 100 if entry_eq > 0 else 0
+            # Use actual ETF prices for display
+            entry_etf = open_entry.get("etf", "")
+            actual_entry = _get_adj_open(min(entry_eq_idx, n - 1), entry_etf) or 1.0
+            actual_exit = _get_adj_open(min(exit_eq_idx, n - 1), t.get("etf", entry_etf)) or actual_entry * (1 + pnl_pct / 100)
             platform_trades.append(Trade(
                 entry_time=entry_ts,
-                entry_price=1.0,
+                entry_price=round(actual_entry, 4),
                 exit_time=exit_ts,
-                exit_price=1.0 * (1 + pnl_pct / 100),
+                exit_price=round(actual_exit, 4),
                 hold_bars=hold_bars,
                 pnl_pct=round(pnl_pct, 4),
                 pnl_abs=round(pnl_pct / 100, 6),
-                asset=open_entry.get("etf", ""),
+                asset=entry_etf,
                 status="closed",
             ))
             open_entry = None
@@ -637,11 +641,14 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
                 entry_eq = equity[min(entry_eq_idx, len(equity) - 1)]
                 exit_eq = equity[min(exit_eq_idx, len(equity) - 1)]
                 pnl_pct = (exit_eq / entry_eq - 1) * 100 if entry_eq > 0 else 0
+                entry_etf = open_entry.get("etf", "")
+                actual_entry = _get_adj_open(min(entry_eq_idx, n - 1), entry_etf) or 1.0
+                actual_exit = _get_adj_open(min(exit_eq_idx, n - 1), entry_etf) or actual_entry * (1 + pnl_pct / 100)
                 platform_trades.append(Trade(
                     entry_time=entry_ts,
-                    entry_price=1.0,
+                    entry_price=round(actual_entry, 4),
                     exit_time=exit_ts,
-                    exit_price=1.0 * (1 + pnl_pct / 100),
+                    exit_price=round(actual_exit, 4),
                     hold_bars=hold_bars,
                     pnl_pct=round(pnl_pct, 4),
                     pnl_abs=round(pnl_pct / 100, 6),

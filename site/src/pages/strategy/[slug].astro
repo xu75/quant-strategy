@@ -65,7 +65,7 @@ function getSignalColor(value: any, format: string): string {
   if (value == null) return 'text-gray-300';
   if (format === 'regime') return value === 'bull' ? 'text-green-400' : 'text-red-400';
   if (format === 'mode') {
-    if (value === 'bull') return 'text-green-400';
+    if (value === 'bull' || value === 'risk_on') return 'text-green-400';
     if (value === 'crash' || value === 'risk_off') return 'text-red-400';
     return 'text-gray-300';
   }
@@ -115,8 +115,8 @@ const signalGridCols = Math.min(signalFields.length, 4);
           {position.in_position ? 'In Position' : 'No Position'}
         </span>
         <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
-          signal.action === 'buy' ? 'bg-green-900/50 text-green-400'
-            : signal.action === 'sell' ? 'bg-red-900/50 text-red-400'
+          signal.action === 'buy' || signal.action === 'risk_on' ? 'bg-green-900/50 text-green-400'
+            : signal.action === 'sell' || signal.action === 'risk_off' ? 'bg-red-900/50 text-red-400'
             : 'bg-gray-800 text-gray-400'
         }`}>
           <span data-i18n="strategy.signal_prefix">Signal:</span> {signal.action.toUpperCase()}

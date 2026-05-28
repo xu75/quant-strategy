@@ -21,7 +21,7 @@ function getCardFieldColor(value: any, format: string, isRetracted: boolean): st
   if (value == null) return 'text-gray-300';
   if (format === 'regime') return value === 'bull' ? 'text-green-400' : value === 'bear' ? 'text-red-400' : 'text-gray-300';
   if (format === 'mode') {
-    if (value === 'buy' || value === 'bull') return 'text-green-400';
+    if (value === 'buy' || value === 'bull' || value === 'risk_on') return 'text-green-400';
     if (value === 'sell' || value === 'crash' || value === 'risk_off' || value === 'bear') return 'text-red-400';
     return 'text-gray-300';
   }
