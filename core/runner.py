@@ -28,6 +28,19 @@ SITE_PUBLIC_CHARTS = Path("site/public/charts")
 FALLBACK_HISTORY_CANDLES = 6000
 LOG_PREFIX = "[Quant Strategy]"
 
+DISPLAY_POSITION_THRESHOLD = 0.03
+
+
+def is_display_in_position(exposure: float | None, fallback: bool = False) -> bool:
+    """Determine if position should display as 'in position' for latest.json.
+
+    Uses a higher threshold than backtest semantics (0.01) to avoid showing
+    residual positions (<=3%) as actively held.
+    """
+    if exposure is None:
+        return fallback
+    return exposure > DISPLAY_POSITION_THRESHOLD
+
 
 def _hours_per_bar(timeframe: str) -> float:
     tf = timeframe.strip().upper()
@@ -428,9 +441,15 @@ def _run_full_backtest(adapter):
         "sources": sources_provenance,
     }
 
+    current_signal = adapter.get_current_signal(df, in_position, entry_bar_idx, config, extra_data=extra_data)
+
+    display_in_position = is_display_in_position(
+        getattr(current_signal, 'target_exposure', None), fallback=in_position
+    )
+
     generate_status_json(
-        df_backtest, config, in_position, entry_bar_idx, output_dir / "latest.json",
-        current_signal=adapter.get_current_signal(df, in_position, entry_bar_idx, config, extra_data=extra_data),
+        df_backtest, config, display_in_position, entry_bar_idx, output_dir / "latest.json",
+        current_signal=current_signal,
     )
     generate_backtest_json(
         result,
@@ -551,8 +570,8 @@ def _run_daily_signal(adapter):
         f"mode={mode_str}, regime={regime_str}"
     )
 
-    # Determine position state
-    in_position = exposure > 0.01
+    # Determine position state (display: <=3% exposure = "空仓")
+    in_position = is_display_in_position(exposure)
     entry_bar_idx = 0
 
     # Generate latest.json only — signal comes from incremental result, not full replay
