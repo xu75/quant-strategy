@@ -571,10 +571,10 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     daily_returns = equity_series.pct_change().dropna()
     sharpe = (daily_returns.mean() / daily_returns.std() * np.sqrt(252)) if daily_returns.std() > 0 else 0
 
-    # Buy & hold benchmark (first available ETF, equal-weight proxy)
-    first_etf = next((c for c in etf_aligned.columns if c != "timestamp" and c in rotation["selected_etf"].values), None)
-    if first_etf and first_etf in etf_aligned.columns:
-        bh_prices = etf_aligned[first_etf].dropna()
+    # Buy & hold benchmark: 513100 (国泰纳指100, longest history)
+    bh_etf = "513100"
+    if bh_etf in etf_aligned.columns:
+        bh_prices = etf_aligned[bh_etf].dropna()
         bh_return = (bh_prices.iloc[-1] / bh_prices.iloc[0] - 1) * 100 if len(bh_prices) > 1 else 0
         bh_equity = bh_prices / bh_prices.iloc[0]
         bh_peak = bh_equity.cummax()
