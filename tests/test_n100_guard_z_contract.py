@@ -8,7 +8,7 @@ from strategies.n100_guard_z.signal import Signal, StrategyConfig, compute_signa
 
 def test_n100_signal_satisfies_status_report_contract(tmp_path):
     signal = Signal(
-        action="risk_off",
+        action="sell",
         price=500.0,
         timestamp=pd.Timestamp("2026-05-25", tz="UTC"),
         reason="TRUE_CASH_STRETCH",
@@ -29,7 +29,7 @@ def test_n100_signal_satisfies_status_report_contract(tmp_path):
 
 def test_n100_status_report_includes_execution_layer_fields(tmp_path):
     signal = Signal(
-        action="risk_on",
+        action="buy",
         price=500.0,
         timestamp=pd.Timestamp("2026-05-25", tz="UTC"),
         reason="NDX_INVESTED",
@@ -86,7 +86,7 @@ def test_n100_latest_signal_keeps_rotation_state_when_etfs_start_later():
     )
 
     latest = signals[-1]
-    assert latest.action == "risk_on"
+    assert latest.action in ("buy", "hold")
     assert latest.current_etf == "513100"
 
 
@@ -130,7 +130,7 @@ def test_n100_carry_forward_rotation_when_qqq_leads_etf():
     latest = signals[-1]
     # Latest signal should be on the most recent QQQ date
     assert latest.timestamp == qqq_dates[-1].normalize()
-    assert latest.action == "risk_on"
+    assert latest.action in ("buy", "hold")
     # Must carry forward last known ETF, not be empty
     assert latest.current_etf == "513100"
     assert latest.holding != "—"

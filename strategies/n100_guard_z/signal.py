@@ -56,7 +56,7 @@ class StrategyConfig:
 
 @dataclass
 class Signal:
-    action: str  # "risk_on" / "risk_off"
+    action: str  # "buy" / "sell" / "hold"
     price: float = 0.0
     timestamp: Optional[pd.Timestamp] = None
     reason: str = ""
@@ -378,6 +378,7 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     last_etf_code = ""
     last_zscore = 0.0
     last_premium = 0.0
+    prev_risk_on = False
     for i in range(len(signal_layer)):
         row = signal_layer.iloc[i]
         row_ts = row["timestamp"]
@@ -390,7 +391,13 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
 
         is_risk_on = bool(row["risk_on"])
         etf_code = last_etf_code if is_risk_on else ""
-        action = "risk_on" if is_risk_on else "risk_off"
+        if is_risk_on and not prev_risk_on:
+            action = "buy"
+        elif not is_risk_on and prev_risk_on:
+            action = "sell"
+        else:
+            action = "hold"
+        prev_risk_on = is_risk_on
         sig = Signal(
             action=action,
             price=row["qqq_close"],
@@ -416,7 +423,7 @@ def get_current_signal(df: pd.DataFrame, in_position: bool = False,
     """Return signal for the latest bar."""
     signals = compute_signals(df, config, **kwargs)
     if not signals:
-        return Signal(action="risk_off", reason="no_data")
+        return Signal(action="hold", reason="no_data")
     return signals[-1]
 
 
