@@ -18,13 +18,13 @@
     "internal_code": "n100_guard_z"
   },
   "performance": {
-    "total_return_pct": 660.66,
-    "realized_return_pct": 660.66,
+    "total_return_pct": 673.23,
+    "realized_return_pct": 673.23,
     "max_drawdown_pct": -30.18,
-    "win_rate_pct": 100.0,
+    "win_rate_pct": 72.5,
     "total_trades": 40,
     "avg_hold_bars": 75.2,
-    "sharpe_ratio": 1.02,
+    "sharpe_ratio": 1.026,
     "buy_hold_return_pct": 119.45,
     "buy_hold_max_drawdown_pct": -85.5,
     "has_open_position": true
@@ -40,7 +40,7 @@
       "exit_time": "2015-09-01T00:00:00+00:00",
       "exit_price": 7.28,
       "hold_bars": 648,
-      "pnl_pct": 33.27,
+      "pnl_pct": 30.85,
       "asset": "513100"
     },
     {
@@ -49,7 +49,7 @@
       "exit_time": "2015-12-18T00:00:00+00:00",
       "exit_price": 7.94,
       "hold_bars": 67,
-      "pnl_pct": 7.27,
+      "pnl_pct": 9.24,
       "asset": "513100"
     },
     {
@@ -58,7 +58,7 @@
       "exit_time": "2016-01-22T00:00:00+00:00",
       "exit_price": 3.7,
       "hold_bars": 35,
-      "pnl_pct": -6.2,
+      "pnl_pct": -7.6,
       "asset": "159941"
     },
     {
@@ -67,7 +67,7 @@
       "exit_time": "2016-02-01T00:00:00+00:00",
       "exit_price": 7.36,
       "hold_bars": 10,
-      "pnl_pct": -1.45,
+      "pnl_pct": 1.88,
       "asset": "513100"
     },
     {
@@ -76,7 +76,7 @@
       "exit_time": "2016-05-03T00:00:00+00:00",
       "exit_price": 7.52,
       "hold_bars": 43,
-      "pnl_pct": -0.35,
+      "pnl_pct": -0.93,
       "asset": "513100"
     },
     {
@@ -85,7 +85,7 @@
       "exit_time": "2016-11-01T00:00:00+00:00",
       "exit_price": 4.37,
       "hold_bars": 78,
-      "pnl_pct": 4.57,
+      "pnl_pct": 3.11,
       "asset": "159941"
     },
     {
@@ -94,7 +94,7 @@
       "exit_time": "2017-04-24T00:00:00+00:00",
       "exit_price": 9.85,
       "hold_bars": 77,
-      "pnl_pct": 8.32,
+      "pnl_pct": 5.09,
       "asset": "513100"
     },
     {
@@ -103,7 +103,7 @@
       "exit_time": "2017-08-22T00:00:00+00:00",
       "exit_price": 5.08,
       "hold_bars": 120,
-      "pnl_pct": 0.69,
+      "pnl_pct": 2.63,
       "asset": "159941"
     },
     {
@@ -112,7 +112,7 @@
       "exit_time": "2017-10-17T00:00:00+00:00",
       "exit_price": 10.6,
       "hold_bars": 56,
-      "pnl_pct": 2.59,
+      "pnl_pct": 3.82,
       "asset": "513100"
     },
     {
@@ -121,7 +121,7 @@
       "exit_time": "2017-11-17T00:00:00+00:00",
       "exit_price": 5.5,
       "hold_bars": 31,
-      "pnl_pct": 4.3,
+      "pnl_pct": 4.76,
       "asset": "159941"
     },
     {
@@ -130,7 +130,7 @@
       "exit_time": "2017-12-04T00:00:00+00:00",
       "exit_price": 11.2,
       "hold_bars": 17,
-      "pnl_pct": 1.11,
+      "pnl_pct": 1.8,
       "asset": "513100"
     },
     {
@@ -139,7 +139,7 @@
       "exit_time": "2018-01-03T00:00:00+00:00",
       "exit_price": 5.6,
       "hold_bars": 30,
-      "pnl_pct": 4.15,
+      "pnl_pct": -0.91,
       "asset": "159941"
     },
     {
@@ -148,7 +148,7 @@
       "exit_time": "2018-02-08T00:00:00+00:00",
       "exit_price": 10.8,
       "hold_bars": 36,
-      "pnl_pct": -10.52,
+      "pnl_pct": -3.9,
       "asset": "513100"
     },
     {
@@ -157,7 +157,7 @@
       "exit_time": "2018-03-27T00:00:00+00:00",
       "exit_price": 5.62,
       "hold_bars": 47,
-      "pnl_pct": 10.28,
+      "pnl_pct": 4.65,
       "asset": "159941"
     },
     {
@@ -166,7 +166,7 @@
       "exit_time": "2018-05-02T00:00:00+00:00",
       "exit_price": 11.18,
       "hold_bars": 36,
-      "pnl_pct": 1.5,
+      "pnl_pct": -0.33,
       "asset": "513100"
     },
     {
@@ -175,7 +175,7 @@
       "exit_time": "2018-05-17T00:00:00+00:00",
       "exit_price": 5.88,
       "hold_bars": 15,
-      "pnl_pct": 6.48,
+      "pnl_pct": 7.1,
       "asset": "159941"
     },
     {
@@ -184,7 +184,7 @@
       "exit_time": "2018-07-11T00:00:00+00:00",
       "exit_price": 12.85,
       "hold_bars": 55,
-      "pnl_pct": 12.2,
+      "pnl_pct": 11.39,
       "asset": "513100"
     },
     {
@@ -193,7 +193,7 @@
       "exit_time": "2018-11-01T00:00:00+00:00",
       "exit_price": 6.28,
       "hold_bars": 113,
-      "pnl_pct": -4.93,
+      "pnl_pct": -3.28,
       "asset": "159941"
     },
     {
@@ -202,7 +202,7 @@
       "exit_time": "2018-12-03T00:00:00+00:00",
       "exit_price": 6.32,
       "hold_bars": 21,
-      "pnl_pct": -1.11,
+      "pnl_pct": -1.57,
       "asset": "159941"
     },
     {
@@ -211,7 +211,7 @@
       "exit_time": "2019-06-03T00:00:00+00:00",
       "exit_price": 6.32,
       "hold_bars": 104,
-      "pnl_pct": 2.68,
+      "pnl_pct": 1.87,
       "asset": "159941"
     },
     {
@@ -220,7 +220,7 @@
       "exit_time": "2019-09-03T00:00:00+00:00",
       "exit_price": 6.97,
       "hold_bars": 64,
-      "pnl_pct": 0.95,
+      "pnl_pct": 2.51,
       "asset": "159941"
     },
     {
@@ -229,7 +229,7 @@
       "exit_time": "2020-01-06T00:00:00+00:00",
       "exit_price": 16.14,
       "hold_bars": 66,
-      "pnl_pct": 9.2,
+      "pnl_pct": 9.34,
       "asset": "513100"
     },
     {
@@ -238,7 +238,7 @@
       "exit_time": "2020-04-01T00:00:00+00:00",
       "exit_price": 7.05,
       "hold_bars": 86,
-      "pnl_pct": -8.48,
+      "pnl_pct": -10.75,
       "asset": "159941"
     },
     {
@@ -247,7 +247,7 @@
       "exit_time": "2020-07-17T00:00:00+00:00",
       "exit_price": 19.12,
       "hold_bars": 88,
-      "pnl_pct": 14.73,
+      "pnl_pct": 13.03,
       "asset": "513100"
     },
     {
@@ -256,7 +256,7 @@
       "exit_time": "2021-02-24T00:00:00+00:00",
       "exit_price": 10.6,
       "hold_bars": 222,
-      "pnl_pct": 14.96,
+      "pnl_pct": 15.27,
       "asset": "159941"
     },
     {
@@ -265,7 +265,7 @@
       "exit_time": "2021-09-01T00:00:00+00:00",
       "exit_price": 25.99,
       "hold_bars": 189,
-      "pnl_pct": 17.96,
+      "pnl_pct": 18.02,
       "asset": "513100"
     },
     {
@@ -274,7 +274,7 @@
       "exit_time": "2022-01-04T00:00:00+00:00",
       "exit_price": 13.09,
       "hold_bars": 34,
-      "pnl_pct": 2.34,
+      "pnl_pct": 1.48,
       "asset": "159941"
     },
     {
@@ -283,7 +283,7 @@
       "exit_time": "2023-07-25T00:00:00+00:00",
       "exit_price": 1.43,
       "hold_bars": 82,
-      "pnl_pct": 24.44,
+      "pnl_pct": 25.62,
       "asset": "513300"
     },
     {
@@ -292,7 +292,7 @@
       "exit_time": "2023-09-21T00:00:00+00:00",
       "exit_price": 1.18,
       "hold_bars": 58,
-      "pnl_pct": -5.39,
+      "pnl_pct": -3.49,
       "asset": "159660"
     },
     {
@@ -301,7 +301,7 @@
       "exit_time": "2023-11-24T00:00:00+00:00",
       "exit_price": 1.44,
       "hold_bars": 64,
-      "pnl_pct": 6.23,
+      "pnl_pct": 4.85,
       "asset": "513300"
     },
     {
@@ -310,7 +310,7 @@
       "exit_time": "2024-01-23T00:00:00+00:00",
       "exit_price": 3.88,
       "hold_bars": 60,
-      "pnl_pct": 9.68,
+      "pnl_pct": 10.92,
       "asset": "159941"
     },
     {
@@ -319,7 +319,7 @@
       "exit_time": "2024-03-07T00:00:00+00:00",
       "exit_price": 1.5,
       "hold_bars": 44,
-      "pnl_pct": 4.68,
+      "pnl_pct": 3.96,
       "asset": "159632"
     },
     {
@@ -328,7 +328,7 @@
       "exit_time": "2024-07-03T00:00:00+00:00",
       "exit_price": 1.24,
       "hold_bars": 118,
-      "pnl_pct": 13.21,
+      "pnl_pct": 13.43,
       "asset": "159513"
     },
     {
@@ -337,7 +337,7 @@
       "exit_time": "2024-12-02T00:00:00+00:00",
       "exit_price": 1.63,
       "hold_bars": 152,
-      "pnl_pct": 1.28,
+      "pnl_pct": 3.62,
       "asset": "159659"
     },
     {
@@ -346,7 +346,7 @@
       "exit_time": "2025-02-06T00:00:00+00:00",
       "exit_price": 2.06,
       "hold_bars": 35,
-      "pnl_pct": -2.18,
+      "pnl_pct": -1.4,
       "asset": "513300"
     },
     {
@@ -355,7 +355,7 @@
       "exit_time": "2025-07-16T00:00:00+00:00",
       "exit_price": 1.85,
       "hold_bars": 70,
-      "pnl_pct": 13.88,
+      "pnl_pct": 14.5,
       "asset": "513390"
     },
     {
@@ -364,7 +364,7 @@
       "exit_time": "2025-09-30T00:00:00+00:00",
       "exit_price": 5.35,
       "hold_bars": 76,
-      "pnl_pct": 9.99,
+      "pnl_pct": 8.23,
       "asset": "159941"
     },
     {
@@ -373,7 +373,7 @@
       "exit_time": "2026-04-01T00:00:00+00:00",
       "exit_price": 1.94,
       "hold_bars": 183,
-      "pnl_pct": -8.76,
+      "pnl_pct": -4.83,
       "asset": "513110"
     },
     {
@@ -382,7 +382,7 @@
       "exit_time": "2026-04-24T00:00:00+00:00",
       "exit_price": 2.1,
       "hold_bars": 11,
-      "pnl_pct": 7.09,
+      "pnl_pct": 8.12,
       "asset": "159660"
     },
     {
@@ -391,7 +391,7 @@
       "exit_time": "2026-05-22T00:00:00+00:00",
       "exit_price": 10.6,
       "hold_bars": 28,
-      "pnl_pct": 13.31,
+      "pnl_pct": 11.09,
       "asset": "513100"
     }
   ],
@@ -399,7 +399,7 @@
   "periods": {
     "since_launch": {
       "start": "2026-05-26T00:00:00+00:00",
-      "end": "2026-05-27T00:00:00+00:00",
+      "end": "2026-05-28T00:00:00+00:00",
       "performance": {
         "total_return_pct": 0.0,
         "realized_return_pct": 0.0,
@@ -408,71 +408,71 @@
         "total_trades": 0,
         "avg_hold_bars": 0.0,
         "sharpe_ratio": 0.0,
-        "buy_hold_return_pct": -0.11,
+        "buy_hold_return_pct": 0.73,
         "buy_hold_max_drawdown_pct": 0.11,
         "has_open_position": false
       }
     },
     "1y": {
-      "start": "2025-05-27T00:00:00+00:00",
-      "end": "2026-05-27T00:00:00+00:00",
+      "start": "2025-05-28T00:00:00+00:00",
+      "end": "2026-05-28T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 31.87,
-        "realized_return_pct": 31.87,
-        "max_drawdown_pct": 16.79,
+        "total_return_pct": 36.49,
+        "realized_return_pct": 36.49,
+        "max_drawdown_pct": 16.19,
         "win_rate_pct": 60.0,
         "total_trades": 5,
         "avg_hold_bars": 73.6,
-        "sharpe_ratio": 1.628,
-        "buy_hold_return_pct": 40.63,
+        "sharpe_ratio": 1.814,
+        "buy_hold_return_pct": 42.44,
         "buy_hold_max_drawdown_pct": 11.96,
         "has_open_position": false
       }
     },
     "2y": {
-      "start": "2024-05-27T00:00:00+00:00",
-      "end": "2026-05-27T00:00:00+00:00",
+      "start": "2024-05-28T00:00:00+00:00",
+      "end": "2026-05-28T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 56.11,
-        "realized_return_pct": 56.11,
-        "max_drawdown_pct": 16.79,
+        "total_return_pct": 65.03,
+        "realized_return_pct": 65.03,
+        "max_drawdown_pct": 16.19,
         "win_rate_pct": 62.5,
         "total_trades": 8,
         "avg_hold_bars": 84.1,
-        "sharpe_ratio": 1.342,
-        "buy_hold_return_pct": 61.26,
+        "sharpe_ratio": 1.496,
+        "buy_hold_return_pct": 62.01,
         "buy_hold_max_drawdown_pct": 22.77,
         "has_open_position": false
       }
     },
     "3y": {
-      "start": "2023-05-27T00:00:00+00:00",
-      "end": "2026-05-27T00:00:00+00:00",
+      "start": "2023-05-28T00:00:00+00:00",
+      "end": "2026-05-28T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 104.53,
-        "realized_return_pct": 104.53,
-        "max_drawdown_pct": 16.79,
+        "total_return_pct": 124.01,
+        "realized_return_pct": 124.01,
+        "max_drawdown_pct": 16.19,
         "win_rate_pct": 69.23,
         "total_trades": 13,
         "avg_hold_bars": 75.5,
-        "sharpe_ratio": 1.489,
-        "buy_hold_return_pct": 113.38,
+        "sharpe_ratio": 1.663,
+        "buy_hold_return_pct": 115.18,
         "buy_hold_max_drawdown_pct": 22.77,
         "has_open_position": false
       }
     },
     "5y": {
-      "start": "2021-05-27T00:00:00+00:00",
-      "end": "2026-05-27T00:00:00+00:00",
+      "start": "2021-05-28T00:00:00+00:00",
+      "end": "2026-05-28T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 168.57,
-        "realized_return_pct": 168.57,
-        "max_drawdown_pct": 16.79,
+        "total_return_pct": 203.63,
+        "realized_return_pct": 203.63,
+        "max_drawdown_pct": 16.19,
         "win_rate_pct": 73.33,
         "total_trades": 15,
         "avg_hold_bars": 80.3,
-        "sharpe_ratio": 1.49,
-        "buy_hold_return_pct": 126.13,
+        "sharpe_ratio": 1.664,
+        "buy_hold_return_pct": 127.32,
         "buy_hold_max_drawdown_pct": 35.12,
         "has_open_position": false
       }
@@ -488,117 +488,117 @@
         "symbol": "QQQ",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3370,
+        "rows": 3371,
         "start": "2013-01-02T00:00:00+00:00",
-        "end": "2026-05-27T00:00:00+00:00"
+        "end": "2026-05-28T00:00:00+00:00"
       },
       {
         "key": "spy",
         "symbol": "SPY",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 7143,
+        "rows": 7144,
         "start": "1998-01-02T00:00:00+00:00",
-        "end": "2026-05-27T00:00:00+00:00"
+        "end": "2026-05-28T00:00:00+00:00"
       },
       {
         "key": "etf_513100",
         "symbol": "513100",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3115,
+        "rows": 3116,
         "start": "2013-07-31T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159941",
         "symbol": "159941",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 2641,
+        "rows": 2642,
         "start": "2015-07-13T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_513300",
         "symbol": "513300",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 1347,
+        "rows": 1348,
         "start": "2020-11-05T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159501",
         "symbol": "159501",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 714,
+        "rows": 715,
         "start": "2023-06-14T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159513",
         "symbol": "159513",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 684,
+        "rows": 685,
         "start": "2023-07-28T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159659",
         "symbol": "159659",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 747,
+        "rows": 748,
         "start": "2023-04-25T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159632",
         "symbol": "159632",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 923,
+        "rows": 924,
         "start": "2022-08-03T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159660",
         "symbol": "159660",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 753,
+        "rows": 754,
         "start": "2023-04-17T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_159696",
         "symbol": "159696",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 664,
+        "rows": 665,
         "start": "2023-08-25T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_513110",
         "symbol": "513110",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 772,
+        "rows": 773,
         "start": "2023-03-20T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_513390",
         "symbol": "513390",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 741,
+        "rows": 742,
         "start": "2023-05-08T00:00:00+00:00",
-        "end": "2026-05-28T00:00:00+00:00"
+        "end": "2026-05-29T00:00:00+00:00"
       },
       {
         "key": "etf_nav",
