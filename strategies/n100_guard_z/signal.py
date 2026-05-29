@@ -518,48 +518,64 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         curr_etf = rotation["selected_etf"].iloc[sig_idx]
         daily_return = 0.0
 
-        if curr_risk_on and curr_etf and curr_etf in etf_aligned.columns:
-            # T+1 execution: use adjusted open prices
-            exec_price_today = _get_adj_open(i, curr_etf)
-            exec_price_yesterday = _get_adj_open(i - 1, curr_etf)
+        # Boundary: risk_on=True but no ETF selected yet → treat as cash
+        effective_risk_on = curr_risk_on and curr_etf and curr_etf in etf_aligned.columns
 
+        # Determine overnight state: what we actually held from yesterday's open
+        # The return we earn today reflects what we held overnight (prev state)
+        is_entry = effective_risk_on and not prev_risk_on
+        is_exit = not effective_risk_on and prev_risk_on and prev_etf != ""
+        is_rotation = (effective_risk_on and prev_risk_on
+                       and prev_etf != "" and prev_etf != curr_etf)
+        is_hold = effective_risk_on and prev_risk_on and prev_etf == curr_etf
+
+        if is_entry:
+            # ENTRY day: was in cash overnight → earn money market
+            daily_return = daily_mm_rate
+            daily_return -= config.fee_rate
+            trades.append({
+                "date": str(signal_layer["timestamp"].iloc[i]),
+                "type": "entry",
+                "etf": curr_etf,
+            })
+        elif is_exit:
+            # EXIT day: held old ETF overnight → earn old ETF open-to-open return
+            exec_price_today = _get_adj_open(i, prev_etf)
+            exec_price_yesterday = _get_adj_open(i - 1, prev_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
-
-            # Fee on transitions
-            if not prev_risk_on:
-                # Entry: 1×fee
-                daily_return -= config.fee_rate
-                trades.append({
-                    "date": str(signal_layer["timestamp"].iloc[i]),
-                    "type": "entry",
-                    "etf": curr_etf,
-                })
-            elif prev_etf != curr_etf and prev_etf != "":
-                # Rotation: 2×fee
-                daily_return -= 2 * config.fee_rate
-                trades.append({
-                    "date": str(signal_layer["timestamp"].iloc[i]),
-                    "type": "rotation",
-                    "from": prev_etf,
-                    "to": curr_etf,
-                })
+            daily_return -= config.fee_rate
+            trades.append({
+                "date": str(signal_layer["timestamp"].iloc[i]),
+                "type": "exit",
+                "etf": prev_etf,
+            })
+        elif is_rotation:
+            # ROTATION day: held old ETF overnight → earn old ETF open-to-open return
+            exec_price_today = _get_adj_open(i, prev_etf)
+            exec_price_yesterday = _get_adj_open(i - 1, prev_etf)
+            if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
+                daily_return = exec_price_today / exec_price_yesterday - 1
+            daily_return -= 2 * config.fee_rate
+            trades.append({
+                "date": str(signal_layer["timestamp"].iloc[i]),
+                "type": "rotation",
+                "from": prev_etf,
+                "to": curr_etf,
+            })
+        elif is_hold:
+            # HOLD day: held curr ETF overnight → earn curr ETF open-to-open return
+            exec_price_today = _get_adj_open(i, curr_etf)
+            exec_price_yesterday = _get_adj_open(i - 1, curr_etf)
+            if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
+                daily_return = exec_price_today / exec_price_yesterday - 1
         else:
-            # Risk-off: money market return
+            # Risk-off hold: in cash → earn money market
             daily_return = daily_mm_rate
 
-            if prev_risk_on and prev_etf:
-                # Exit: 1×fee
-                daily_return -= config.fee_rate
-                trades.append({
-                    "date": str(signal_layer["timestamp"].iloc[i]),
-                    "type": "exit",
-                    "etf": prev_etf,
-                })
-
         equity.append(equity[-1] * (1 + daily_return))
-        prev_risk_on = curr_risk_on
-        prev_etf = curr_etf if curr_risk_on else ""
+        prev_risk_on = effective_risk_on
+        prev_etf = curr_etf if effective_risk_on else ""
 
     # Metrics
     equity_series = pd.Series(equity)
@@ -583,20 +599,7 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         bh_return = 0.0
         bh_max_dd = 0.0
 
-    # Win rate
-    wins = sum(1 for t in trades if t["type"] == "exit")
-    # Approximate: count profitable round-trips
-    entry_equity = []
-    exit_equity = []
-    eq_idx = 0
-    for t in trades:
-        if t["type"] == "entry":
-            entry_equity.append(equity[min(eq_idx, len(equity) - 1)])
-        elif t["type"] == "exit":
-            exit_equity.append(equity[min(eq_idx, len(equity) - 1)])
-        eq_idx += 1
-    profitable = sum(1 for e, x in zip(entry_equity, exit_equity) if x > e)
-    win_rate = (profitable / len(exit_equity) * 100) if exit_equity else 0.0
+    # Win rate computed after platform_trades are built (below)
 
     # Equity curve DataFrame
     timestamps = signal_layer["timestamp"].tolist()
@@ -606,6 +609,7 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     })
 
     # Build Trade objects from raw trade records
+    # PnL uses actual ETF adj_open prices (not equity curve ratio)
     platform_trades = []
     open_entry = None
     for t in trades:
@@ -615,21 +619,20 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
             entry_ts = pd.Timestamp(open_entry["date"])
             exit_ts = pd.Timestamp(t["date"])
             hold_bars = max(1, (exit_ts - entry_ts).days)
-            # Find equity at entry/exit for PnL
-            entry_eq_idx = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
-            exit_eq_idx = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), len(equity) - 1)
-            entry_eq = equity[min(entry_eq_idx, len(equity) - 1)]
-            exit_eq = equity[min(exit_eq_idx, len(equity) - 1)]
-            pnl_pct = (exit_eq / entry_eq - 1) * 100 if entry_eq > 0 else 0
-            # Use actual ETF prices for display
+            entry_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
+            exit_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), n - 1)
             entry_etf = open_entry.get("etf", "")
-            actual_entry = _get_adj_open(min(entry_eq_idx, n - 1), entry_etf) or 1.0
-            actual_exit = _get_adj_open(min(exit_eq_idx, n - 1), t.get("etf", entry_etf)) or actual_entry * (1 + pnl_pct / 100)
+            actual_entry = _get_adj_open(min(entry_bar, n - 1), entry_etf)
+            actual_exit = _get_adj_open(min(exit_bar, n - 1), entry_etf)
+            if actual_entry and actual_entry > 0 and actual_exit:
+                pnl_pct = (actual_exit / actual_entry - 1 - 2 * config.fee_rate) * 100
+            else:
+                pnl_pct = 0.0
             platform_trades.append(Trade(
                 entry_time=entry_ts,
-                entry_price=round(actual_entry, 4),
+                entry_price=round(actual_entry or 1.0, 4),
                 exit_time=exit_ts,
-                exit_price=round(actual_exit, 4),
+                exit_price=round(actual_exit or 1.0, 4),
                 hold_bars=hold_bars,
                 pnl_pct=round(pnl_pct, 4),
                 pnl_abs=round(pnl_pct / 100, 6),
@@ -638,35 +641,38 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
             ))
             open_entry = None
         elif t["type"] == "rotation":
-            # Rotation closes old position and opens new
             if open_entry is not None:
                 entry_ts = pd.Timestamp(open_entry["date"])
                 exit_ts = pd.Timestamp(t["date"])
                 hold_bars = max(1, (exit_ts - entry_ts).days)
-                entry_eq_idx = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
-                exit_eq_idx = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), len(equity) - 1)
-                entry_eq = equity[min(entry_eq_idx, len(equity) - 1)]
-                exit_eq = equity[min(exit_eq_idx, len(equity) - 1)]
-                pnl_pct = (exit_eq / entry_eq - 1) * 100 if entry_eq > 0 else 0
+                entry_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
+                exit_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), n - 1)
                 entry_etf = open_entry.get("etf", "")
-                actual_entry = _get_adj_open(min(entry_eq_idx, n - 1), entry_etf) or 1.0
-                actual_exit = _get_adj_open(min(exit_eq_idx, n - 1), entry_etf) or actual_entry * (1 + pnl_pct / 100)
+                actual_entry = _get_adj_open(min(entry_bar, n - 1), entry_etf)
+                actual_exit = _get_adj_open(min(exit_bar, n - 1), entry_etf)
+                if actual_entry and actual_entry > 0 and actual_exit:
+                    pnl_pct = (actual_exit / actual_entry - 1 - 2 * config.fee_rate) * 100
+                else:
+                    pnl_pct = 0.0
                 platform_trades.append(Trade(
                     entry_time=entry_ts,
-                    entry_price=round(actual_entry, 4),
+                    entry_price=round(actual_entry or 1.0, 4),
                     exit_time=exit_ts,
-                    exit_price=round(actual_exit, 4),
+                    exit_price=round(actual_exit or 1.0, 4),
                     hold_bars=hold_bars,
                     pnl_pct=round(pnl_pct, 4),
                     pnl_abs=round(pnl_pct / 100, 6),
-                    asset=open_entry.get("etf", ""),
+                    asset=entry_etf,
                     status="closed",
                 ))
-            # New entry from rotation
             open_entry = {"date": t["date"], "etf": t.get("to", "")}
 
     # Determine if currently in position
     has_open = prev_risk_on and prev_etf != ""
+
+    # Win rate from actual ETF price PnL
+    profitable = sum(1 for t in platform_trades if t.pnl_pct > 0)
+    win_rate = (profitable / len(platform_trades) * 100) if platform_trades else 0.0
 
     return BacktestResult(
         config=config,
