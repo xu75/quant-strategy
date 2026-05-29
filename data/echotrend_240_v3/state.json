@@ -1,11 +1,11 @@
 {
   "engine": {
-    "bar_index": 11107,
+    "bar_index": 11109,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 20.0,
+      "trend": 5.0,
       "risk": 0.0,
-      "rs": 65.0,
+      "rs": 50.0,
       "raw": 1.0,
       "target": 1.0
     },
@@ -18,10 +18,10 @@
     "last_rebalance_bar": 11058,
     "cb_triggered": false,
     "cb_trigger_date": "2026-02-05",
-    "prev_bar_high": 152.63999938964844,
-    "prev_bar_low": 151.47000122070312,
-    "intraday_high": 153.63999938964844,
-    "current_date": "2026-05-28"
+    "prev_bar_high": 158.60499572753906,
+    "prev_bar_low": 149.8699951171875,
+    "intraday_high": 158.60499572753906,
+    "current_date": "2026-05-29"
   },
   "portfolio": {
     "cash": 282806.75080081576,
@@ -29,7 +29,7 @@
     "initial_capital": 10000.0,
     "total_costs": 16731.20181480774
   },
-  "watermark": "2026-05-28T19:30:00+00:00",
+  "watermark": "2026-05-29T14:30:00+00:00",
   "strategy_id": "echotrend_240_v3",
   "strategy_version": "1.0.0",
   "config_hash": "d89e8ddbbb365abe",
