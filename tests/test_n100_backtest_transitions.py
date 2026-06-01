@@ -143,9 +143,10 @@ class TestTransitionDayAttribution:
         eq = result.equity_curve["equity"].tolist()
         daily_mm = config.money_market_annual_rate / 365
 
-        # Day index 10 is ENTRY (sig_idx=9 switches from False→True)
-        # The return on entry day should be ~money_market - fee, NOT ETF return
-        entry_return = eq[10] / eq[9] - 1
+        # With shift(1) on selected_etf: risk_on goes True at day_10 but
+        # shifted_etf doesn't become "513100" until day_11 (rotation[10]).
+        # So effective ENTRY is at i=11 → equity[11].
+        entry_return = eq[11] / eq[10] - 1
         expected_entry = daily_mm - config.fee_rate
         assert abs(entry_return - expected_entry) < 1e-8, (
             f"ENTRY day return {entry_return:.6f} != expected {expected_entry:.6f}"
@@ -190,9 +191,9 @@ class TestTransitionDayAttribution:
 
         eq = result.equity_curve["equity"].tolist()
 
-        # Rotation happens at i=16 (sig_idx=15), result appended as equity[15].
-        # So rotation day return = eq[15] / eq[14] - 1
-        rotation_return = eq[15] / eq[14] - 1
+        # Rotation happens at i=16: sig_day=day_16 has shifted_etf=rotation[15]="159941"
+        # while prev_etf="513100" → ROTATION. equity[16] = result of this iteration.
+        rotation_return = eq[16] / eq[15] - 1
 
         # Should earn OLD ETF (513100, ~1% daily) return - 2*fee
         # Not new ETF (159941, ~1.5% daily) return
@@ -295,23 +296,23 @@ class TestTransitionDayAttribution:
         eq = result.equity_curve["equity"].tolist()
         daily_mm = config.money_market_annual_rate / 365
 
-        # Days 2-5 (loop i=2..5, sig_idx=1..4): risk_on but no ETF → money_market
-        for i in range(2, 5):
+        # Days 1-5 (loop i=1..5): risk_on=True but shifted_etf="" → money_market
+        # (shift(1) means rotation[4]="" is still used at idx=5)
+        for i in range(1, 6):
             day_return = eq[i] / eq[i - 1] - 1
             assert abs(day_return - daily_mm) < 1e-8, (
                 f"Day {i}: should earn money_market, got {day_return:.8f}"
             )
 
-        # Day 6 (loop i=6, sig_idx=5): ETF appears → ENTRY (earn mm - fee)
-        # equity[5] = result of i=6
-        entry_return = eq[5] / eq[4] - 1
+        # i=6: shifted_etf = rotation[5] = "513100" → ENTRY (earn mm - fee)
+        entry_return = eq[6] / eq[5] - 1
         expected_entry = daily_mm - config.fee_rate
         assert abs(entry_return - expected_entry) < 1e-8, (
             f"ENTRY day return {entry_return:.8f} != expected {expected_entry:.8f}"
         )
 
-        # Day 7 (loop i=7): HOLD → earn ETF return
-        hold_return = eq[6] / eq[5] - 1
+        # i=7: HOLD → earn ETF return
+        hold_return = eq[7] / eq[6] - 1
         assert hold_return > daily_mm, (
             f"HOLD day return {hold_return:.8f} should be > money_market {daily_mm:.8f}"
         )

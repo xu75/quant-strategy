@@ -372,32 +372,113 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     rotation = _zscore_rotation(etf_aligned, nav_aligned, qqq_ret_aligned, config, risk_on_mask)
     rotation_by_ts = rotation.set_index("timestamp")
 
-    # Build signal list with as-of carry-forward for rotation state.
-    # QQQ may have more recent dates than ETF/NAV; carry last known rotation.
+    # Build signal list using execution calendar state machine.
+    # The execution calendar = common_dates (US ∩ A-share ∩ NAV), sorted.
+    # Position only changes on execution days (next A-share day after signal).
+    # Between execution days, holding is frozen at last executed state.
+    #
+    # State machine mirrors run_backtest:
+    #   signal_by_date[d].selected_etf = rotation[d-1] (shift(1) in common_dates)
+    #   Transition happens at exec_day (the NEXT common_date after signal fires)
+    #   So on signal day D, we are still holding the PREVIOUS position.
+    #   The new position only becomes active on the next common_date after D.
+
+    # Pre-compute execution calendar signal state (same as run_backtest)
+    common_sorted = sorted(common_dates)
+    n_common = len(common_sorted)
+
+    # Build the same signal_by_date as run_backtest (shift(1) on selected_etf)
+    exec_signal_by_date = {}
+    for idx in range(n_common):
+        d = signal_aligned["timestamp"].iloc[idx]
+        shifted_etf = rotation["selected_etf"].iloc[idx - 1] if idx > 0 else ""
+        exec_signal_by_date[d] = {
+            "risk_on": bool(signal_aligned["risk_on"].iloc[idx]),
+            "selected_etf": shifted_etf,
+        }
+
+    # Walk the execution calendar to determine actual holding at each exec_day
+    # holding_at_date[d] = ETF code actually held as of date d's open
+    holding_at_date = {}
+    exec_prev_risk_on = False
+    exec_prev_etf = ""
+    exec_holding = ""  # what we are actually holding right now
+
+    for i in range(1, n_common - 1):
+        sig_day = common_sorted[i]
+        exec_day = common_sorted[i + 1]
+
+        sig = exec_signal_by_date.get(sig_day)
+        if sig is None:
+            holding_at_date[exec_day] = exec_holding
+            continue
+
+        curr_risk_on = sig["risk_on"]
+        curr_etf = sig["selected_etf"]
+        effective_risk_on = curr_risk_on and curr_etf and curr_etf in etf_aligned.columns
+
+        is_entry = effective_risk_on and not exec_prev_risk_on
+        is_exit = not effective_risk_on and exec_prev_risk_on and exec_prev_etf != ""
+        is_rotation = (effective_risk_on and exec_prev_risk_on
+                       and exec_prev_etf != "" and exec_prev_etf != curr_etf)
+
+        if is_entry:
+            exec_holding = curr_etf
+        elif is_exit:
+            exec_holding = ""
+        elif is_rotation:
+            exec_holding = curr_etf
+        # else: hold — no change
+
+        holding_at_date[exec_day] = exec_holding
+        exec_prev_risk_on = effective_risk_on
+        exec_prev_etf = curr_etf if effective_risk_on else ""
+
+    # Also set initial days (before first exec) as empty
+    if n_common > 1:
+        holding_at_date[common_sorted[0]] = ""
+        holding_at_date[common_sorted[1]] = ""
+
+    # Now build signals for ALL signal_layer dates (including non-A-share US dates).
+    # For each date, find the most recent execution state.
     signals = []
-    last_etf_code = ""
     last_zscore = 0.0
     last_premium = 0.0
-    prev_risk_on = False
+    # Carry-forward: find the latest common_date <= row_ts to get current holding
+    common_idx = 0
+    current_holding = ""
+
     for i in range(len(signal_layer)):
         row = signal_layer.iloc[i]
         row_ts = row["timestamp"]
         etf_info = rotation_by_ts.loc[row_ts] if row_ts in rotation_by_ts.index else None
 
         if etf_info is not None:
-            last_etf_code = etf_info["selected_etf"]
             last_zscore = etf_info["zscore"]
             last_premium = etf_info["premium"]
 
+        # Advance execution calendar pointer to find current holding
+        while (common_idx < n_common - 1
+               and common_sorted[common_idx + 1] <= row_ts):
+            common_idx += 1
+        if common_sorted[common_idx] <= row_ts and common_sorted[common_idx] in holding_at_date:
+            current_holding = holding_at_date[common_sorted[common_idx]]
+
         is_risk_on = bool(row["risk_on"])
-        etf_code = last_etf_code if is_risk_on else ""
-        if is_risk_on and not prev_risk_on:
+        # current_etf = actual execution state (what we're holding NOW).
+        # On exit signal day, sell hasn't executed yet — still holding old ETF.
+        # action="sell" communicates the pending action separately.
+        etf_code = current_holding
+
+        # Action based on risk_on transitions (for display purposes)
+        prev_risk = bool(signal_layer.iloc[i - 1]["risk_on"]) if i > 0 else False
+        if is_risk_on and not prev_risk:
             action = "buy"
-        elif not is_risk_on and prev_risk_on:
+        elif not is_risk_on and prev_risk:
             action = "sell"
         else:
             action = "hold"
-        prev_risk_on = is_risk_on
+
         sig = Signal(
             action=action,
             price=row["qqq_close"],
@@ -461,34 +542,75 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     if etf_adj_df is not None:
         etf_adj_df["timestamp"] = etf_adj_df["timestamp"].dt.normalize()
 
-    # Align data
-    common_dates = set(signal_layer["timestamp"]) & set(etf_df["timestamp"]) & set(nav_df["timestamp"])
-    signal_layer = signal_layer[signal_layer["timestamp"].isin(common_dates)].reset_index(drop=True)
-    etf_aligned = etf_df[etf_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
-    nav_aligned = nav_df[nav_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
+    # --- T+1 Execution Model ---
+    # Signal on day[i] (US close, after A-share close) → execute at day[i+1] open
+    # In common_dates (US ∩ A-share ∩ NAV), consecutive bars are consecutive
+    # A-share trading days. Holidays are naturally skipped.
+    # This ensures that when US signals on 09-30 (last A-share day before National Day),
+    # execution happens on 10-09 (first A-share day after holiday), not on 09-30 itself.
+
+    # Signal generation still uses common_dates for z-score/rotation computation
+    common_signal_dates = set(signal_layer["timestamp"]) & set(etf_df["timestamp"]) & set(nav_df["timestamp"])
+    signal_layer = signal_layer[signal_layer["timestamp"].isin(common_signal_dates)].reset_index(drop=True)
+    etf_aligned = etf_df[etf_df["timestamp"].isin(common_signal_dates)].sort_values("timestamp").reset_index(drop=True)
+    nav_aligned = nav_df[nav_df["timestamp"].isin(common_signal_dates)].sort_values("timestamp").reset_index(drop=True)
 
     n = len(signal_layer)
     qqq_ret_aligned = signal_layer["qqq_close"].pct_change().fillna(0)
 
-    # Rotation layer (uses close prices for z-score/premium)
+    # Rotation layer (uses close prices for z-score/premium — signal generation only)
     risk_on_mask = signal_layer["risk_on"]
     rotation = _zscore_rotation(etf_aligned, nav_aligned, qqq_ret_aligned, config, risk_on_mask)
 
-    # Align open and adj_close DataFrames to same date range
-    if etf_open_df is not None:
-        open_aligned = etf_open_df[etf_open_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
-    else:
-        open_aligned = None
-    if etf_adj_df is not None:
-        adj_aligned = etf_adj_df[etf_adj_df["timestamp"].isin(common_dates)].sort_values("timestamp").reset_index(drop=True)
-    else:
-        adj_aligned = None
+    # Build signal lookup: date → (risk_on, selected_etf)
+    # risk_on uses current day's signal (immediate T+1 execution for exits)
+    # selected_etf uses shift(1) — position = selected.shift(1) per local project
+    # This gives: rotation signal on D → position active D+1 → exec D+2
+    #             risk_off signal on D → exec D+1 (immediate protective exit)
+    signal_by_date = {}
+    for idx in range(n):
+        d = signal_layer["timestamp"].iloc[idx]
+        shifted_etf = rotation["selected_etf"].iloc[idx - 1] if idx > 0 else ""
+        signal_by_date[d] = {
+            "risk_on": bool(signal_layer["risk_on"].iloc[idx]),
+            "selected_etf": shifted_etf,
+        }
 
-    # Backtest engine — T+1 adjusted-open execution
-    # Signal on day i (US close) → execute at day i+1 A-share open
-    # Execution price: adjusted_open = open × (adj_close / close)
-    # Daily return for position held: adj_open[i+1] / adj_open[i] - 1
-    # When open/adj data unavailable, fallback to close-to-close
+    # Full A-share DataFrames indexed by date for execution price lookup
+    etf_full = etf_df.sort_values("timestamp").set_index("timestamp")
+    open_full = etf_open_df.sort_values("timestamp").set_index("timestamp") if etf_open_df is not None else None
+    adj_full = etf_adj_df.sort_values("timestamp").set_index("timestamp") if etf_adj_df is not None else None
+
+    # A-share trading days that also have signal data (common_dates, sorted)
+    ashare_signal_days = sorted(common_signal_dates)
+    m = len(ashare_signal_days)
+
+    def _get_adj_open_by_date(exec_date, etf_code):
+        """Get adjusted open price for a specific A-share execution date."""
+        if exec_date is None:
+            return None
+        if (open_full is not None and adj_full is not None
+                and etf_code in open_full.columns and etf_code in adj_full.columns
+                and etf_code in etf_full.columns):
+            if exec_date in open_full.index and exec_date in adj_full.index and exec_date in etf_full.index:
+                o = open_full.at[exec_date, etf_code]
+                adj_c = adj_full.at[exec_date, etf_code]
+                c = etf_full.at[exec_date, etf_code]
+                if pd.notna(o) and pd.notna(adj_c) and pd.notna(c) and c > 0:
+                    return o * (adj_c / c)
+        # Fallback: use close as proxy
+        if etf_code in etf_full.columns and exec_date in etf_full.index:
+            v = etf_full.at[exec_date, etf_code]
+            if pd.notna(v):
+                return v
+        return None
+
+    # Backtest engine — T+1 open execution
+    # signal_by_date has shift(1) on selected_etf but not risk_on.
+    # Signal on day[i] → execute at day[i+1] open.
+    # Rotation: selected_etf shift(1) means rotation detected one day later,
+    #   so entry exec = day[i+1] which is 2 bars after original selection.
+    # Exit: risk_off is immediate, exec = day[i+1] (1 bar after signal).
     equity = [1.0]
     trades = []
     daily_mm_rate = config.money_market_annual_rate / 365
@@ -496,33 +618,21 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     prev_risk_on = False
     prev_etf = ""
 
-    def _get_adj_open(bar_idx, etf_code):
-        """Get adjusted open price for a given bar and ETF."""
-        if (open_aligned is not None and adj_aligned is not None
-                and etf_code in open_aligned.columns and etf_code in adj_aligned.columns
-                and etf_code in etf_aligned.columns):
-            o = open_aligned[etf_code].iloc[bar_idx]
-            adj_c = adj_aligned[etf_code].iloc[bar_idx]
-            c = etf_aligned[etf_code].iloc[bar_idx]
-            if pd.notna(o) and pd.notna(adj_c) and pd.notna(c) and c > 0:
-                return o * (adj_c / c)
-        # Fallback: use close as proxy
-        if etf_code in etf_aligned.columns:
-            return etf_aligned[etf_code].iloc[bar_idx]
-        return None
+    for i in range(1, m - 1):
+        sig_day = ashare_signal_days[i]
+        exec_day = ashare_signal_days[i + 1]
 
-    for i in range(2, n):
-        # Signal from previous day (T+1 lag)
-        sig_idx = i - 1
-        curr_risk_on = signal_layer["risk_on"].iloc[sig_idx]
-        curr_etf = rotation["selected_etf"].iloc[sig_idx]
+        sig = signal_by_date.get(sig_day)
+        if sig is None:
+            equity.append(equity[-1] * (1 + daily_mm_rate))
+            continue
+
+        curr_risk_on = sig["risk_on"]
+        curr_etf = sig["selected_etf"]
         daily_return = 0.0
 
-        # Boundary: risk_on=True but no ETF selected yet → treat as cash
-        effective_risk_on = curr_risk_on and curr_etf and curr_etf in etf_aligned.columns
+        effective_risk_on = curr_risk_on and curr_etf and curr_etf in etf_full.columns
 
-        # Determine overnight state: what we actually held from yesterday's open
-        # The return we earn today reflects what we held overnight (prev state)
         is_entry = effective_risk_on and not prev_risk_on
         is_exit = not effective_risk_on and prev_risk_on and prev_etf != ""
         is_rotation = (effective_risk_on and prev_risk_on
@@ -530,47 +640,44 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         is_hold = effective_risk_on and prev_risk_on and prev_etf == curr_etf
 
         if is_entry:
-            # ENTRY day: was in cash overnight → earn money market
             daily_return = daily_mm_rate
             daily_return -= config.fee_rate
             trades.append({
-                "date": str(signal_layer["timestamp"].iloc[i]),
                 "type": "entry",
                 "etf": curr_etf,
+                "exec_date": exec_day,
             })
         elif is_exit:
-            # EXIT day: held old ETF overnight → earn old ETF open-to-open return
-            exec_price_today = _get_adj_open(i, prev_etf)
-            exec_price_yesterday = _get_adj_open(i - 1, prev_etf)
+            # Exit: sell at exec_day open. Last holding return = open[exec_day]/open[sig_day]
+            exec_price_today = _get_adj_open_by_date(exec_day, prev_etf)
+            exec_price_yesterday = _get_adj_open_by_date(sig_day, prev_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
             daily_return -= config.fee_rate
             trades.append({
-                "date": str(signal_layer["timestamp"].iloc[i]),
                 "type": "exit",
                 "etf": prev_etf,
+                "exec_date": exec_day,
             })
         elif is_rotation:
-            # ROTATION day: held old ETF overnight → earn old ETF open-to-open return
-            exec_price_today = _get_adj_open(i, prev_etf)
-            exec_price_yesterday = _get_adj_open(i - 1, prev_etf)
+            # Rotation: sell old at exec_day open, buy new at exec_day open
+            exec_price_today = _get_adj_open_by_date(exec_day, prev_etf)
+            exec_price_yesterday = _get_adj_open_by_date(sig_day, prev_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
             daily_return -= 2 * config.fee_rate
             trades.append({
-                "date": str(signal_layer["timestamp"].iloc[i]),
                 "type": "rotation",
                 "from": prev_etf,
                 "to": curr_etf,
+                "exec_date": exec_day,
             })
         elif is_hold:
-            # HOLD day: held curr ETF overnight → earn curr ETF open-to-open return
-            exec_price_today = _get_adj_open(i, curr_etf)
-            exec_price_yesterday = _get_adj_open(i - 1, curr_etf)
+            exec_price_today = _get_adj_open_by_date(exec_day, curr_etf)
+            exec_price_yesterday = _get_adj_open_by_date(sig_day, curr_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
         else:
-            # Risk-off hold: in cash → earn money market
             daily_return = daily_mm_rate
 
         equity.append(equity[-1] * (1 + daily_return))
@@ -580,7 +687,7 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     # Metrics
     equity_series = pd.Series(equity)
     total_return = equity_series.iloc[-1] / equity_series.iloc[0] - 1
-    n_years = n / 252
+    n_years = m / 252
     rolling_max = equity_series.cummax()
     drawdown = (equity_series - rolling_max) / rolling_max
     max_dd = drawdown.min()
@@ -588,9 +695,12 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     sharpe = (daily_returns.mean() / daily_returns.std() * np.sqrt(252)) if daily_returns.std() > 0 else 0
 
     # Buy & hold benchmark: 513100 (国泰纳指100, longest history)
+    # Clipped to backtest window for matching comparison
     bh_etf = "513100"
-    if bh_etf in etf_aligned.columns:
-        bh_prices = etf_aligned[bh_etf].dropna()
+    bt_start = ashare_signal_days[0]
+    bt_end = ashare_signal_days[-1]
+    if bh_etf in etf_full.columns:
+        bh_prices = etf_full[bh_etf].loc[bt_start:bt_end].dropna()
         bh_return = (bh_prices.iloc[-1] / bh_prices.iloc[0] - 1) * 100 if len(bh_prices) > 1 else 0
         bh_equity = bh_prices / bh_prices.iloc[0]
         bh_peak = bh_equity.cummax()
@@ -599,31 +709,34 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         bh_return = 0.0
         bh_max_dd = 0.0
 
-    # Win rate computed after platform_trades are built (below)
-
     # Equity curve DataFrame
-    timestamps = signal_layer["timestamp"].tolist()
+    # equity[0] = initial value (start of backtest)
+    # equity[k] for k>=1 = value after iteration i=k, realized at exec_day = days[k+1]
+    # Timestamps: equity[0] → days[0] (start), equity[k] → days[k+1] (exec_day)
+    eq_timestamps = [ashare_signal_days[0]]  # initial
+    for i in range(1, m - 1):
+        if i < len(equity):
+            eq_timestamps.append(ashare_signal_days[i + 1])
     eq_df = pd.DataFrame({
-        "timestamp": timestamps[:len(equity)],
+        "timestamp": eq_timestamps[:len(equity)],
         "equity": equity,
     })
 
-    # Build Trade objects from raw trade records
-    # PnL uses actual ETF adj_open prices (not equity curve ratio)
+    # Build Trade objects — uses actual A-share execution dates and prices
     platform_trades = []
     open_entry = None
     for t in trades:
         if t["type"] == "entry":
             open_entry = t
         elif t["type"] == "exit" and open_entry is not None:
-            entry_ts = pd.Timestamp(open_entry["date"])
-            exit_ts = pd.Timestamp(t["date"])
+            entry_exec = open_entry["exec_date"]
+            exit_exec = t["exec_date"]
+            entry_ts = pd.Timestamp(entry_exec)
+            exit_ts = pd.Timestamp(exit_exec)
             hold_bars = max(1, (exit_ts - entry_ts).days)
-            entry_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
-            exit_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), n - 1)
             entry_etf = open_entry.get("etf", "")
-            actual_entry = _get_adj_open(min(entry_bar, n - 1), entry_etf)
-            actual_exit = _get_adj_open(min(exit_bar, n - 1), entry_etf)
+            actual_entry = _get_adj_open_by_date(entry_exec, entry_etf)
+            actual_exit = _get_adj_open_by_date(exit_exec, entry_etf)
             if actual_entry and actual_entry > 0 and actual_exit:
                 pnl_pct = (actual_exit / actual_entry - 1 - 2 * config.fee_rate) * 100
             else:
@@ -642,14 +755,14 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
             open_entry = None
         elif t["type"] == "rotation":
             if open_entry is not None:
-                entry_ts = pd.Timestamp(open_entry["date"])
-                exit_ts = pd.Timestamp(t["date"])
+                entry_exec = open_entry["exec_date"]
+                exit_exec = t["exec_date"]
+                entry_ts = pd.Timestamp(entry_exec)
+                exit_ts = pd.Timestamp(exit_exec)
                 hold_bars = max(1, (exit_ts - entry_ts).days)
-                entry_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= open_entry["date"]), 0)
-                exit_bar = next((j for j in range(len(timestamps)) if str(timestamps[j]) >= t["date"]), n - 1)
                 entry_etf = open_entry.get("etf", "")
-                actual_entry = _get_adj_open(min(entry_bar, n - 1), entry_etf)
-                actual_exit = _get_adj_open(min(exit_bar, n - 1), entry_etf)
+                actual_entry = _get_adj_open_by_date(entry_exec, entry_etf)
+                actual_exit = _get_adj_open_by_date(exit_exec, entry_etf)
                 if actual_entry and actual_entry > 0 and actual_exit:
                     pnl_pct = (actual_exit / actual_entry - 1 - 2 * config.fee_rate) * 100
                 else:
@@ -665,7 +778,7 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
                     asset=entry_etf,
                     status="closed",
                 ))
-            open_entry = {"date": t["date"], "etf": t.get("to", "")}
+            open_entry = {"type": "entry", "etf": t.get("to", ""), "exec_date": t["exec_date"]}
 
     # Determine if currently in position
     has_open = prev_risk_on and prev_etf != ""
@@ -683,10 +796,10 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         max_drawdown_pct=round(max_dd * 100, 2),
         win_rate=round(win_rate, 1),
         total_trades=len(platform_trades),
-        avg_hold_bars=round(n / max(len(platform_trades), 1), 1),
+        avg_hold_bars=round(m / max(len(platform_trades), 1), 1),
         sharpe_ratio=round(sharpe, 3),
-        start_date=pd.Timestamp(timestamps[0]),
-        end_date=pd.Timestamp(timestamps[-1]),
+        start_date=pd.Timestamp(ashare_signal_days[0]),
+        end_date=pd.Timestamp(ashare_signal_days[-1]),
         buy_hold_return_pct=round(bh_return, 2),
         buy_hold_max_drawdown_pct=round(bh_max_dd, 2),
         has_open_position=has_open,
