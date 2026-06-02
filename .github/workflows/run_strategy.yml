@@ -32,7 +32,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install pandas requests pytz yfinance akshare==1.18.63
+        run: pip install pandas requests pytz yfinance akshare==1.18.63 pyyaml
 
       - name: Update market data
         run: python run_strategy.py --mode update-data

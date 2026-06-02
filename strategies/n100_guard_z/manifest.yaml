@@ -39,73 +39,79 @@ data_sources:
     timeframe: "1D"
     source: "external"
     local_file: "513100_1d.csv"
-    note: "AKShare, 国泰纳指100"
+    note: "AKShare, 纳指ETF国泰"
   etf_159941:
     symbol: "159941"
     timeframe: "1D"
     source: "external"
     local_file: "159941_1d.csv"
-    note: "AKShare, 易方达纳指100"
+    note: "AKShare, 纳指ETF广发"
   etf_513300:
     symbol: "513300"
     timeframe: "1D"
     source: "external"
     local_file: "513300_1d.csv"
-    note: "AKShare, 华夏纳指100"
+    note: "AKShare, 纳斯达克ETF华夏"
   etf_159501:
     symbol: "159501"
     timeframe: "1D"
     source: "external"
     local_file: "159501_1d.csv"
-    note: "AKShare, 富国纳指100"
+    note: "AKShare, 纳指ETF嘉实"
   etf_159513:
     symbol: "159513"
     timeframe: "1D"
     source: "external"
     local_file: "159513_1d.csv"
-    note: "AKShare, 鹏华纳指100"
+    note: "AKShare, 纳斯达克100ETF大成"
   etf_159659:
     symbol: "159659"
     timeframe: "1D"
     source: "external"
     local_file: "159659_1d.csv"
-    note: "AKShare, 景顺纳指100"
+    note: "AKShare, 纳斯达克100ETF招商"
   etf_159632:
     symbol: "159632"
     timeframe: "1D"
     source: "external"
     local_file: "159632_1d.csv"
-    note: "AKShare, 中欧纳指100"
+    note: "AKShare, 纳斯达克ETF华安"
   etf_159660:
     symbol: "159660"
     timeframe: "1D"
     source: "external"
     local_file: "159660_1d.csv"
-    note: "AKShare, 博时纳指100"
+    note: "AKShare, 纳指ETF汇添富"
   etf_159696:
     symbol: "159696"
     timeframe: "1D"
     source: "external"
     local_file: "159696_1d.csv"
-    note: "AKShare, 华安纳指100"
+    note: "AKShare, 纳指ETF易方达"
   etf_513110:
     symbol: "513110"
     timeframe: "1D"
     source: "external"
     local_file: "513110_1d.csv"
-    note: "AKShare, 华安纳指100ETF"
+    note: "AKShare, 纳指ETF华泰柏瑞"
   etf_513390:
     symbol: "513390"
     timeframe: "1D"
     source: "external"
     local_file: "513390_1d.csv"
-    note: "AKShare, 天弘纳指100"
+    note: "AKShare, 纳指100ETF博时"
+  etf_513870:
+    symbol: "513870"
+    timeframe: "1D"
+    source: "external"
+    local_file: "513870_1d.csv"
+    note: "AKShare, 纳指ETF富国"
   etf_nav:
     symbol: "N100_ETF_NAV"
     timeframe: "1D"
     source: "external"
     local_file: "n100_etf_nav.csv"
-    note: "AKShare, 11只ETF净值数据（wide format）"
+    note: "AKShare, 12只ETF净值数据（wide format）"
 
 display:
   slug: "n100-guard-z"
@@ -166,24 +172,25 @@ page:
     - title: "信号层：周频回场"
       description: "仅在 TRUE_CASH_STRETCH 中，每周五检查：QQQ > SMA225 且 SPY 12m > 0 且 QQQ 12m > SPY 12m → 次交易日回场。"
     - title: "执行层：Hybrid Z-Score 溢价轮动"
-      description: "risk_on 期间从11只纳指100 ETF中选最优标的。切换需同时满足：z-score差 > 1.0、绝对溢价差 > 16bps、持有 ≥ 10天。"
+      description: "risk_on 期间从12只纳指100 ETF中选最优标的。切换需同时满足：z-score差 > 1.0、绝对溢价差 > 16bps、持有 ≥ 10天。"
     - title: "执行时序"
       description: "T日US收盘信号 → T+1日A股开盘执行。空仓期按货币基金年化2%计算收益。"
-  data_source_desc: "US数据：QQQ/SPY日线（yfinance）。A股数据：11只纳指100 ETF日线 + NAV。信号T日US收盘生成，T+1日A股开盘执行。"
+  data_source_desc: "US数据：QQQ/SPY日线（yfinance）。A股数据：12只纳指100 ETF日线 + NAV。信号T日US收盘生成，T+1日A股开盘执行。"
 
 etf_pool:
   risk_on:
-    - {code: "513100", name: "国泰纳指100", listed: "2013-05"}
-    - {code: "159941", name: "易方达纳指100", listed: "2015-07"}
-    - {code: "513300", name: "华夏纳指100", listed: "2014-01"}
-    - {code: "159501", name: "富国纳指100", listed: "2023-01"}
-    - {code: "159513", name: "鹏华纳指100", listed: "2023-03"}
-    - {code: "159659", name: "景顺纳指100", listed: "2023-04"}
-    - {code: "159632", name: "中欧纳指100", listed: "2023-04"}
-    - {code: "159660", name: "博时纳指100", listed: "2023-04"}
-    - {code: "159696", name: "华安纳指100", listed: "2023-04"}
-    - {code: "513110", name: "华安纳指100ETF", listed: "2022-09"}
-    - {code: "513390", name: "天弘纳指100", listed: "2023-06"}
+    - {code: "513100", name: "纳指ETF国泰", listed: "2013-07"}
+    - {code: "159941", name: "纳指ETF广发", listed: "2015-07"}
+    - {code: "513300", name: "纳斯达克ETF华夏", listed: "2020-11"}
+    - {code: "159501", name: "纳指ETF嘉实", listed: "2023-06"}
+    - {code: "159513", name: "纳斯达克100ETF大成", listed: "2023-07"}
+    - {code: "159659", name: "纳斯达克100ETF招商", listed: "2023-04"}
+    - {code: "159632", name: "纳斯达克ETF华安", listed: "2022-08"}
+    - {code: "159660", name: "纳指ETF汇添富", listed: "2023-04"}
+    - {code: "159696", name: "纳指ETF易方达", listed: "2023-08"}
+    - {code: "513110", name: "纳指ETF华泰柏瑞", listed: "2023-03"}
+    - {code: "513390", name: "纳指100ETF博时", listed: "2023-05"}
+    - {code: "513870", name: "纳指ETF富国", listed: "2023-11"}
   risk_off:
     - {code: "511880", name: "银华日利", priority: 1}
     - {code: "511660", name: "建信添益", priority: 2}

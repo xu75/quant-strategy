@@ -4,9 +4,11 @@ DualMom-B FastRe 择时 + Hybrid Z-Score 溢价轮动
 """
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 import numpy as np
 import pandas as pd
+import yaml
 
 from pipeline.backtest import BacktestResult, Trade
 
@@ -15,19 +17,14 @@ from pipeline.backtest import BacktestResult, Trade
 # Config
 # ---------------------------------------------------------------------------
 
-ETF_NAMES = {
-    "513100": "国泰纳指100",
-    "159941": "易方达纳指100",
-    "513300": "华夏纳指100",
-    "159501": "富国纳指100",
-    "159513": "鹏华纳指100",
-    "159659": "景顺纳指100",
-    "159632": "中欧纳指100",
-    "159660": "博时纳指100",
-    "159696": "华安纳指100",
-    "513110": "华安纳指100ETF",
-    "513390": "天弘纳指100",
-}
+def _load_etf_names() -> dict[str, str]:
+    """Load ETF names from single source of truth (etf_pool.yaml)."""
+    config_path = Path(__file__).parent / "etf_pool.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        pool = yaml.safe_load(f)
+    return {etf["code"]: etf["official_short_name"] for etf in pool["etfs"]}
+
+ETF_NAMES = _load_etf_names()
 
 
 @dataclass

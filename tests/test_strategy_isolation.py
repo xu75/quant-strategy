@@ -180,6 +180,113 @@ class TestImportBoundaries:
         )
 
 
+class TestEtfPoolConsistency:
+    """ETF pool config must be single source of truth — manifest/signal/pipeline must agree."""
+
+    def test_etf_pool_yaml_is_authoritative(self):
+        pool_path = STRATEGIES_DIR / "n100_guard_z" / "etf_pool.yaml"
+        if not pool_path.exists():
+            pytest.skip("etf_pool.yaml not present")
+        with open(pool_path) as f:
+            pool = yaml.safe_load(f)
+        codes = {etf["code"] for etf in pool["etfs"]}
+        assert len(codes) == len(pool["etfs"]), "Duplicate codes in etf_pool.yaml"
+        for etf in pool["etfs"]:
+            assert etf["tracking_index"] == "纳斯达克100指数", (
+                f"{etf['code']}: tracking_index must be 纳斯达克100指数"
+            )
+
+    def test_manifest_etf_pool_matches_config(self):
+        pool_path = STRATEGIES_DIR / "n100_guard_z" / "etf_pool.yaml"
+        manifest_path = STRATEGIES_DIR / "n100_guard_z" / "manifest.yaml"
+        if not pool_path.exists():
+            pytest.skip("etf_pool.yaml not present")
+        with open(pool_path) as f:
+            pool = yaml.safe_load(f)
+        with open(manifest_path) as f:
+            manifest = yaml.safe_load(f)
+        pool_codes = {etf["code"] for etf in pool["etfs"]}
+        manifest_codes = {item["code"] for item in manifest["etf_pool"]["risk_on"]}
+        assert pool_codes == manifest_codes, (
+            f"manifest etf_pool.risk_on codes don't match etf_pool.yaml: "
+            f"missing={pool_codes - manifest_codes}, extra={manifest_codes - pool_codes}"
+        )
+
+    def test_manifest_data_sources_cover_pool(self):
+        pool_path = STRATEGIES_DIR / "n100_guard_z" / "etf_pool.yaml"
+        manifest_path = STRATEGIES_DIR / "n100_guard_z" / "manifest.yaml"
+        if not pool_path.exists():
+            pytest.skip("etf_pool.yaml not present")
+        with open(pool_path) as f:
+            pool = yaml.safe_load(f)
+        with open(manifest_path) as f:
+            manifest = yaml.safe_load(f)
+        pool_codes = {etf["code"] for etf in pool["etfs"]}
+        ds_symbols = {src["symbol"] for src in manifest["data_sources"].values()}
+        missing = pool_codes - ds_symbols
+        assert not missing, (
+            f"manifest data_sources missing ETF entries: {missing}"
+        )
+
+    def test_manifest_names_match_pool(self):
+        """ETF names in manifest.etf_pool and manifest.data_sources must match etf_pool.yaml."""
+        pool_path = STRATEGIES_DIR / "n100_guard_z" / "etf_pool.yaml"
+        manifest_path = STRATEGIES_DIR / "n100_guard_z" / "manifest.yaml"
+        if not pool_path.exists():
+            pytest.skip("etf_pool.yaml not present")
+        with open(pool_path) as f:
+            pool = yaml.safe_load(f)
+        with open(manifest_path) as f:
+            manifest = yaml.safe_load(f)
+
+        pool_names = {etf["code"]: etf["official_short_name"] for etf in pool["etfs"]}
+
+        # Check manifest.etf_pool.risk_on names
+        for item in manifest["etf_pool"]["risk_on"]:
+            code = item["code"]
+            manifest_name = item["name"]
+            pool_name = pool_names.get(code)
+            assert manifest_name == pool_name, (
+                f"manifest.etf_pool.risk_on[{code}].name = '{manifest_name}' "
+                f"!= etf_pool.yaml official_short_name = '{pool_name}'"
+            )
+
+        # Check manifest.data_sources notes contain correct names
+        for key, src in manifest["data_sources"].items():
+            if not key.startswith("etf_"):
+                continue
+            code = src["symbol"]
+            if code not in pool_names:
+                continue
+            note = src.get("note", "")
+            pool_name = pool_names[code]
+            assert pool_name in note, (
+                f"manifest.data_sources.{key}.note does not contain '{pool_name}' from etf_pool.yaml"
+            )
+
+    def test_manifest_listed_dates_match_pool(self):
+        """ETF listed dates in manifest.etf_pool must match etf_pool.yaml listed_date (YYYY-MM)."""
+        pool_path = STRATEGIES_DIR / "n100_guard_z" / "etf_pool.yaml"
+        manifest_path = STRATEGIES_DIR / "n100_guard_z" / "manifest.yaml"
+        if not pool_path.exists():
+            pytest.skip("etf_pool.yaml not present")
+        with open(pool_path) as f:
+            pool = yaml.safe_load(f)
+        with open(manifest_path) as f:
+            manifest = yaml.safe_load(f)
+
+        pool_dates = {etf["code"]: etf["listed_date"][:7] for etf in pool["etfs"]}
+
+        for item in manifest["etf_pool"]["risk_on"]:
+            code = item["code"]
+            manifest_listed = item["listed"]
+            pool_listed = pool_dates.get(code)
+            assert manifest_listed == pool_listed, (
+                f"manifest.etf_pool.risk_on[{code}].listed = '{manifest_listed}' "
+                f"!= etf_pool.yaml listed_date[:7] = '{pool_listed}'"
+            )
+
+
 class TestOutputPathIsolation:
     """Data and chart output paths must be namespaced by strategy ID."""
 

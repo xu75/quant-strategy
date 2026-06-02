@@ -18,24 +18,20 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 import pandas as pd
+import yaml
 
 CANONICAL_MARKET_DIR = Path(__file__).parent.parent / "data" / "market"
 LOG_PREFIX = "[update-ashare]"
 
-# N100 ETF pool: code -> name
-N100_ETF_POOL = {
-    "513100": "国泰纳指100",
-    "159941": "易方达纳指100",
-    "513300": "华夏纳指100",
-    "159501": "富国纳指100",
-    "159513": "鹏华纳指100",
-    "159659": "景顺纳指100",
-    "159632": "中欧纳指100",
-    "159660": "博时纳指100",
-    "159696": "华安纳指100",
-    "513110": "华安纳指100ETF",
-    "513390": "天弘纳指100",
-}
+
+def _load_etf_pool() -> dict[str, str]:
+    """Load ETF pool from single source of truth (etf_pool.yaml)."""
+    config_path = Path(__file__).parent.parent / "strategies" / "n100_guard_z" / "etf_pool.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        pool = yaml.safe_load(f)
+    return {etf["code"]: etf["official_short_name"] for etf in pool["etfs"]}
+
+N100_ETF_POOL = _load_etf_pool()
 
 
 def _fetch_etf_daily(code: str, start_date: str = "20130101") -> pd.DataFrame:

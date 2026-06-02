@@ -1,0 +1,159 @@
+# N100 Guard-Z ETF Pool Configuration
+# Single source of truth for Nasdaq-100 tracking ETFs listed on A-share markets
+#
+# Maintenance protocol:
+#   1. Auto-discovery: scan full market ETF list via AKShare/Eastmoney API
+#   2. Candidate filter: official_short_name contains "纳指" OR "纳斯达克100"
+#   3. Manual validation: verify tracking_index == "纳斯达克100指数" via fund archive
+#   4. NAV/OHLC availability check: ensure data retrievable via AKShare
+#   5. PR approval: new additions require backtest rerun (universe change affects metrics)
+#
+# Field definitions:
+#   - code: 6-digit ETF security code
+#   - official_short_name: 证券简称 from exchange (display on site)
+#   - full_name: 基金全称 from fund archive
+#   - manager: 基金管理人
+#   - tracking_index: 跟踪标的指数 (must be "纳斯达克100指数")
+#   - listed_date: 本地可交易数据首日 (YYYY-MM-DD, from local OHLCV files)
+#   - exchange: SH (上海) / SZ (深圳)
+#   - source_url: fund archive URL for verification
+#   - checked_at: last manual verification timestamp (YYYY-MM-DD)
+#   - enabled_from: date when this ETF was added to the pool (YYYY-MM-DD)
+#   - note: optional remarks
+
+etfs:
+  - code: "513100"
+    official_short_name: "纳指ETF国泰"
+    full_name: "国泰纳斯达克100ETF（QDII）"
+    manager: "国泰基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2013-07-31"
+    exchange: "SH"
+    source_url: "https://fundf10.eastmoney.com/jbgk_513100.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2013-07-31"
+    note: "Longest history, used as buy-and-hold benchmark"
+
+  - code: "159941"
+    official_short_name: "纳指ETF广发"
+    full_name: "广发纳斯达克100ETF（QDII）"
+    manager: "广发基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2015-07-13"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159941.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2015-07-13"
+
+  - code: "513300"
+    official_short_name: "纳斯达克ETF华夏"
+    full_name: "华夏纳斯达克100ETF（QDII）"
+    manager: "华夏基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2020-11-05"
+    exchange: "SH"
+    source_url: "https://fundf10.eastmoney.com/jbgk_513300.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2020-11-05"
+
+  - code: "159501"
+    official_short_name: "纳指ETF嘉实"
+    full_name: "嘉实纳斯达克100ETF（QDII）"
+    manager: "嘉实基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-06-14"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159501.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-06-14"
+
+  - code: "159513"
+    official_short_name: "纳斯达克100ETF大成"
+    full_name: "大成纳斯达克100ETF（QDII）"
+    manager: "大成基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-07-28"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159513.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-07-28"
+
+  - code: "159659"
+    official_short_name: "纳斯达克100ETF招商"
+    full_name: "招商纳斯达克100ETF（QDII）"
+    manager: "招商基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-04-25"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159659.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-04-25"
+
+  - code: "159632"
+    official_short_name: "纳斯达克ETF华安"
+    full_name: "华安纳斯达克100ETF（QDII）"
+    manager: "华安基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2022-08-03"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159632.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2022-08-03"
+
+  - code: "159660"
+    official_short_name: "纳指ETF汇添富"
+    full_name: "汇添富纳斯达克100ETF（QDII）"
+    manager: "汇添富基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-04-17"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159660.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-04-17"
+    note: "Previously mislabeled as 博时纳指100"
+
+  - code: "159696"
+    official_short_name: "纳指ETF易方达"
+    full_name: "易方达纳斯达克100ETF（QDII）"
+    manager: "易方达基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-08-25"
+    exchange: "SZ"
+    source_url: "https://fundf10.eastmoney.com/jbgk_159696.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-08-25"
+
+  - code: "513110"
+    official_short_name: "纳指ETF华泰柏瑞"
+    full_name: "华泰柏瑞纳斯达克100ETF（QDII）"
+    manager: "华泰柏瑞基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-03-20"
+    exchange: "SH"
+    source_url: "https://fundf10.eastmoney.com/jbgk_513110.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-03-20"
+
+  - code: "513390"
+    official_short_name: "纳指100ETF博时"
+    full_name: "博时纳斯达克100ETF（QDII）"
+    manager: "博时基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-05-08"
+    exchange: "SH"
+    source_url: "https://fundf10.eastmoney.com/jbgk_513390.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-05-08"
+    note: "Previously confused with 159660"
+
+  - code: "513870"
+    official_short_name: "纳指ETF富国"
+    full_name: "富国纳斯达克100ETF（QDII）"
+    manager: "富国基金"
+    tracking_index: "纳斯达克100指数"
+    listed_date: "2023-11-02"
+    exchange: "SH"
+    source_url: "https://fundf10.eastmoney.com/jbgk_513870.html"
+    checked_at: "2026-06-02"
+    enabled_from: "2023-11-02"
+    note: "New addition, previously missing from pool"
