@@ -143,10 +143,12 @@ class TestTransitionDayAttribution:
         eq = result.equity_curve["equity"].tolist()
         daily_mm = config.money_market_annual_rate / 365
 
-        # With shift(1) on selected_etf: risk_on goes True at day_10 but
-        # shifted_etf doesn't become "513100" until day_11 (rotation[10]).
-        # So effective ENTRY is at i=11 → equity[11].
-        entry_return = eq[11] / eq[10] - 1
+        # T+1 model (no pre-shift): risk_on goes True at day_10 with selected_etf="513100".
+        # sig_day=day_10, exec_day=day_11. So ENTRY equity impact is at eq[10] (loop i=10).
+        # Wait — the loop uses sig_day[i] → exec_day[i+1], equity appended per iteration.
+        # i=10: sig_day=day_10, risk_on=True, selected_etf="513100" → ENTRY
+        #   equity[10] = equity[9] * (1 + entry_return)
+        entry_return = eq[10] / eq[9] - 1
         expected_entry = daily_mm - config.fee_rate
         assert abs(entry_return - expected_entry) < 1e-8, (
             f"ENTRY day return {entry_return:.6f} != expected {expected_entry:.6f}"
@@ -191,12 +193,11 @@ class TestTransitionDayAttribution:
 
         eq = result.equity_curve["equity"].tolist()
 
-        # Rotation happens at i=16: sig_day=day_16 has shifted_etf=rotation[15]="159941"
-        # while prev_etf="513100" → ROTATION. equity[16] = result of this iteration.
-        rotation_return = eq[16] / eq[15] - 1
+        # T+1 model: rotation signal at day_15 (selected_etf="159941", prev was "513100")
+        # Loop i=15: sig_day=day_15, selected_etf=rotation[15]="159941" → ROTATION
+        rotation_return = eq[15] / eq[14] - 1
 
         # Should earn OLD ETF (513100, ~1% daily) return - 2*fee
-        # Not new ETF (159941, ~1.5% daily) return
         assert rotation_return < 0.012, (
             f"ROTATION day return {rotation_return:.6f} should reflect old ETF (~1%), not new (~1.5%)"
         )
@@ -296,23 +297,134 @@ class TestTransitionDayAttribution:
         eq = result.equity_curve["equity"].tolist()
         daily_mm = config.money_market_annual_rate / 365
 
-        # Days 1-5 (loop i=1..5): risk_on=True but shifted_etf="" → money_market
-        # (shift(1) means rotation[4]="" is still used at idx=5)
-        for i in range(1, 6):
+        # T+1 model (no pre-shift): days 1-4 (loop i=1..4) selected_etf="" → money_market
+        # rotation[5]="513100" is used directly at i=5 → ENTRY
+        for i in range(1, 5):
             day_return = eq[i] / eq[i - 1] - 1
             assert abs(day_return - daily_mm) < 1e-8, (
                 f"Day {i}: should earn money_market, got {day_return:.8f}"
             )
 
-        # i=6: shifted_etf = rotation[5] = "513100" → ENTRY (earn mm - fee)
-        entry_return = eq[6] / eq[5] - 1
+        # i=5: selected_etf = rotation[5] = "513100" → ENTRY (earn mm - fee)
+        entry_return = eq[5] / eq[4] - 1
         expected_entry = daily_mm - config.fee_rate
         assert abs(entry_return - expected_entry) < 1e-8, (
             f"ENTRY day return {entry_return:.8f} != expected {expected_entry:.8f}"
         )
 
-        # i=7: HOLD → earn ETF return
-        hold_return = eq[7] / eq[6] - 1
+        # i=6: HOLD → earn ETF return
+        hold_return = eq[6] / eq[5] - 1
         assert hold_return > daily_mm, (
             f"HOLD day return {hold_return:.8f} should be > money_market {daily_mm:.8f}"
         )
+
+
+class TestRealizedReturnAndOpenTrade:
+    """Verify realized_return and open trade semantics."""
+
+    @patch("strategies.n100_guard_z.signal._fastre_signals")
+    @patch("strategies.n100_guard_z.signal._zscore_rotation")
+    def test_open_trade_in_trades_list(self, mock_rotation, mock_fastre):
+        """When has_open_position=True, trades list must contain a status='open' entry."""
+        # Use data that ends mid-position (risk_on at end)
+        dates = pd.date_range("2024-01-01", periods=20, freq="D", tz="UTC")
+        qqq = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 120, 20)})
+        spy = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 110, 20)})
+        etf_513100 = _make_etf_prices(dates, "513100", base=2.0, daily_pct=0.01)
+        nav_df = pd.DataFrame({"timestamp": dates, "513100": etf_513100["close"] * 0.998})
+
+        # Cash for first 5 days, then invested until end (no exit)
+        risk_on = [False] * 5 + [True] * 15
+        signal_layer = pd.DataFrame({
+            "timestamp": dates,
+            "qqq_close": qqq["close"],
+            "risk_on": risk_on,
+            "state": ["TRUE_CASH_STRETCH" if not r else "NDX_INVESTED" for r in risk_on],
+        })
+        rotation = pd.DataFrame({"selected_etf": [""] * 5 + ["513100"] * 15})
+
+        mock_fastre.return_value = signal_layer
+        mock_rotation.return_value = rotation
+
+        config = StrategyConfig(fee_rate=0.001, money_market_annual_rate=0.02)
+        result = run_backtest(qqq, config, extra_data={
+            "spy": spy, "etf_513100": etf_513100, "etf_nav": nav_df,
+        })
+
+        assert result.has_open_position is True
+        open_trades = [t for t in result.trades if t.status == "open"]
+        assert len(open_trades) == 1
+        assert open_trades[0].asset == "513100"
+
+    @patch("strategies.n100_guard_z.signal._fastre_signals")
+    @patch("strategies.n100_guard_z.signal._zscore_rotation")
+    def test_realized_less_than_total_when_open(self, mock_rotation, mock_fastre):
+        """realized_return < total_return when open position has positive MTM."""
+        dates = pd.date_range("2024-01-01", periods=20, freq="D", tz="UTC")
+        qqq = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 120, 20)})
+        spy = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 110, 20)})
+        etf_513100 = _make_etf_prices(dates, "513100", base=2.0, daily_pct=0.01)
+        nav_df = pd.DataFrame({"timestamp": dates, "513100": etf_513100["close"] * 0.998})
+
+        risk_on = [False] * 5 + [True] * 15
+        signal_layer = pd.DataFrame({
+            "timestamp": dates,
+            "qqq_close": qqq["close"],
+            "risk_on": risk_on,
+            "state": ["TRUE_CASH_STRETCH" if not r else "NDX_INVESTED" for r in risk_on],
+        })
+        rotation = pd.DataFrame({"selected_etf": [""] * 5 + ["513100"] * 15})
+
+        mock_fastre.return_value = signal_layer
+        mock_rotation.return_value = rotation
+
+        config = StrategyConfig(fee_rate=0.001, money_market_annual_rate=0.02)
+        result = run_backtest(qqq, config, extra_data={
+            "spy": spy, "etf_513100": etf_513100, "etf_nav": nav_df,
+        })
+
+        assert result.has_open_position is True
+        assert result.realized_return_pct < result.total_return_pct, (
+            f"realized {result.realized_return_pct}% should be < total {result.total_return_pct}%"
+        )
+
+    @patch("strategies.n100_guard_z.signal._fastre_signals")
+    @patch("strategies.n100_guard_z.signal._zscore_rotation")
+    def test_realized_equals_total_when_no_open(self, mock_rotation, mock_fastre):
+        """When no open position, realized_return == total_return."""
+        qqq, extra_data, signal_layer, rotation = _make_controlled_backtest_data()
+
+        mock_fastre.return_value = signal_layer
+        mock_rotation.return_value = rotation
+
+        config = StrategyConfig(fee_rate=0.001, money_market_annual_rate=0.02)
+        result = run_backtest(qqq, config, extra_data=extra_data)
+
+        # _make_controlled_backtest_data ends with risk_on=True (days 25-29)
+        # so has_open should be True. Let's use a dataset that ends with cash.
+        # Override: cash at end
+        dates = pd.date_range("2024-01-01", periods=20, freq="D", tz="UTC")
+        qqq2 = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 120, 20)})
+        spy2 = pd.DataFrame({"timestamp": dates, "close": np.linspace(100, 110, 20)})
+        etf = _make_etf_prices(dates, "513100", base=2.0, daily_pct=0.01)
+        nav = pd.DataFrame({"timestamp": dates, "513100": etf["close"] * 0.998})
+
+        # Invested then exit (no open at end)
+        risk_on2 = [False] * 3 + [True] * 10 + [False] * 7
+        sl2 = pd.DataFrame({
+            "timestamp": dates,
+            "qqq_close": qqq2["close"],
+            "risk_on": risk_on2,
+            "state": ["TRUE_CASH_STRETCH" if not r else "NDX_INVESTED" for r in risk_on2],
+        })
+        rot2 = pd.DataFrame({"selected_etf": [""] * 3 + ["513100"] * 10 + [""] * 7})
+
+        mock_fastre.return_value = sl2
+        mock_rotation.return_value = rot2
+
+        result2 = run_backtest(qqq2, config, extra_data={
+            "spy": spy2, "etf_513100": etf, "etf_nav": nav,
+        })
+
+        assert result2.has_open_position is False
+        assert result2.realized_return_pct == result2.total_return_pct

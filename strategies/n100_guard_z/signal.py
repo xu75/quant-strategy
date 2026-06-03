@@ -126,9 +126,10 @@ def _fastre_signals(qqq_df: pd.DataFrame, spy_df: pd.DataFrame,
                     state = "NDX_INVESTED"
         elif state == "TRUE_CASH_STRETCH":
             if is_week_end[i]:
-                if (qqq_close > sma_val
-                        and spy_mom > 0
-                        and qqq_mom > spy_mom):
+                reentry_ok = qqq_close > sma_val and qqq_mom > spy_mom
+                if config.require_abs_momentum:
+                    reentry_ok = reentry_ok and spy_mom > 0
+                if reentry_ok:
                     state = "NDX_INVESTED"
 
         states[i] = state
@@ -375,7 +376,7 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     # Between execution days, holding is frozen at last executed state.
     #
     # State machine mirrors run_backtest:
-    #   signal_by_date[d].selected_etf = rotation[d-1] (shift(1) in common_dates)
+    #   signal_by_date[d].selected_etf = rotation[d] (no shift — loop provides T+1)
     #   Transition happens at exec_day (the NEXT common_date after signal fires)
     #   So on signal day D, we are still holding the PREVIOUS position.
     #   The new position only becomes active on the next common_date after D.
@@ -384,14 +385,14 @@ def compute_signals(df: pd.DataFrame, config: StrategyConfig = None,
     common_sorted = sorted(common_dates)
     n_common = len(common_sorted)
 
-    # Build the same signal_by_date as run_backtest (shift(1) on selected_etf)
+    # Build the same signal_by_date as run_backtest (no shift — loop hop is T+1)
     exec_signal_by_date = {}
     for idx in range(n_common):
         d = signal_aligned["timestamp"].iloc[idx]
-        shifted_etf = rotation["selected_etf"].iloc[idx - 1] if idx > 0 else ""
+        current_etf = rotation["selected_etf"].iloc[idx]
         exec_signal_by_date[d] = {
             "risk_on": bool(signal_aligned["risk_on"].iloc[idx]),
-            "selected_etf": shifted_etf,
+            "selected_etf": current_etf,
         }
 
     # Walk the execution calendar to determine actual holding at each exec_day
@@ -560,17 +561,17 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     rotation = _zscore_rotation(etf_aligned, nav_aligned, qqq_ret_aligned, config, risk_on_mask)
 
     # Build signal lookup: date → (risk_on, selected_etf)
-    # risk_on uses current day's signal (immediate T+1 execution for exits)
-    # selected_etf uses shift(1) — position = selected.shift(1) per local project
-    # This gives: rotation signal on D → position active D+1 → exec D+2
-    #             risk_off signal on D → exec D+1 (immediate protective exit)
+    # The backtest loop already implements T+1 via sig_day[i] → exec_day[i+1].
+    # No additional shift needed here — selected_etf is used directly.
+    # (Original project uses position=selected.shift(1) + direct indexing;
+    #  here the loop's sig→exec hop is the equivalent single T+1 delay.)
     signal_by_date = {}
     for idx in range(n):
         d = signal_layer["timestamp"].iloc[idx]
-        shifted_etf = rotation["selected_etf"].iloc[idx - 1] if idx > 0 else ""
+        current_etf = rotation["selected_etf"].iloc[idx]
         signal_by_date[d] = {
             "risk_on": bool(signal_layer["risk_on"].iloc[idx]),
-            "selected_etf": shifted_etf,
+            "selected_etf": current_etf,
         }
 
     # Full A-share DataFrames indexed by date for execution price lookup
@@ -603,14 +604,12 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         return None
 
     # Backtest engine — T+1 open execution
-    # signal_by_date has shift(1) on selected_etf but not risk_on.
-    # Signal on day[i] → execute at day[i+1] open.
-    # Rotation: selected_etf shift(1) means rotation detected one day later,
-    #   so entry exec = day[i+1] which is 2 bars after original selection.
-    # Exit: risk_off is immediate, exec = day[i+1] (1 bar after signal).
+    # Signal on day[i] → execute at day[i+1] open (single T+1 delay via loop).
+    # selected_etf is used directly (no pre-shift), matching sibling project model.
     equity = [1.0]
     trades = []
     daily_mm_rate = config.money_market_annual_rate / 365
+    open_entry_equity_idx = None  # equity index at last entry (for realized calc)
 
     prev_risk_on = False
     prev_etf = ""
@@ -639,30 +638,31 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
         if is_entry:
             daily_return = daily_mm_rate
             daily_return -= config.fee_rate
+            open_entry_equity_idx = len(equity)  # will point to the equity value after this append
             trades.append({
                 "type": "entry",
                 "etf": curr_etf,
                 "exec_date": exec_day,
             })
         elif is_exit:
-            # Exit: sell at exec_day open. Last holding return = open[exec_day]/open[sig_day]
             exec_price_today = _get_adj_open_by_date(exec_day, prev_etf)
             exec_price_yesterday = _get_adj_open_by_date(sig_day, prev_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
             daily_return -= config.fee_rate
+            open_entry_equity_idx = None
             trades.append({
                 "type": "exit",
                 "etf": prev_etf,
                 "exec_date": exec_day,
             })
         elif is_rotation:
-            # Rotation: sell old at exec_day open, buy new at exec_day open
             exec_price_today = _get_adj_open_by_date(exec_day, prev_etf)
             exec_price_yesterday = _get_adj_open_by_date(sig_day, prev_etf)
             if exec_price_today is not None and exec_price_yesterday is not None and exec_price_yesterday > 0:
                 daily_return = exec_price_today / exec_price_yesterday - 1
             daily_return -= 2 * config.fee_rate
+            open_entry_equity_idx = len(equity)  # new entry starts here
             trades.append({
                 "type": "rotation",
                 "from": prev_etf,
@@ -780,20 +780,57 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     # Determine if currently in position
     has_open = prev_risk_on and prev_etf != ""
 
-    # Win rate from actual ETF price PnL
-    profitable = sum(1 for t in platform_trades if t.pnl_pct > 0)
-    win_rate = (profitable / len(platform_trades) * 100) if platform_trades else 0.0
+    # Append open trade if position is active
+    if has_open and open_entry is not None:
+        entry_exec = open_entry["exec_date"]
+        entry_etf = open_entry.get("etf", "")
+        entry_ts = pd.Timestamp(entry_exec)
+        end_ts = pd.Timestamp(ashare_signal_days[-1])
+        hold_bars = max(1, (end_ts - entry_ts).days)
+        actual_entry = _get_adj_open_by_date(entry_exec, entry_etf)
+        last_close = (etf_full.at[ashare_signal_days[-1], entry_etf]
+                      if entry_etf in etf_full.columns and ashare_signal_days[-1] in etf_full.index
+                      else None)
+        if actual_entry and actual_entry > 0 and last_close and last_close > 0:
+            open_pnl_pct = (last_close / actual_entry - 1 - config.fee_rate) * 100
+        else:
+            open_pnl_pct = 0.0
+        platform_trades.append(Trade(
+            entry_time=entry_ts,
+            entry_price=round(actual_entry or 1.0, 4),
+            exit_time=end_ts,
+            exit_price=round(last_close or 1.0, 4),
+            hold_bars=hold_bars,
+            pnl_pct=round(open_pnl_pct, 4),
+            pnl_abs=round(open_pnl_pct / 100, 6),
+            asset=entry_etf,
+            status="open",
+        ))
+
+    # Win rate from closed trades only
+    closed_trades = [t for t in platform_trades if t.status == "closed"]
+    profitable = sum(1 for t in closed_trades if t.pnl_pct > 0)
+    win_rate = (profitable / len(closed_trades) * 100) if closed_trades else 0.0
+
+    # Realized return: equity-curve based
+    # If open position exists, realized = equity growth assuming mm from entry onward
+    if has_open and open_entry_equity_idx is not None and open_entry_equity_idx < len(equity):
+        days_open = len(equity) - 1 - open_entry_equity_idx
+        realized_end = equity[open_entry_equity_idx] * ((1 + daily_mm_rate) ** days_open)
+        realized_return = realized_end / equity[0] - 1
+    else:
+        realized_return = total_return
 
     return BacktestResult(
         config=config,
         trades=platform_trades,
         equity_curve=eq_df,
         total_return_pct=round(total_return * 100, 2),
-        realized_return_pct=round(total_return * 100, 2),
+        realized_return_pct=round(realized_return * 100, 2),
         max_drawdown_pct=round(max_dd * 100, 2),
         win_rate=round(win_rate, 1),
-        total_trades=len(platform_trades),
-        avg_hold_bars=round(m / max(len(platform_trades), 1), 1),
+        total_trades=len(closed_trades),
+        avg_hold_bars=round(m / max(len(closed_trades), 1), 1),
         sharpe_ratio=round(sharpe, 3),
         start_date=pd.Timestamp(ashare_signal_days[0]),
         end_date=pd.Timestamp(ashare_signal_days[-1]),
