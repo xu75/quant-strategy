@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-04T05:26:20.880254+00:00",
+  "updated_at": "2026-06-04T11:43:58.920572+00:00",
   "strategy": {
     "name": "N100 Guard-Z",
     "code": "n100_guard_z",
@@ -17,8 +17,8 @@
     "qqq_12m": 0.4292774742773622,
     "spy_12m": 0.28711544885214413,
     "current_etf": "159659",
-    "current_zscore": 3.0376264869454324,
-    "current_premium": 0.087066844889502
+    "current_zscore": 2.1916429801888073,
+    "current_premium": 0.07375772763772659
   },
   "position": {
     "in_position": true,
