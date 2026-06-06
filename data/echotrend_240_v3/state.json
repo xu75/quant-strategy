@@ -3,14 +3,14 @@
     "bar_index": 11149,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 15.0,
-      "risk": 10.0,
+      "trend": 25.0,
+      "risk": 35.0,
       "rs": 65.0,
       "raw": 1.0,
       "target": 1.0
     },
     "mode": "risk_off",
-    "mode_counter": 5,
+    "mode_counter": 2,
     "trend_regime": "bear",
     "regime_counter": 0,
     "regime_change_bar": 11054,
