@@ -363,6 +363,11 @@ def _run_full_backtest(adapter):
     df_sorted = df_backtest.sort_values("timestamp").reset_index(drop=True)
     end_price = df_sorted.iloc[-1]["close"]
     end_date = df_sorted.iloc[-1]["timestamp"]
+    if adapter.get_benchmark_prices is not None:
+        benchmark_df = adapter.get_benchmark_prices(df, config, extra_data=extra_data)
+        benchmark_df = benchmark_df.sort_values("timestamp").reset_index(drop=True)
+    else:
+        benchmark_df = df_sorted[["timestamp", "close"]]
 
     period_boundaries = build_performance_period_boundaries(end_date, since_date)
 
@@ -390,7 +395,7 @@ def _run_full_backtest(adapter):
             open_entry_time,
             open_entry_price,
             equity_curve=result.equity_curve,
-            benchmark_prices=price_path_from_period(df_sorted, p_start),
+            benchmark_prices=price_path_from_period(benchmark_df, p_start),
             timeframe=config.timeframe,
             use_equity_curve_returns=adapter.run_backtest is not None,
         )
@@ -458,7 +463,7 @@ def _run_full_backtest(adapter):
         periods=periods_data,
         provenance=provenance,
     )
-    generate_equity_chart(result, charts_dir / "equity.png", benchmark_prices=df_sorted[["timestamp", "close"]])
+    generate_equity_chart(result, charts_dir / "equity.png", benchmark_prices=benchmark_df)
     # Build extra_series for multi-asset chart overlay (only secondary_symbol)
     chart_extra_series = None
     secondary_symbol = getattr(config, 'secondary_symbol', None)

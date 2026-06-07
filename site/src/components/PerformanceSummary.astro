@@ -18,6 +18,8 @@ interface Props {
 }
 
 const { defaultPerf, periods, periodsJson, defaultRangeJson, backtestHref } = Astro.props;
+const defaultMaxDrawdown = Math.abs(defaultPerf.max_drawdown_pct);
+const defaultBuyHoldMaxDrawdown = Math.abs(defaultPerf.buy_hold_max_drawdown_pct);
 ---
 
 <section class="mb-10">
@@ -46,11 +48,11 @@ const { defaultPerf, periods, periodsJson, defaultRangeJson, backtestHref } = As
     </div>
     <div class="border border-gray-800 rounded-lg p-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.drawdown">Max Drawdown</p>
-      <p id="perf-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.max_drawdown_pct}%</p>
+      <p id="perf-drawdown" class="text-xl font-mono text-red-400">-{defaultMaxDrawdown}%</p>
     </div>
     <div class="border border-gray-800 rounded-lg p-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.buyhold_drawdown">B&H Max DD</p>
-      <p id="perf-buyhold-drawdown" class="text-xl font-mono text-red-400">-{defaultPerf.buy_hold_max_drawdown_pct}%</p>
+      <p id="perf-buyhold-drawdown" class="text-xl font-mono text-red-400">-{defaultBuyHoldMaxDrawdown}%</p>
     </div>
     <div class="border border-gray-800 rounded-lg p-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide" data-i18n="label.sharpe">Sharpe (Ann.)</p>
@@ -122,8 +124,8 @@ const { defaultPerf, periods, periodsJson, defaultRangeJson, backtestHref } = As
 
       setVal('perf-return', p.total_return_pct, '%');
       setVal('perf-buyhold', p.buy_hold_return_pct, '%');
-      document.getElementById('perf-drawdown').textContent = `-${p.max_drawdown_pct}%`;
-      document.getElementById('perf-buyhold-drawdown').textContent = `-${p.buy_hold_max_drawdown_pct}%`;
+      document.getElementById('perf-drawdown').textContent = `-${Math.abs(p.max_drawdown_pct)}%`;
+      document.getElementById('perf-buyhold-drawdown').textContent = `-${Math.abs(p.buy_hold_max_drawdown_pct)}%`;
       document.getElementById('perf-sharpe').textContent = p.sharpe_ratio;
       document.getElementById('perf-winrate').textContent = `${p.win_rate_pct}%`;
       document.getElementById('perf-trades').textContent = p.total_trades;

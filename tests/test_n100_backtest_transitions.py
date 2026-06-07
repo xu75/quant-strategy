@@ -428,3 +428,38 @@ class TestRealizedReturnAndOpenTrade:
 
         assert result2.has_open_position is False
         assert result2.realized_return_pct == result2.total_return_pct
+
+
+class TestBenchmarkSemantics:
+    """N100 Guard-Z benchmark must be the split-adjusted 513100 path."""
+
+    @patch("strategies.n100_guard_z.signal._fastre_signals")
+    @patch("strategies.n100_guard_z.signal._zscore_rotation")
+    def test_buy_hold_uses_adjusted_513100_close(self, mock_rotation, mock_fastre):
+        dates = pd.date_range("2024-01-01", periods=5, freq="D", tz="UTC")
+        qqq = pd.DataFrame({"timestamp": dates, "close": [100, 101, 102, 103, 104]})
+        spy = pd.DataFrame({"timestamp": dates, "close": [100, 100, 100, 100, 100]})
+        etf = pd.DataFrame({
+            "timestamp": dates,
+            "open": [5.0, 5.1, 1.04, 1.05, 1.06],
+            "close": [5.0, 5.1, 1.04, 1.05, 1.06],
+            "adj_close": [5.0, 5.1, 5.2, 5.25, 5.3],
+        })
+        nav = pd.DataFrame({"timestamp": dates, "513100": [5.0, 5.1, 1.04, 1.05, 1.06]})
+
+        mock_fastre.return_value = pd.DataFrame({
+            "timestamp": dates,
+            "qqq_close": qqq["close"],
+            "risk_on": [False] * len(dates),
+            "state": ["TRUE_CASH_STRETCH"] * len(dates),
+        })
+        mock_rotation.return_value = pd.DataFrame({"selected_etf": [""] * len(dates)})
+
+        result = run_backtest(
+            qqq,
+            StrategyConfig(),
+            extra_data={"spy": spy, "etf_513100": etf, "etf_nav": nav},
+        )
+
+        assert result.buy_hold_return_pct == pytest.approx(6.0)
+        assert result.buy_hold_max_drawdown_pct == pytest.approx(0.0)

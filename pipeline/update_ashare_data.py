@@ -34,6 +34,60 @@ def _load_etf_pool() -> dict[str, str]:
 N100_ETF_POOL = _load_etf_pool()
 
 
+def _to_utc_ns(values) -> pd.Series:
+    """Normalize datetimes to pandas nanosecond UTC for merge_asof."""
+    return pd.to_datetime(values, utc=True).astype("datetime64[ns, UTC]")
+
+
+def _align_split_factor_to_price_jumps(
+    close: pd.Series,
+    split_factor: pd.Series,
+) -> pd.Series:
+    """Delay large split-factor jumps until the market price actually jumps."""
+    close = close.astype(float).reset_index(drop=True)
+    factor = split_factor.astype(float).ffill().fillna(1.0).reset_index(drop=True)
+    if factor.empty:
+        return factor
+
+    current = float(factor.iloc[0])
+    pending = None
+    aligned = [current]
+
+    for i in range(1, len(factor)):
+        candidate = float(factor.iloc[i])
+        prev_close = float(close.iloc[i - 1])
+        curr_close = float(close.iloc[i])
+        raw_ratio = curr_close / prev_close if prev_close > 0 else 1.0
+
+        large_up = candidate > current * 1.5
+        large_down = candidate < current / 1.5
+
+        if pending is not None:
+            if raw_ratio < 0.7 or raw_ratio > 1.5:
+                current = pending
+                pending = None
+            elif not (candidate > current * 1.5 or candidate < current / 1.5):
+                pending = None
+
+        if pending is None:
+            if large_up:
+                if raw_ratio < 0.7:
+                    current = candidate
+                else:
+                    pending = candidate
+            elif large_down:
+                if raw_ratio > 1.5:
+                    current = candidate
+                else:
+                    pending = candidate
+            else:
+                current = candidate
+
+        aligned.append(current)
+
+    return pd.Series(aligned, index=split_factor.index)
+
+
 def _fetch_etf_daily(code: str, start_date: str = "20130101") -> pd.DataFrame:
     """Fetch daily OHLCV for a single A-share ETF via AKShare."""
     try:
@@ -111,32 +165,67 @@ def _fetch_etf_nav(code: str, start_date: str = "20130101") -> pd.DataFrame:
 
 
 def _compute_adj_close(df: pd.DataFrame, nav_df: pd.DataFrame = None) -> pd.DataFrame:
-    """Compute adj_close using terminal split factor (constant multiplier).
+    """Compute adj_close using the date-specific cumulative NAV factor.
 
-    terminal_split_factor = cum_nav_terminal / nav_terminal
-    adj_close = close * terminal_split_factor
+    split_factor(date) = cum_nav(date) / nav(date)
+    adj_close(date) = close(date) * split_factor(date)
 
-    This uses the TERMINAL (latest) ratio as a constant across the entire
-    series, ensuring no fake returns appear on split dates.
-    If NAV data unavailable, falls back to adj_close = close (factor = 1.0).
+    The factor is aligned backward from the latest available NAV, so market data
+    on a trading day without published NAV uses the previous fund NAV factor.
+    If NAV data is unavailable, falls back to adj_close = close.
     """
     df = df.copy()
 
     if nav_df is not None and "cum_nav" in nav_df.columns and "nav" in nav_df.columns:
-        # Get terminal values (latest row with valid data)
-        valid = nav_df.dropna(subset=["nav", "cum_nav"])
+        valid = nav_df.dropna(subset=["nav", "cum_nav"]).copy()
+        valid = valid[valid["nav"] > 0]
         if not valid.empty:
-            terminal = valid.iloc[-1]
-            nav_terminal = terminal["nav"]
-            cum_nav_terminal = terminal["cum_nav"]
-            if nav_terminal > 0:
-                split_factor = cum_nav_terminal / nav_terminal
-                df["adj_close"] = df["close"] * split_factor
-                return df
+            prices = df.drop(columns=["adj_close"], errors="ignore").copy()
+            prices["datetime"] = _to_utc_ns(prices["datetime"])
+            valid["datetime"] = _to_utc_ns(valid["datetime"])
+            valid["split_factor"] = valid["cum_nav"] / valid["nav"]
+
+            adjusted = pd.merge_asof(
+                prices.sort_values("datetime"),
+                valid[["datetime", "split_factor"]].sort_values("datetime"),
+                on="datetime",
+                direction="backward",
+            )
+            adjusted["split_factor"] = adjusted["split_factor"].ffill().fillna(1.0)
+            adjusted["split_factor"] = _align_split_factor_to_price_jumps(
+                adjusted["close"],
+                adjusted["split_factor"],
+            )
+            adjusted["adj_close"] = adjusted["close"] * adjusted["split_factor"]
+            return adjusted.drop(columns=["split_factor"])
 
     # Fallback: no split detected
     df["adj_close"] = df["close"]
     return df
+
+
+def _merge_existing_daily(
+    existing: pd.DataFrame,
+    fetched: pd.DataFrame,
+    nav_df: pd.DataFrame | None,
+) -> pd.DataFrame:
+    """Merge refetched overlap rows and recompute adj_close for the full file."""
+    if existing.empty:
+        combined = fetched.copy()
+    else:
+        combined = pd.concat([existing, fetched], ignore_index=True)
+        combined["datetime"] = _to_utc_ns(combined["datetime"])
+        combined = combined.drop_duplicates(subset=["datetime"], keep="last")
+
+    combined = combined.sort_values("datetime").reset_index(drop=True)
+    if nav_df is not None and {"nav", "cum_nav"}.issubset(nav_df.columns):
+        return _compute_adj_close(combined, nav_df=nav_df)
+
+    if "adj_close" not in combined.columns:
+        combined["adj_close"] = combined["close"]
+    else:
+        combined["adj_close"] = combined["adj_close"].fillna(combined["close"])
+    return combined
 
 
 def _update_single_etf(code: str) -> int:
@@ -163,20 +252,15 @@ def _update_single_etf(code: str) -> int:
     except Exception:
         nav_df = None
 
-    df = _compute_adj_close(df, nav_df=nav_df)
-
     if not existing.empty:
-        # Append only new rows
-        df = df[df["datetime"] > last_date]
-        if df.empty:
-            return 0
-        combined = pd.concat([existing, df], ignore_index=True)
+        new_rows = df[df["datetime"] > last_date]
+        new_count = len(new_rows)
     else:
-        combined = df
+        new_count = len(df)
 
-    combined = combined.drop_duplicates(subset=["datetime"]).sort_values("datetime")
+    combined = _merge_existing_daily(existing, df, nav_df)
     combined.to_csv(csv_path, index=False)
-    return len(df)
+    return new_count
 
 
 def _update_nav_data() -> int:
