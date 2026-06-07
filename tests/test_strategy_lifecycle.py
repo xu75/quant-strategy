@@ -64,3 +64,15 @@ def test_echotrend_backtest_page_displays_lifecycle_banner():
 
     assert "StrategyStatusBanner" in source
     assert "status" in source
+
+
+def test_backtest_pages_format_negative_drawdown_once():
+    backtest_source = (SITE_PAGES / "backtest" / "[slug].astro").read_text()
+    summary_source = (PROJECT_ROOT / "site" / "src" / "components" / "PerformanceSummary.astro").read_text()
+
+    assert "Math.abs(perf.max_drawdown_pct)" in backtest_source
+    assert "Math.abs(perf.buy_hold_max_drawdown_pct)" in backtest_source
+    assert "Math.abs(defaultPerf.max_drawdown_pct)" in summary_source
+    assert "Math.abs(defaultPerf.buy_hold_max_drawdown_pct)" in summary_source
+    assert "Math.abs(p.max_drawdown_pct)" in summary_source
+    assert "Math.abs(p.buy_hold_max_drawdown_pct)" in summary_source

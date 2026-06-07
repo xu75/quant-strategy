@@ -232,6 +232,30 @@ class TestPeriodMetricsCrossBoundary:
 
         assert result is None
 
+    def test_buy_hold_return_uses_benchmark_path_when_provided(self):
+        """Strategy summaries can use a benchmark different from the traded symbol."""
+        period_start = pd.Timestamp("2025-01-01", tz="UTC")
+        benchmark = pd.DataFrame({
+            "timestamp": pd.to_datetime(
+                ["2025-01-01", "2025-01-02", "2025-01-03"],
+                utc=True,
+            ),
+            "close": [10.0, 12.0, 15.0],
+        })
+
+        result = compute_period_metrics(
+            trades=[],
+            period_start=period_start,
+            end_price=200.0,
+            start_price=100.0,
+            benchmark_prices=benchmark,
+            equity_curve=benchmark.assign(equity=[1.0, 1.0, 1.0]),
+            use_equity_curve_returns=True,
+        )
+
+        assert result is not None
+        assert result["buy_hold_return_pct"] == pytest.approx(50.0)
+
 
 class TestSharpeAnnualization:
     """P1 regression: Sharpe must use actual equity cadence, not nominal timeframe."""

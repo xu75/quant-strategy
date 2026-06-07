@@ -311,6 +311,23 @@ def _unpack_extra_data(kwargs: dict) -> tuple:
     return spy_df, etf_df, etf_open_df, etf_adj_df, nav_df
 
 
+def get_benchmark_prices(
+    df: pd.DataFrame,
+    config: StrategyConfig = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Return the split-adjusted 513100 benchmark path for B&H metrics."""
+    extra = kwargs.get("extra_data", kwargs)
+    benchmark = extra.get("etf_513100")
+    if isinstance(benchmark, pd.DataFrame) and "timestamp" in benchmark.columns:
+        price_col = "adj_close" if "adj_close" in benchmark.columns else "close"
+        if price_col in benchmark.columns:
+            result = benchmark[["timestamp", price_col]].rename(columns={price_col: "close"})
+            return result.dropna(subset=["timestamp", "close"]).sort_values("timestamp").reset_index(drop=True)
+
+    return df[["timestamp", "close"]].dropna().sort_values("timestamp").reset_index(drop=True)
+
+
 # ---------------------------------------------------------------------------
 # Public Interface
 # ---------------------------------------------------------------------------
@@ -696,8 +713,9 @@ def run_backtest(df: pd.DataFrame, config: StrategyConfig = None,
     bh_etf = "513100"
     bt_start = ashare_signal_days[0]
     bt_end = ashare_signal_days[-1]
-    if bh_etf in etf_full.columns:
-        bh_prices = etf_full[bh_etf].loc[bt_start:bt_end].dropna()
+    bh_source = adj_full if adj_full is not None and bh_etf in adj_full.columns else etf_full
+    if bh_etf in bh_source.columns:
+        bh_prices = bh_source[bh_etf].loc[bt_start:bt_end].dropna()
         bh_return = (bh_prices.iloc[-1] / bh_prices.iloc[0] - 1) * 100 if len(bh_prices) > 1 else 0
         bh_equity = bh_prices / bh_prices.iloc[0]
         bh_peak = bh_equity.cummax()

@@ -404,8 +404,20 @@ def compute_period_metrics(
             wins = 0
             returns_list = []
 
-    buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
-    buy_hold_max_dd = _max_drawdown(benchmark_prices) * 100 if benchmark_prices is not None else 0.0
+    if benchmark_prices is not None:
+        if isinstance(benchmark_prices, pd.DataFrame):
+            benchmark_series = benchmark_prices["close"].astype(float).dropna()
+        else:
+            benchmark_series = pd.Series(benchmark_prices, dtype=float).dropna()
+        if len(benchmark_series) >= 2 and float(benchmark_series.iloc[0]) > 0:
+            buy_hold = (float(benchmark_series.iloc[-1]) / float(benchmark_series.iloc[0]) - 1) * 100
+            buy_hold_max_dd = _max_drawdown(benchmark_series) * 100
+        else:
+            buy_hold = 0.0
+            buy_hold_max_dd = 0.0
+    else:
+        buy_hold = (end_price - start_price) / start_price * 100 if start_price > 0 else 0.0
+        buy_hold_max_dd = 0.0
     all_closed = cross_boundary + in_period
     avg_hold = sum(t.hold_bars for t in all_closed) / closed_count if closed_count > 0 else 0.0
 

@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from pipeline.report import generate_status_json
-from strategies.n100_guard_z.signal import Signal, StrategyConfig, compute_signals
+from strategies.n100_guard_z.signal import (
+    Signal,
+    StrategyConfig,
+    compute_signals,
+    get_benchmark_prices,
+)
 
 
 def test_n100_signal_satisfies_status_report_contract(tmp_path):
@@ -134,3 +140,21 @@ def test_n100_carry_forward_rotation_when_qqq_leads_etf():
     # Must carry forward last known ETF, not be empty
     assert latest.current_etf == "513100"
     assert latest.holding != "—"
+
+
+def test_n100_benchmark_prices_use_513100_adj_close():
+    qqq_dates = pd.date_range("2024-01-01", periods=3, freq="D", tz="UTC")
+    qqq = pd.DataFrame({"timestamp": qqq_dates, "close": [100.0, 101.0, 102.0]})
+    etf = pd.DataFrame({
+        "timestamp": qqq_dates,
+        "close": [5.0, 1.01, 1.02],
+        "adj_close": [5.0, 5.05, 5.10],
+    })
+
+    benchmark = get_benchmark_prices(
+        qqq,
+        StrategyConfig(),
+        extra_data={"etf_513100": etf},
+    )
+
+    assert benchmark["close"].tolist() == pytest.approx([5.0, 5.05, 5.10])
