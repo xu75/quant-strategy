@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-10T12:07:01.254462+00:00",
+  "updated_at": "2026-06-10T16:23:57.993199+00:00",
   "strategy": {
     "name": "EchoTrend 240 V3",
     "code": "echotrend_240_v3",
@@ -9,16 +9,16 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 117.02,
+    "price": 118.1,
     "ma_value": 0.0,
-    "timestamp": "2026-06-09T19:30:00+00:00",
+    "timestamp": "2026-06-10T14:30:00+00:00",
     "hold_bars": 0,
     "reason": "Exposure 0.02, mode=risk_off, regime=bear",
     "regime": "bear",
     "mode": "risk_off",
-    "target_exposure": 0.0225,
+    "target_exposure": 0.0227,
     "scores": {
-      "trend": 0.0,
+      "trend": 20.0,
       "risk": 0.0,
       "rs": 50.0,
       "raw": 1.0,
