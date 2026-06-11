@@ -427,8 +427,8 @@
         "total_trades": 1,
         "avg_hold_bars": 10.0,
         "sharpe_ratio": -2.669,
-        "buy_hold_return_pct": -1.92,
-        "buy_hold_max_drawdown_pct": 10.61,
+        "buy_hold_return_pct": -4.16,
+        "buy_hold_max_drawdown_pct": 11.46,
         "has_open_position": true
       }
     },
@@ -443,7 +443,7 @@
         "total_trades": 6,
         "avg_hold_bars": 63.0,
         "sharpe_ratio": 1.469,
-        "buy_hold_return_pct": 36.76,
+        "buy_hold_return_pct": 33.63,
         "buy_hold_max_drawdown_pct": 16.3,
         "has_open_position": true
       }
@@ -459,7 +459,7 @@
         "total_trades": 9,
         "avg_hold_bars": 75.9,
         "sharpe_ratio": 1.281,
-        "buy_hold_return_pct": 53.73,
+        "buy_hold_return_pct": 50.22,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
       }
@@ -475,7 +475,7 @@
         "total_trades": 14,
         "avg_hold_bars": 70.8,
         "sharpe_ratio": 1.507,
-        "buy_hold_return_pct": 108.06,
+        "buy_hold_return_pct": 103.3,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
       }
@@ -491,7 +491,7 @@
         "total_trades": 16,
         "avg_hold_bars": 75.9,
         "sharpe_ratio": 1.531,
-        "buy_hold_return_pct": 137.21,
+        "buy_hold_return_pct": 131.79,
         "buy_hold_max_drawdown_pct": 27.5,
         "has_open_position": true
       }
@@ -525,9 +525,9 @@
         "symbol": "513100",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3124,
+        "rows": 3125,
         "start": "2013-07-31T00:00:00+00:00",
-        "end": "2026-06-10T00:00:00+00:00"
+        "end": "2026-06-11T00:00:00+00:00"
       },
       {
         "key": "etf_159941",
