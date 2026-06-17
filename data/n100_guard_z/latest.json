@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-16T22:34:09.830477+00:00",
+  "updated_at": "2026-06-17T05:20:35.775083+00:00",
   "strategy": {
     "name": "N100 Guard-Z",
     "code": "n100_guard_z",
@@ -8,14 +8,14 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 721.34,
-    "ma_value": 616.06,
-    "timestamp": "2026-06-12T00:00:00+00:00",
+    "price": 729.86,
+    "ma_value": 616.81,
+    "timestamp": "2026-06-16T00:00:00+00:00",
     "hold_bars": 0,
     "reason": "NDX_INVESTED",
     "holding": "\u7eb3\u65af\u8fbe\u514b100ETF\u62db\u5546",
-    "qqq_12m": 0.36781320418483876,
-    "spy_12m": 0.2522165765967759,
+    "qqq_12m": 0.38193474907564773,
+    "spy_12m": 0.2655607968949747,
     "current_etf": "159659",
     "current_zscore": 0.626389526582057,
     "current_premium": 0.045769932419679416
