@@ -18,20 +18,20 @@
     "internal_code": "n100_guard_z"
   },
   "performance": {
-    "total_return_pct": 693.9,
-    "realized_return_pct": 700.51,
+    "total_return_pct": 686.26,
+    "realized_return_pct": 700.56,
     "max_drawdown_pct": -30.18,
     "win_rate_pct": 73.2,
     "total_trades": 41,
     "avg_hold_bars": 73.7,
-    "sharpe_ratio": 1.027,
-    "buy_hold_return_pct": 1025.37,
+    "sharpe_ratio": 1.023,
+    "buy_hold_return_pct": 1024.88,
     "buy_hold_max_drawdown_pct": -28.57,
     "has_open_position": true
   },
   "period": {
     "start": "2013-07-31T00:00:00+00:00",
-    "end": "2026-06-16T00:00:00+00:00"
+    "end": "2026-06-17T00:00:00+00:00"
   },
   "trades": [
     {
@@ -406,10 +406,10 @@
     {
       "entry_time": "2026-06-01T00:00:00+00:00",
       "entry_price": 2.41,
-      "exit_time": "2026-06-16T00:00:00+00:00",
+      "exit_time": "2026-06-17T00:00:00+00:00",
       "exit_price": 2.4,
-      "hold_bars": 15,
-      "pnl_pct": -0.52,
+      "hold_bars": 16,
+      "pnl_pct": -0.56,
       "asset": "159659",
       "status": "open"
     }
@@ -420,13 +420,13 @@
       "start": "2026-05-26T00:00:00+00:00",
       "end": "2026-06-17T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 2.98,
-        "realized_return_pct": 2.98,
+        "total_return_pct": 1.99,
+        "realized_return_pct": 1.99,
         "max_drawdown_pct": 10.25,
         "win_rate_pct": 0.0,
         "total_trades": 1,
         "avg_hold_bars": 10.0,
-        "sharpe_ratio": 1.426,
+        "sharpe_ratio": 0.994,
         "buy_hold_return_pct": 4.3,
         "buy_hold_max_drawdown_pct": 10.61,
         "has_open_position": true
@@ -436,13 +436,13 @@
       "start": "2025-06-17T00:00:00+00:00",
       "end": "2026-06-17T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 39.66,
-        "realized_return_pct": 39.66,
+        "total_return_pct": 38.32,
+        "realized_return_pct": 38.32,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 66.67,
         "total_trades": 6,
         "avg_hold_bars": 63.0,
-        "sharpe_ratio": 1.756,
+        "sharpe_ratio": 1.703,
         "buy_hold_return_pct": 44.88,
         "buy_hold_max_drawdown_pct": 16.3,
         "has_open_position": true
@@ -452,13 +452,13 @@
       "start": "2024-06-17T00:00:00+00:00",
       "end": "2026-06-17T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 62.75,
-        "realized_return_pct": 62.75,
+        "total_return_pct": 61.19,
+        "realized_return_pct": 61.19,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 66.67,
         "total_trades": 9,
         "avg_hold_bars": 75.9,
-        "sharpe_ratio": 1.385,
+        "sharpe_ratio": 1.357,
         "buy_hold_return_pct": 58.15,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
@@ -468,13 +468,13 @@
       "start": "2023-06-17T00:00:00+00:00",
       "end": "2026-06-17T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 114.91,
-        "realized_return_pct": 114.91,
+        "total_return_pct": 112.84,
+        "realized_return_pct": 112.84,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 71.43,
         "total_trades": 14,
         "avg_hold_bars": 70.8,
-        "sharpe_ratio": 1.524,
+        "sharpe_ratio": 1.504,
         "buy_hold_return_pct": 107.18,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
@@ -484,13 +484,13 @@
       "start": "2021-06-17T00:00:00+00:00",
       "end": "2026-06-17T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 204.6,
-        "realized_return_pct": 204.6,
+        "total_return_pct": 201.67,
+        "realized_return_pct": 201.67,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 75.0,
         "total_trades": 16,
         "avg_hold_bars": 75.9,
-        "sharpe_ratio": 1.606,
+        "sharpe_ratio": 1.592,
         "buy_hold_return_pct": 148.37,
         "buy_hold_max_drawdown_pct": 27.5,
         "has_open_position": true
@@ -633,9 +633,9 @@
         "symbol": "N100_ETF_NAV",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3161,
+        "rows": 3162,
         "start": "2013-04-25T00:00:00+00:00",
-        "end": "2026-06-16T00:00:00+00:00"
+        "end": "2026-06-17T00:00:00+00:00"
       }
     ]
   }
