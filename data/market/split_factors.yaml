@@ -1,0 +1,33 @@
+# Known historical split/consolidation factors for A-share ETFs.
+# These are pinned facts that must not be overridden by external NAV data.
+#
+# Purpose: When the pipeline recomputes adj_close from AKShare NAV, it uses
+# these pinned factors as the source of truth. If NAV-derived factors conflict
+# with pinned values (>50% divergence), the pipeline rejects the update.
+#
+# Format:
+#   code: ETF security code
+#   event_date: date the split/consolidation took effect (price jumped)
+#   factor: cumulative multiplier applied to close to get adj_close
+#           (adj_close = close * factor for dates ON or AFTER event_date)
+#   pre_factor: factor for dates BEFORE event_date (typically 1.0)
+#   event_type: "split" (shares increase, price drops) or "consolidation" (reverse)
+#   note: human-readable explanation
+#
+# Maintenance: When a new split/consolidation is detected (large price jump +
+# factor change in NAV), add an entry here and commit.
+
+splits:
+  - code: "513100"
+    event_date: "2022-01-14"
+    factor: 5.0
+    pre_factor: 1.0
+    event_type: "split"
+    note: "5:1 份额拆分。close从~5跌到~1，shares增5倍。cum_nav/nav ≈ 5 for all dates after."
+
+  - code: "159941"
+    event_date: "2022-07-05"
+    factor: 4.0
+    pre_factor: 1.0
+    event_type: "split"
+    note: "4:1 份额拆分。close从~2.38跌到~0.60，shares增4倍。cum_nav/nav ≈ 4 for all dates after."

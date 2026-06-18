@@ -21,7 +21,12 @@ import pandas as pd
 import yaml
 
 CANONICAL_MARKET_DIR = Path(__file__).parent.parent / "data" / "market"
+SPLIT_FACTORS_PATH = CANONICAL_MARKET_DIR / "split_factors.yaml"
 LOG_PREFIX = "[update-ashare]"
+
+# Tolerance for adj_close regression guard: if existing adj_close for an
+# overlap row would change by more than this fraction, reject the update.
+ADJ_CLOSE_DRIFT_TOLERANCE = 0.10
 
 
 def _load_etf_pool() -> dict[str, str]:
@@ -31,7 +36,31 @@ def _load_etf_pool() -> dict[str, str]:
         pool = yaml.safe_load(f)
     return {etf["code"]: etf["official_short_name"] for etf in pool["etfs"]}
 
+
+def _load_split_factors() -> dict[str, list[dict]]:
+    """Load pinned split factors from split_factors.yaml.
+
+    Returns dict mapping ETF code to list of split events, each with:
+      event_date (pd.Timestamp), factor (float), pre_factor (float).
+    """
+    if not SPLIT_FACTORS_PATH.exists():
+        return {}
+    with open(SPLIT_FACTORS_PATH, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    result: dict[str, list[dict]] = {}
+    for entry in data.get("splits", []):
+        code = entry["code"]
+        event = {
+            "event_date": pd.Timestamp(entry["event_date"], tz="UTC"),
+            "factor": float(entry["factor"]),
+            "pre_factor": float(entry.get("pre_factor", 1.0)),
+        }
+        result.setdefault(code, []).append(event)
+    return result
+
+
 N100_ETF_POOL = _load_etf_pool()
+PINNED_SPLITS = _load_split_factors()
 
 
 def _to_utc_ns(values) -> pd.Series:
@@ -164,18 +193,40 @@ def _fetch_etf_nav(code: str, start_date: str = "20130101") -> pd.DataFrame:
     return df.sort_values("datetime").reset_index(drop=True)
 
 
-def _compute_adj_close(df: pd.DataFrame, nav_df: pd.DataFrame = None) -> pd.DataFrame:
-    """Compute adj_close using the date-specific cumulative NAV factor.
+def _compute_adj_close(
+    df: pd.DataFrame,
+    nav_df: pd.DataFrame = None,
+    code: str | None = None,
+) -> pd.DataFrame:
+    """Compute adj_close using pinned split factors (preferred) or NAV-derived factors.
+
+    Priority:
+      1. Pinned factors from split_factors.yaml (deterministic, immune to API drift)
+      2. NAV-derived factors via cum_nav/nav (only for ETFs without pinned splits)
+      3. Fallback: adj_close = close (no split information available)
 
     split_factor(date) = cum_nav(date) / nav(date)
     adj_close(date) = close(date) * split_factor(date)
-
-    The factor is aligned backward from the latest available NAV, so market data
-    on a trading day without published NAV uses the previous fund NAV factor.
-    If NAV data is unavailable, falls back to adj_close = close.
     """
     df = df.copy()
 
+    # --- Priority 1: Use pinned split factors if available ---
+    pinned = PINNED_SPLITS.get(code, []) if code else []
+    if pinned:
+        prices = df.drop(columns=["adj_close"], errors="ignore").copy()
+        prices["datetime"] = _to_utc_ns(prices["datetime"])
+        # Build factor series from pinned events (sorted by event_date)
+        events = sorted(pinned, key=lambda e: e["event_date"])
+        factor_series = pd.Series(1.0, index=prices.index)
+        for event in events:
+            event_ts = pd.Timestamp(event["event_date"]).tz_convert("UTC")
+            mask = prices["datetime"] >= event_ts
+            factor_series[mask] = event["factor"]
+            factor_series[~mask] = event["pre_factor"]
+        prices["adj_close"] = prices["close"] * factor_series
+        return prices
+
+    # --- Priority 2: NAV-derived factors ---
     if nav_df is not None and "cum_nav" in nav_df.columns and "nav" in nav_df.columns:
         valid = nav_df.dropna(subset=["nav", "cum_nav"]).copy()
         valid = valid[valid["nav"] > 0]
@@ -199,15 +250,62 @@ def _compute_adj_close(df: pd.DataFrame, nav_df: pd.DataFrame = None) -> pd.Data
             adjusted["adj_close"] = adjusted["close"] * adjusted["split_factor"]
             return adjusted.drop(columns=["split_factor"])
 
-    # Fallback: no split detected
+    # --- Priority 3: Fallback ---
     df["adj_close"] = df["close"]
     return df
+
+
+def _check_adj_close_regression(
+    existing: pd.DataFrame,
+    recomputed: pd.DataFrame,
+    code: str,
+) -> None:
+    """Fail-closed guard: reject if recomputed adj_close diverges from existing.
+
+    Compares overlap rows (same datetime) between existing and recomputed.
+    If any row's adj_close changes by more than ADJ_CLOSE_DRIFT_TOLERANCE,
+    raises ValueError to prevent writing corrupted data.
+    """
+    if existing.empty or "adj_close" not in existing.columns:
+        return
+
+    existing_cp = existing[["datetime", "adj_close"]].copy()
+    existing_cp["datetime"] = _to_utc_ns(existing_cp["datetime"])
+    recomputed_cp = recomputed[["datetime", "adj_close"]].copy()
+    recomputed_cp["datetime"] = _to_utc_ns(recomputed_cp["datetime"])
+
+    merged = existing_cp.merge(
+        recomputed_cp, on="datetime", suffixes=("_old", "_new")
+    )
+    if merged.empty:
+        return
+
+    # Only check rows where old adj_close is meaningful (not zero/nan)
+    valid = merged[merged["adj_close_old"].abs() > 1e-6].copy()
+    if valid.empty:
+        return
+
+    valid["drift"] = (
+        (valid["adj_close_new"] - valid["adj_close_old"]).abs()
+        / valid["adj_close_old"]
+    )
+    max_drift = valid["drift"].max()
+    if max_drift > ADJ_CLOSE_DRIFT_TOLERANCE:
+        worst = valid.loc[valid["drift"].idxmax()]
+        raise ValueError(
+            f"{LOG_PREFIX} REGRESSION GUARD: {code} adj_close drift {max_drift:.1%} "
+            f"exceeds {ADJ_CLOSE_DRIFT_TOLERANCE:.0%} tolerance. "
+            f"Worst row: {worst['datetime']} old={worst['adj_close_old']:.4f} "
+            f"new={worst['adj_close_new']:.4f}. "
+            f"Refusing to write. Check NAV data or update split_factors.yaml."
+        )
 
 
 def _merge_existing_daily(
     existing: pd.DataFrame,
     fetched: pd.DataFrame,
     nav_df: pd.DataFrame | None,
+    code: str | None = None,
 ) -> pd.DataFrame:
     """Merge refetched overlap rows and recompute adj_close for the full file."""
     if existing.empty:
@@ -219,7 +317,9 @@ def _merge_existing_daily(
 
     combined = combined.sort_values("datetime").reset_index(drop=True)
     if nav_df is not None and {"nav", "cum_nav"}.issubset(nav_df.columns):
-        return _compute_adj_close(combined, nav_df=nav_df)
+        return _compute_adj_close(combined, nav_df=nav_df, code=code)
+    if code and PINNED_SPLITS.get(code):
+        return _compute_adj_close(combined, code=code)
 
     if "adj_close" not in combined.columns:
         combined["adj_close"] = combined["close"]
@@ -258,7 +358,11 @@ def _update_single_etf(code: str) -> int:
     else:
         new_count = len(df)
 
-    combined = _merge_existing_daily(existing, df, nav_df)
+    combined = _merge_existing_daily(existing, df, nav_df, code=code)
+
+    # Regression guard: reject if existing adj_close would be corrupted
+    _check_adj_close_regression(existing, combined, code)
+
     combined.to_csv(csv_path, index=False)
     return new_count
 

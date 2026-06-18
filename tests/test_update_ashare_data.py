@@ -147,3 +147,136 @@ def test_merge_existing_prefers_refetched_overlap_and_recomputes_adj_close():
 
     assert combined.loc[combined["datetime"] == pd.Timestamp("2026-06-04", tz="UTC"), "adj_close"].iloc[0] == pytest.approx(11.2)
     assert combined.loc[combined["datetime"] == pd.Timestamp("2026-06-05", tz="UTC"), "adj_close"].iloc[0] == pytest.approx(11.1)
+
+
+# --- B1: Pinned split factor tests ---
+
+def test_pinned_factor_overrides_nav_derived_factor(monkeypatch):
+    """When split_factors.yaml has an entry, its factor takes precedence over NAV."""
+    # Simulate: NAV says factor=1 (corrupted), but pinned says factor=5
+    raw = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-10", "2026-06-11", "2026-06-12"],
+            utc=True,
+        ),
+        "open": [2.14, 2.12, 2.21],
+        "high": [2.17, 2.13, 2.22],
+        "low": [2.13, 2.09, 2.16],
+        "close": [2.143, 2.130, 2.162],
+        "volume": [4000000, 4800000, 4700000],
+    })
+    # Bad NAV: cum_nav ≈ nav → factor ≈ 1
+    bad_nav = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-10", "2026-06-11", "2026-06-12"],
+            utc=True,
+        ),
+        "nav": [1.94, 2.00, 2.02],
+        "cum_nav": [1.94, 2.00, 2.02],  # corrupted: should be ~9.7, ~10.0, ~10.1
+    })
+
+    # Inject pinned factor for 513100
+    monkeypatch.setattr(
+        update_ashare_data,
+        "PINNED_SPLITS",
+        {"513100": [{"event_date": pd.Timestamp("2022-01-14", tz="UTC"), "factor": 5.0, "pre_factor": 1.0}]},
+    )
+
+    adjusted = update_ashare_data._compute_adj_close(raw, nav_df=bad_nav, code="513100")
+
+    # Pinned factor=5 should win over NAV-derived factor=1
+    assert adjusted["adj_close"].iloc[0] == pytest.approx(2.143 * 5, rel=1e-4)
+    assert adjusted["adj_close"].iloc[1] == pytest.approx(2.130 * 5, rel=1e-4)
+    assert adjusted["adj_close"].iloc[2] == pytest.approx(2.162 * 5, rel=1e-4)
+
+
+def test_pinned_factor_applies_pre_factor_before_event_date(monkeypatch):
+    """Dates before the split event use pre_factor (typically 1.0)."""
+    raw = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2022-01-12", "2022-01-13", "2022-01-14", "2022-01-17"],
+            utc=True,
+        ),
+        "open": [5.0, 5.1, 1.0, 1.02],
+        "high": [5.1, 5.2, 1.05, 1.04],
+        "low": [4.9, 5.0, 0.98, 1.00],
+        "close": [5.048, 5.10, 1.01, 1.03],
+        "volume": [100, 120, 500, 400],
+    })
+
+    monkeypatch.setattr(
+        update_ashare_data,
+        "PINNED_SPLITS",
+        {"513100": [{"event_date": pd.Timestamp("2022-01-14", tz="UTC"), "factor": 5.0, "pre_factor": 1.0}]},
+    )
+
+    adjusted = update_ashare_data._compute_adj_close(raw, code="513100")
+
+    # Before event: adj_close = close * 1.0
+    assert adjusted["adj_close"].iloc[0] == pytest.approx(5.048, rel=1e-4)
+    assert adjusted["adj_close"].iloc[1] == pytest.approx(5.10, rel=1e-4)
+    # On/after event: adj_close = close * 5.0
+    assert adjusted["adj_close"].iloc[2] == pytest.approx(1.01 * 5, rel=1e-4)
+    assert adjusted["adj_close"].iloc[3] == pytest.approx(1.03 * 5, rel=1e-4)
+
+
+# --- B3: Regression guard tests ---
+
+def test_regression_guard_rejects_large_adj_close_drift():
+    """If recomputed adj_close diverges >10% from existing, raise ValueError."""
+    existing = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-09", "2026-06-10", "2026-06-11"],
+            utc=True,
+        ),
+        "close": [2.20, 2.143, 2.13],
+        "adj_close": [11.0, 10.715, 10.65],  # factor=5
+    })
+    # Simulates corrupted recomputation (factor=1)
+    recomputed = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-09", "2026-06-10", "2026-06-11"],
+            utc=True,
+        ),
+        "close": [2.20, 2.143, 2.13],
+        "adj_close": [2.20, 2.143, 2.13],  # factor=1 (broken!)
+    })
+
+    with pytest.raises(ValueError, match="REGRESSION GUARD"):
+        update_ashare_data._check_adj_close_regression(existing, recomputed, "513100")
+
+
+def test_regression_guard_allows_small_drift():
+    """Small differences (<10%) from rounding or NAV adjustments are OK."""
+    existing = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-09", "2026-06-10"],
+            utc=True,
+        ),
+        "close": [2.20, 2.143],
+        "adj_close": [11.0, 10.715],
+    })
+    # Tiny drift (< 1%) — acceptable
+    recomputed = pd.DataFrame({
+        "datetime": pd.to_datetime(
+            ["2026-06-09", "2026-06-10"],
+            utc=True,
+        ),
+        "close": [2.20, 2.143],
+        "adj_close": [11.05, 10.75],  # ~0.5% drift
+    })
+
+    # Should NOT raise
+    update_ashare_data._check_adj_close_regression(existing, recomputed, "513100")
+
+
+def test_regression_guard_allows_first_run():
+    """First run (no existing data) should never trigger the guard."""
+    recomputed = pd.DataFrame({
+        "datetime": pd.to_datetime(["2026-06-09"], utc=True),
+        "close": [2.20],
+        "adj_close": [2.20],
+    })
+
+    # Empty existing — should NOT raise
+    update_ashare_data._check_adj_close_regression(pd.DataFrame(), recomputed, "513100")
