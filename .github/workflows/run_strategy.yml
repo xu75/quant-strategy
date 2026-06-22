@@ -2,9 +2,9 @@ name: Run Strategy
 
 on:
   schedule:
-    # Every 4 hours at :05 past (UTC: 0, 4, 8, 12, 16, 20)
-    # Offset by 5 min to allow OKX candle close confirmation
-    - cron: '5 0,4,8,12,16,20 * * *'
+    # Once daily at UTC 08:05 (Beijing 16:05 / Pacific 01:05)
+    # Reduced from every-4h to stay within GitHub Actions free tier (2000 min/month)
+    - cron: '5 8 * * *'
   workflow_dispatch:
     inputs:
       mode:
