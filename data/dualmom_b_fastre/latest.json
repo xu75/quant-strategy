@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-22T05:47:13.842773+00:00",
+  "updated_at": "2026-06-23T11:49:20.906570+00:00",
   "strategy": {
     "name": "DualMom-B FastRe",
     "code": "dualmom_b_fastre",
@@ -8,14 +8,14 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 722.51,
-    "ma_value": 617.53,
-    "timestamp": "2026-06-17T00:00:00+00:00",
+    "price": 737.95,
+    "ma_value": 618.32,
+    "timestamp": "2026-06-22T00:00:00+00:00",
     "hold_bars": 0,
     "reason": "QQQ > SMA225, holding QQQ",
     "holding": "QQQ",
-    "qqq_12m": "+31.46%",
-    "spy_12m": "+20.94%"
+    "qqq_12m": "+34.27%",
+    "spy_12m": "+21.50%"
   },
   "position": {
     "in_position": true,
