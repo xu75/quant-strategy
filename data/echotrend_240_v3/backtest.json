@@ -21,20 +21,20 @@
     "warmup_bars": 960
   },
   "performance": {
-    "total_return_pct": 2785.94,
+    "total_return_pct": 2780.54,
     "realized_return_pct": 2813.35,
     "max_drawdown_pct": 71.6,
     "win_rate_pct": 41.57,
     "total_trades": 89,
     "avg_hold_bars": 300.8,
     "sharpe_ratio": 1.192,
-    "buy_hold_return_pct": 623.81,
+    "buy_hold_return_pct": 556.21,
     "buy_hold_max_drawdown_pct": 89.56,
     "has_open_position": true
   },
   "period": {
     "start": "2020-01-02T15:30:00+00:00",
-    "end": "2026-06-23T19:30:00+00:00"
+    "end": "2026-06-24T19:30:00+00:00"
   },
   "trades": [
     {
@@ -754,80 +754,80 @@
   "periods": {
     "since_launch": {
       "start": "2026-05-18T19:30:00+00:00",
-      "end": "2026-06-23T19:30:00+00:00",
+      "end": "2026-06-24T19:30:00+00:00",
       "performance": {
-        "total_return_pct": -1.2,
-        "realized_return_pct": -1.2,
-        "max_drawdown_pct": 1.23,
+        "total_return_pct": -1.38,
+        "realized_return_pct": -1.38,
+        "max_drawdown_pct": 1.43,
         "win_rate_pct": 0.0,
         "total_trades": 0,
         "avg_hold_bars": 0.0,
-        "sharpe_ratio": -5.847,
-        "buy_hold_return_pct": -37.71,
-        "buy_hold_max_drawdown_pct": 38.27,
+        "sharpe_ratio": -6.547,
+        "buy_hold_return_pct": -43.53,
+        "buy_hold_max_drawdown_pct": 44.48,
         "has_open_position": false
       }
     },
     "1y": {
-      "start": "2025-06-23T19:30:00+00:00",
-      "end": "2026-06-23T19:30:00+00:00",
+      "start": "2025-06-24T19:30:00+00:00",
+      "end": "2026-06-24T19:30:00+00:00",
       "performance": {
-        "total_return_pct": -8.95,
-        "realized_return_pct": -8.95,
+        "total_return_pct": -9.19,
+        "realized_return_pct": -9.19,
         "max_drawdown_pct": 35.39,
         "win_rate_pct": 22.22,
         "total_trades": 9,
         "avg_hold_bars": 379.6,
-        "sharpe_ratio": -0.066,
-        "buy_hold_return_pct": -71.7,
-        "buy_hold_max_drawdown_pct": 77.22,
+        "sharpe_ratio": -0.073,
+        "buy_hold_return_pct": -75.04,
+        "buy_hold_max_drawdown_pct": 79.51,
         "has_open_position": false
       }
     },
     "2y": {
-      "start": "2024-06-23T19:30:00+00:00",
-      "end": "2026-06-23T19:30:00+00:00",
+      "start": "2024-06-24T19:30:00+00:00",
+      "end": "2026-06-24T19:30:00+00:00",
       "performance": {
-        "total_return_pct": 114.78,
-        "realized_return_pct": 114.78,
+        "total_return_pct": 114.74,
+        "realized_return_pct": 114.74,
         "max_drawdown_pct": 43.79,
         "win_rate_pct": 41.67,
         "total_trades": 24,
         "avg_hold_bars": 330.0,
-        "sharpe_ratio": 0.97,
-        "buy_hold_return_pct": -29.5,
-        "buy_hold_max_drawdown_pct": 80.65,
+        "sharpe_ratio": 0.972,
+        "buy_hold_return_pct": -32.17,
+        "buy_hold_max_drawdown_pct": 82.6,
         "has_open_position": false
       }
     },
     "3y": {
-      "start": "2023-06-23T19:30:00+00:00",
-      "end": "2026-06-23T19:30:00+00:00",
+      "start": "2023-06-24T19:30:00+00:00",
+      "end": "2026-06-24T19:30:00+00:00",
       "performance": {
-        "total_return_pct": 831.55,
-        "realized_return_pct": 831.55,
+        "total_return_pct": 829.8,
+        "realized_return_pct": 829.8,
         "max_drawdown_pct": 57.23,
         "win_rate_pct": 44.19,
         "total_trades": 43,
         "avg_hold_bars": 304.4,
-        "sharpe_ratio": 1.542,
-        "buy_hold_return_pct": 214.66,
-        "buy_hold_max_drawdown_pct": 80.65,
+        "sharpe_ratio": 1.54,
+        "buy_hold_return_pct": 185.27,
+        "buy_hold_max_drawdown_pct": 82.6,
         "has_open_position": false
       }
     },
     "5y": {
-      "start": "2021-06-23T19:30:00+00:00",
-      "end": "2026-06-23T19:30:00+00:00",
+      "start": "2021-06-24T19:30:00+00:00",
+      "end": "2026-06-24T19:30:00+00:00",
       "performance": {
-        "total_return_pct": 901.99,
-        "realized_return_pct": 901.99,
+        "total_return_pct": 899.61,
+        "realized_return_pct": 899.61,
         "max_drawdown_pct": 57.23,
         "win_rate_pct": 42.19,
         "total_trades": 64,
         "avg_hold_bars": 306.7,
-        "sharpe_ratio": 1.108,
-        "buy_hold_return_pct": 83.95,
+        "sharpe_ratio": 1.107,
+        "buy_hold_return_pct": 61.66,
         "buy_hold_max_drawdown_pct": 84.86,
         "has_open_position": false
       }
@@ -843,54 +843,54 @@
         "symbol": "MSTR",
         "timeframe": "1H",
         "source": "canonical",
-        "rows": 27240,
+        "rows": 27247,
         "start": "2020-01-02T10:00:00+00:00",
-        "end": "2026-06-23T19:30:00+00:00"
+        "end": "2026-06-24T19:30:00+00:00"
       },
       {
         "key": "btc",
         "symbol": "BTC-USDT",
         "timeframe": "1H",
         "source": "canonical",
-        "rows": 56784,
+        "rows": 56807,
         "start": "2020-01-01T00:00:00+00:00",
-        "end": "2026-06-24T10:00:00+00:00"
+        "end": "2026-06-25T09:00:00+00:00"
       },
       {
         "key": "qqq",
         "symbol": "QQQ",
         "timeframe": "1H",
         "source": "canonical",
-        "rows": 27222,
+        "rows": 27229,
         "start": "2020-01-02T09:00:00+00:00",
-        "end": "2026-06-23T19:30:00+00:00"
+        "end": "2026-06-24T19:30:00+00:00"
       },
       {
         "key": "mstr_daily",
         "symbol": "MSTR",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 1621,
+        "rows": 1622,
         "start": "2020-01-02T00:00:00+00:00",
-        "end": "2026-06-23T00:00:00+00:00"
+        "end": "2026-06-24T00:00:00+00:00"
       },
       {
         "key": "btc_daily",
         "symbol": "BTC-USD",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 2366,
+        "rows": 2367,
         "start": "2020-01-01T00:00:00+00:00",
-        "end": "2026-06-22T16:00:00+00:00"
+        "end": "2026-06-23T16:00:00+00:00"
       },
       {
         "key": "qqq_daily",
         "symbol": "QQQ",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3384,
+        "rows": 3385,
         "start": "2013-01-02T00:00:00+00:00",
-        "end": "2026-06-23T00:00:00+00:00"
+        "end": "2026-06-24T00:00:00+00:00"
       }
     ]
   }
