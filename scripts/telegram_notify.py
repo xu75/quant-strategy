@@ -10,7 +10,17 @@ Requires env vars:
 
 Detection logic:
     Compares current latest.json against the previous git commit's version.
-    Only sends when current_signal.action changes to buy/sell.
+
+    Primary: in_position change (False→True = buy, True→False = sell).
+    Catches entries that happen between daily runs — the 'action' field is
+    only 'buy'/'sell' for the single crossover bar; after that it becomes
+    'hold'. in_position persists for the entire trade, so daily diffs are
+    always visible.
+
+    Secondary: ETF rotation (current_etf change with rotation_reason present).
+
+    Fallback: action field change to buy/sell, for strategies without
+    position tracking.
 """
 
 import json
@@ -29,8 +39,12 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 
-def get_previous_signal(strategy_id: str) -> str | None:
-    """Get the previous signal action from git HEAD~1."""
+def get_previous_signal_data(strategy_id: str) -> dict | None:
+    """Get the previous signal snapshot from git HEAD~1.
+
+    Returns a flat dict with keys: action, in_position, current_etf, holding.
+    Returns None if HEAD~1 does not contain the file.
+    """
     path = f"data/{strategy_id}/latest.json"
     try:
         result = subprocess.run(
@@ -40,9 +54,23 @@ def get_previous_signal(strategy_id: str) -> str | None:
         if result.returncode != 0:
             return None
         data = json.loads(result.stdout)
-        return data.get("current_signal", {}).get("action")
+        signal = data.get("current_signal", {})
+        position = data.get("position", {})
+        return {
+            "action": signal.get("action"),
+            "in_position": position.get("in_position"),
+            "current_etf": signal.get("current_etf"),
+            "holding": signal.get("holding"),
+        }
     except (json.JSONDecodeError, subprocess.TimeoutExpired, FileNotFoundError):
         return None
+
+
+# Keep for backward compatibility — thin wrapper around get_previous_signal_data.
+def get_previous_signal(strategy_id: str) -> str | None:
+    """Get the previous signal action from git HEAD~1."""
+    prev = get_previous_signal_data(strategy_id)
+    return prev.get("action") if prev else None
 
 
 def get_current_signal(strategy_id: str) -> dict | None:
@@ -72,6 +100,46 @@ def format_message(strategy_name: str, slug: str,
         f"Symbol: {symbol}",
         f"Price: ${price:,.2f}" if price else "",
         f"Reason: {reason}" if reason else "",
+        "",
+        f'<a href="{SITE_URL}/strategy/{slug}">View Strategy →</a>',
+    ]
+    return "\n".join(line for line in lines if line is not None)
+
+
+def format_rotation_message(strategy_name: str, slug: str,
+                            old_etf: str, new_etf: str, signal_data: dict) -> str:
+    """Format an HTML message for ETF rotation events."""
+    old_name = signal_data.get("old_holding", old_etf)
+    new_name = signal_data.get("holding", new_etf)
+    rotation_reason = signal_data.get("rotation_reason")
+
+    lines = [
+        f"\U0001f504 <b>{strategy_name}</b> — ETF Rotation",
+        "",
+        f"<code>{old_etf} → {new_etf}</code>",
+        f"{old_name} → {new_name}",
+    ]
+
+    if rotation_reason:
+        old_z = rotation_reason.get("old_zscore", 0)
+        new_z = rotation_reason.get("new_zscore", 0)
+        z_diff = rotation_reason.get("zscore_diff", 0)
+        z_thresh = rotation_reason.get("zscore_threshold", 0)
+        old_p = rotation_reason.get("old_premium", 0)
+        new_p = rotation_reason.get("new_premium", 0)
+        p_diff = rotation_reason.get("premium_diff", 0)
+        p_thresh = rotation_reason.get("premium_threshold", 0)
+        hold_days = rotation_reason.get("holding_days", 0)
+        hold_thresh = rotation_reason.get("holding_days_threshold", 0)
+
+        lines += [
+            "",
+            f"Z-Score: {old_z:.2f} → {new_z:.2f}  差值 {z_diff:.2f} > 阈值 {z_thresh}",
+            f"Premium: {old_p * 100:.4f}% → {new_p * 100:.4f}%  差值 {p_diff * 100:.4f}% > 阈值 {p_thresh * 100:.4f}%",
+            f"持有天数: {hold_days} ≥ {hold_thresh}",
+        ]
+
+    lines += [
         "",
         f'<a href="{SITE_URL}/strategy/{slug}">View Strategy →</a>',
     ]
@@ -131,6 +199,31 @@ def format_webhook_json(strategy_name: str, slug: str,
         "new_signal": new_action,
         "price": signal_data.get("price", 0),
         "reason": signal_data.get("reason", ""),
+        "url": f"{SITE_URL}/strategy/{slug}",
+    }
+
+
+def format_rotation_webhook_json(strategy_name: str, slug: str,
+                                 old_etf: str, new_etf: str, signal_data: dict) -> dict:
+    """Format a JSON payload for ETF rotation webhook events."""
+    rotation_reason = signal_data.get("rotation_reason", {})
+    return {
+        "event": "etf_rotation",
+        "strategy": strategy_name,
+        "old_etf": old_etf,
+        "new_etf": new_etf,
+        "old_name": rotation_reason.get("old_name", signal_data.get("old_holding", "")),
+        "new_name": rotation_reason.get("new_name", signal_data.get("holding", "")),
+        "old_zscore": rotation_reason.get("old_zscore"),
+        "new_zscore": rotation_reason.get("new_zscore"),
+        "zscore_diff": rotation_reason.get("zscore_diff"),
+        "zscore_threshold": rotation_reason.get("zscore_threshold"),
+        "old_premium": rotation_reason.get("old_premium"),
+        "new_premium": rotation_reason.get("new_premium"),
+        "premium_diff": rotation_reason.get("premium_diff"),
+        "premium_threshold": rotation_reason.get("premium_threshold"),
+        "holding_days": rotation_reason.get("holding_days"),
+        "holding_days_threshold": rotation_reason.get("holding_days_threshold"),
         "url": f"{SITE_URL}/strategy/{slug}",
     }
 
@@ -204,6 +297,21 @@ def send_webhook(subscriber: dict, strategy_name: str, slug: str,
         return False
 
 
+def send_rotation_webhook(subscriber: dict, strategy_name: str, slug: str,
+                          old_etf: str, new_etf: str, signal_data: dict) -> bool:
+    """Send ETF rotation notification to a webhook subscriber."""
+    sub_url = subscriber["url"]
+    try:
+        payload = format_rotation_webhook_json(strategy_name, slug, old_etf, new_etf, signal_data)
+        data = json.dumps(payload).encode()
+        req = Request(sub_url, data=data, headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=10) as resp:
+            return resp.status < 300
+    except (URLError, OSError) as e:
+        print(f"[webhook] Rotation failed for {subscriber.get('id', '?')}: {e}")
+        return False
+
+
 def main():
     has_telegram = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
     subscribers = load_subscribers()
@@ -223,7 +331,9 @@ def main():
                      if d.is_dir() and (d / "latest.json").exists()
                      and d.name != "market"]
 
-    changes = []
+    signal_changes = []   # (name, sid, old_action, new_action, signal_data)
+    rotation_changes = []  # (name, sid, old_etf, new_etf, signal_data)
+
     for sdir in sorted(strategy_dirs):
         sid = sdir.name
         current = get_current_signal(sid)
@@ -232,29 +342,73 @@ def main():
 
         strategy_info = current.get("strategy", {})
         signal_info = current.get("current_signal", {})
-        new_action = signal_info.get("action", "")
-        old_action = get_previous_signal(sid)
+        position_info = current.get("position", {})
+        name = strategy_info.get("name", sid)
 
-        if old_action and old_action != new_action and new_action in ("buy", "sell"):
-            signal_data = {
-                "price": signal_info.get("price", 0),
-                "symbol": strategy_info.get("symbol", ""),
-                "reason": signal_info.get("reason", ""),
+        prev = get_previous_signal_data(sid)
+        if not prev:
+            continue
+
+        signal_data = {
+            "price": signal_info.get("price", 0),
+            "symbol": strategy_info.get("symbol", ""),
+            "reason": signal_info.get("reason", ""),
+        }
+
+        # --- Primary: in_position change ---
+        # Catches buy/sell that occur between daily runs — 'action' is
+        # transient (one bar), in_position persists for the whole trade.
+        prev_in_pos = prev.get("in_position")
+        curr_in_pos = position_info.get("in_position")
+        if prev_in_pos is not None and curr_in_pos is not None:
+            if not prev_in_pos and curr_in_pos:
+                signal_changes.append((name, sid, "hold", "buy", signal_data))
+                continue
+            if prev_in_pos and not curr_in_pos:
+                signal_changes.append((name, sid, "hold", "sell", signal_data))
+                continue
+
+        # --- Secondary: ETF rotation (current_etf changed) ---
+        prev_etf = prev.get("current_etf")
+        curr_etf = signal_info.get("current_etf")
+        if prev_etf and curr_etf and prev_etf != curr_etf:
+            rotation_data = {
+                "old_holding": prev.get("holding", prev_etf),
+                "holding": signal_info.get("holding", curr_etf),
+                "rotation_reason": signal_info.get("rotation_reason"),
             }
-            changes.append((strategy_info.get("name", sid), sid, old_action, new_action, signal_data))
+            rotation_changes.append((name, sid, prev_etf, curr_etf, rotation_data))
+            continue
 
-    if not changes:
+        # --- Fallback: action field change (strategies without position tracking) ---
+        old_action = prev.get("action")
+        new_action = signal_info.get("action", "")
+        if old_action and old_action != new_action and new_action in ("buy", "sell"):
+            signal_changes.append((name, sid, old_action, new_action, signal_data))
+
+    total = len(signal_changes) + len(rotation_changes)
+    if not total:
         print("[notify] No signal changes detected")
         return
 
-    print(f"[notify] Detected {len(changes)} signal change(s)")
-    for name, sid, old, new, signal_data in changes:
+    print(f"[notify] Detected {total} change(s): "
+          f"{len(signal_changes)} signal, {len(rotation_changes)} rotation")
+
+    for name, sid, old, new, signal_data in signal_changes:
         slug = strategy_slug(sid)
         if has_telegram:
             msg = format_message(name, slug, old, new, signal_data)
             send_telegram(msg)
         for sub in subscribers:
             send_webhook(sub, name, slug, old, new, signal_data)
+
+    for name, sid, old_etf, new_etf, rotation_data in rotation_changes:
+        slug = strategy_slug(sid)
+        if has_telegram:
+            msg = format_rotation_message(name, slug, old_etf, new_etf, rotation_data)
+            send_telegram(msg)
+        for sub in subscribers:
+            send_rotation_webhook(sub, name, slug, old_etf, new_etf, rotation_data)
 
 
 if __name__ == "__main__":
