@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-10T11:32:07.904949+00:00",
+  "updated_at": "2026-07-11T10:01:14.344373+00:00",
   "strategy": {
     "name": "TrendLock 40 Plus",
     "code": "btc_ma_trend_plus",
@@ -12,11 +12,11 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 64407.1,
-    "ma_value": 63194.23,
-    "timestamp": "2026-07-10T08:00:00+00:00",
-    "hold_bars": 2,
-    "reason": "Holding 2/12 bars, min hold not met"
+    "price": 64269.1,
+    "ma_value": 62964.22,
+    "timestamp": "2026-07-11T08:00:00+00:00",
+    "hold_bars": 8,
+    "reason": "Holding 8/12 bars, min hold not met"
   },
   "position": {
     "in_position": true,
