@@ -54,6 +54,17 @@ class TestExposureStateHelper:
     def test_holding_when_close(self):
         assert exposure_state(0.50, 0.50) == "holding"
 
+    def test_boundary_equality_matches_engine(self):
+        """Engine trades when abs(gap) == min_trade_exposure (0.035); it only
+        SKIPS when abs(gap) < 0.035. So exactly 3.5% must NOT be 'holding'."""
+        # gap = target - current = +0.035 exactly -> engine would trade up
+        assert exposure_state(0.10, 0.135) == "increasing"
+        # gap = -0.035 exactly -> engine would trade down
+        assert exposure_state(0.135, 0.10) == "reducing"
+        # just inside the band stays holding
+        assert exposure_state(0.10, 0.1349) == "holding"
+        assert exposure_state(0.1349, 0.10) == "holding"
+
 
 class TestEngineExposesTrueTarget:
     """After a confirmed bear flip, the engine's final target must be 0.0 even

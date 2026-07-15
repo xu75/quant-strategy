@@ -41,6 +41,14 @@ export const translations: Record<string, Record<string, string>> = {
     'label.exposure': 'Exposure',
     'label.mode': 'Mode',
     'label.regime': 'BTC Regime',
+    // Continuous-exposure contract (V3-style)
+    'exposure.model_position': 'Model Position',
+    'exposure.target': 'Target',
+    'exposure.state.reducing': 'Reducing',
+    'exposure.state.increasing': 'Increasing',
+    'exposure.state.holding': 'Holding',
+    'exposure.action_prefix': 'Action:',
+    'exposure.instruction': 'Set {sym} to {v}% of total portfolio',
     // Strategy page
     'strategy.back': 'Home',
     'strategy.updated': 'Last updated:',
@@ -178,6 +186,14 @@ export const translations: Record<string, Record<string, string>> = {
     'label.exposure': '仓位',
     'label.mode': '模式',
     'label.regime': 'BTC Regime',
+    // Continuous-exposure contract (V3-style)
+    'exposure.model_position': '模型仓位',
+    'exposure.target': '策略目标',
+    'exposure.state.reducing': '减仓中',
+    'exposure.state.increasing': '加仓中',
+    'exposure.state.holding': '已到位',
+    'exposure.action_prefix': '操作：',
+    'exposure.instruction': '将 {sym} 调整至总组合的 {v}%',
     // Strategy page
     'strategy.back': '首页',
     'strategy.updated': '最后更新：',

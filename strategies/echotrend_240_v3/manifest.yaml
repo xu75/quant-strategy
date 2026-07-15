@@ -79,9 +79,9 @@ page:
     - label: "BTC Regime"
       key: "regime"
       format: "regime"
-    - label: "Signal"
-      key: "action"
-      format: "mode"
+    - label: "Model Position"
+      key: "current_exposure"
+      format: "percent"
   signal_fields:
     - label: "MSTR Price"
       key: "price"

@@ -58,7 +58,7 @@ class TestExposureRegression:
         assert note["direction"] == "increase"
         assert note["current_exposure"] == 0.2408
 
-    def test_position_message_says_sync_to_24_not_sell(self):
+    def test_position_message_says_set_to_24_of_total_portfolio(self):
         note = {
             "kind": "position", "strategy": "EchoTrend 240 V3", "slug": "echotrend-240-v3",
             "symbol": "MSTR", "price": 92.11, "regime": "bear",
@@ -67,9 +67,10 @@ class TestExposureRegression:
         }
         msg = format_position_message(note)
         assert "24%" in msg
-        assert "SELL" not in msg.upper().split("SLUG")[0]  # no SELL verb in body
-        # Actionable: sync your MSTR position to the model's current exposure.
-        assert "24%" in msg and ("sync" in msg.lower() or "同步" in msg or "Target" in msg)
+        assert "SELL" not in msg.upper()
+        # Actionable + unambiguous denominator: set MSTR to 24% of TOTAL portfolio.
+        assert "Set MSTR to" in msg
+        assert "total portfolio" in msg.lower()
 
     def test_position_webhook_has_msg_and_no_sell(self):
         note = {

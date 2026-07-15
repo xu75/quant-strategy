@@ -213,8 +213,8 @@ def format_position_message(note: dict) -> str:
     lines = [
         f"{arrow} <b>{note['strategy']}</b> — Position Update",
         "",
-        f"Model position: <code>{prev} → {curr}</code>",
-        f"👉 Sync your {note['symbol']} position to <b>{curr}</b>",
+        f"Model allocation: <code>{prev} → {curr}</code> of total portfolio",
+        f"👉 Set {note['symbol']} to <b>{curr}</b> of your total portfolio",
         f"Strategy target: {tgt} · State: {_state_label(note.get('exposure_state',''))}",
         f"Regime: {note['regime']}" if note.get("regime") else "",
         f"Price: ${price:,.2f}" if price else "",
@@ -231,7 +231,7 @@ def format_position_webhook_json(note: dict) -> dict:
     tgt = _pct(note.get("target_exposure"))
     price = note.get("price", 0)
     msg = (
-        f"{arrow} {note['strategy']} | Sync {note['symbol']} to {curr} "
+        f"{arrow} {note['strategy']} | Set {note['symbol']} to {curr} of total portfolio "
         f"(target {tgt}, {note.get('exposure_state','')}) "
         f"| ${price:,.2f} | {SITE_URL}/strategy/{note['slug']}"
     )
@@ -341,8 +341,9 @@ def format_webhook_json_regime(note: dict) -> dict:
 def _note_to_text(note: dict) -> str:
     """Plain-text one-liner for text/bark channels."""
     if note["kind"] == "position":
-        return (f"{note['strategy']} | Sync {note['symbol']} to "
-                f"{_pct(note['current_exposure'])} (target {_pct(note.get('target_exposure'))})")
+        return (f"{note['strategy']} | Set {note['symbol']} to "
+                f"{_pct(note['current_exposure'])} of total portfolio "
+                f"(target {_pct(note.get('target_exposure'))})")
     if note["kind"] == "action":
         return (f"{note['strategy']} | {note['old_action'].upper()} → "
                 f"{note['new_action'].upper()} | {note['symbol']}")

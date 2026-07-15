@@ -66,7 +66,16 @@ const { title, description = 'Open strategy research for low-frequency quant tra
         if (!t) return;
         document.querySelectorAll('[data-i18n]').forEach((el) => {
           const key = el.getAttribute('data-i18n')!;
-          if (t[key]) el.textContent = t[key];
+          let val = t[key];
+          if (val == null) return;
+          // Interpolate {placeholder} from data-i18n-<placeholder> attributes,
+          // so dynamic values (symbol, percent) survive translation with
+          // per-language word order.
+          val = val.replace(/\{(\w+)\}/g, (_m, name) => {
+            const attr = (el as HTMLElement).dataset[name];
+            return attr != null ? attr : `{${name}}`;
+          });
+          el.textContent = val;
         });
         document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
         const btn = document.getElementById('lang-toggle');

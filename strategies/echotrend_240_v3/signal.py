@@ -80,16 +80,19 @@ EXPOSURE_STATE_EPS = 0.035
 def exposure_state(current: float, target: float, eps: float = EXPOSURE_STATE_EPS) -> str:
     """Classify the model's intent from executed exposure vs strategy target.
 
-    - reducing:   target materially below current (winding position down)
-    - increasing: target materially above current (building position up)
+    - reducing:   target below current by at least eps (winding position down)
+    - increasing: target above current by at least eps (building position up)
     - holding:    within eps of target (at destination)
+
+    Boundary uses >= / <= to match the engine, which trades when the gap is
+    exactly min_trade_exposure (it only *skips* when abs(gap) < min_trade_exposure).
     """
     if current is None or target is None:
         return ""
     gap = target - current
-    if gap > eps:
+    if gap >= eps:
         return "increasing"
-    if gap < -eps:
+    if gap <= -eps:
         return "reducing"
     return "holding"
 

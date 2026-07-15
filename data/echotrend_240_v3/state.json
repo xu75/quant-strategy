@@ -9,6 +9,7 @@
       "raw": 1.0,
       "target": 1.0
     },
+    "last_target_exposure": 0.0,
     "mode": "neutral",
     "mode_counter": 0,
     "trend_regime": "bear",
