@@ -73,6 +73,11 @@ def generate_status_json(
         signal_dict["mode"] = signal.mode
     if hasattr(signal, 'target_exposure') and signal.target_exposure is not None:
         signal_dict["target_exposure"] = round(signal.target_exposure, 4)
+    # Continuous-exposure contract: executed model position + intent.
+    # Only emitted by strategies that set these (V3-style); binary strategies omit them.
+    if getattr(signal, 'current_exposure', None) is not None and getattr(signal, 'exposure_state', ""):
+        signal_dict["current_exposure"] = round(signal.current_exposure, 4)
+        signal_dict["exposure_state"] = signal.exposure_state
     if hasattr(signal, 'scores') and signal.scores:
         signal_dict["scores"] = {k: round(v, 2) if isinstance(v, float) else v for k, v in signal.scores.items()}
 

@@ -448,9 +448,14 @@ def _run_full_backtest(adapter):
 
     current_signal = adapter.get_current_signal(df, in_position, entry_bar_idx, config, extra_data=extra_data)
 
-    display_in_position = is_display_in_position(
-        getattr(current_signal, 'target_exposure', None), fallback=in_position
-    )
+    # Prefer executed exposure (current_exposure) for the display decision — for
+    # continuous strategies target_exposure is now the TRUE target (0 in bear),
+    # which would wrongly show "空仓" while the model still holds a position.
+    # V1-style signals without current_exposure fall back to target_exposure.
+    display_exposure = getattr(current_signal, 'current_exposure', None)
+    if display_exposure is None:
+        display_exposure = getattr(current_signal, 'target_exposure', None)
+    display_in_position = is_display_in_position(display_exposure, fallback=in_position)
 
     generate_status_json(
         df_backtest, config, display_in_position, entry_bar_idx, output_dir / "latest.json",

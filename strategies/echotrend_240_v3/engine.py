@@ -60,6 +60,10 @@ class EchoTrendV3Engine:
         self.mode = "neutral"
         self.mode_counter = 0
         self.last_scores: dict[str, float] = {}
+        # True strategy target at the most recent decision bar (regime ceiling,
+        # CB override). This is the STRATEGY target — distinct from executed
+        # exposure. Seeded to the bull default until the first bar computes it.
+        self.last_target_exposure: float = 1.0
 
         # Regime gate state
         self.trend_regime = "bull"
@@ -98,6 +102,7 @@ class EchoTrendV3Engine:
                 "bar_index": self.bar_index,
                 "exposure_ema": self.exposure_ema,
                 "last_scores": dict(self.last_scores),
+                "last_target_exposure": self.last_target_exposure,
                 "mode": self.mode,
                 "mode_counter": self.mode_counter,
                 "trend_regime": self.trend_regime,
@@ -126,6 +131,7 @@ class EchoTrendV3Engine:
         self.bar_index = eng["bar_index"]
         self.exposure_ema = eng["exposure_ema"]
         self.last_scores = eng.get("last_scores", {})
+        self.last_target_exposure = eng.get("last_target_exposure", 1.0)
         self.mode = eng["mode"]
         self.mode_counter = eng["mode_counter"]
         self.trend_regime = eng["trend_regime"]
@@ -226,6 +232,11 @@ class EchoTrendV3Engine:
 
         # Clamp
         final_target = max(0.0, min(1.0, final_target))
+
+        # Record the TRUE strategy target for this decision bar (regime ceiling
+        # / CB override), independent of whether a trade actually executes. This
+        # is what the UI/notifier report as "strategy target".
+        self.last_target_exposure = final_target
 
         # Current exposure based on open price (known at decision time)
         equity = state.equity(open_price)
@@ -551,6 +562,7 @@ class EchoTrendV3Engine:
             end_date=features.index[-1],
             regime_flips=self.regime_flips,
             final_exposure=final_exp,
+            final_target_exposure=self.last_target_exposure,
             final_mode=self.mode,
             final_regime=self.trend_regime,
         )
@@ -572,6 +584,7 @@ class EngineBacktestResult:
     end_date: pd.Timestamp
     regime_flips: int
     final_exposure: float
+    final_target_exposure: float
     final_mode: str
     final_regime: str
 

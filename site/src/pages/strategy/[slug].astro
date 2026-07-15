@@ -22,6 +22,21 @@ const position = latest.position;
 const strategy = latest.strategy;
 const periods = backtest.periods || {};
 
+// Continuous-exposure contract (V3-style): when current_exposure is present the
+// strategy manages a continuous position, so a bare BUY/SELL badge is misleading
+// (a daily snapshot collapses intraday events). Show the executed model position,
+// the strategy target, and the state + one actionable instruction instead.
+const hasExposure = signal.current_exposure != null;
+const curExpPct = hasExposure ? Math.round(signal.current_exposure * 100) : null;
+const tgtExpPct = signal.target_exposure != null ? Math.round(signal.target_exposure * 100) : null;
+const exposureStateLabels = {
+  reducing: 'Reducing', increasing: 'Increasing', holding: 'Holding',
+};
+const exposureStateLabel = exposureStateLabels[signal.exposure_state] || signal.exposure_state || '';
+const exposureStateColor = signal.exposure_state === 'increasing'
+  ? 'text-green-400'
+  : signal.exposure_state === 'reducing' ? 'text-red-400' : 'text-gray-300';
+
 const defaultPerf = periods.since_launch?.performance || backtest.performance;
 const defaultRange = periods.since_launch
   ? { start: periods.since_launch.start, end: periods.since_launch.end }
@@ -106,22 +121,47 @@ const signalGridCols = Math.min(signalFields.length, 4);
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-4" data-i18n="strategy.signal">Current Signal</h2>
     <div class="border border-gray-800 rounded-xl p-6">
-      <div class="flex items-center gap-4 mb-6">
-        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
-          position.in_position
-            ? 'bg-green-900/50 text-green-400'
-            : 'bg-gray-800 text-gray-400'
-        }`} data-i18n={position.in_position ? 'label.in_position' : 'label.no_position'}>
-          {position.in_position ? 'In Position' : 'No Position'}
-        </span>
-        <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
-          signal.action === 'buy' || signal.action === 'risk_on' ? 'bg-green-900/50 text-green-400'
-            : signal.action === 'sell' || signal.action === 'risk_off' ? 'bg-red-900/50 text-red-400'
-            : 'bg-gray-800 text-gray-400'
-        }`}>
-          <span data-i18n="strategy.signal_prefix">Signal:</span> {signal.action.toUpperCase()}
-        </span>
-      </div>
+      {hasExposure ? (
+        <div class="mb-6">
+          <div class="flex flex-wrap items-center gap-3 mb-3">
+            <span class="px-4 py-2 rounded-full text-sm font-semibold bg-blue-900/50 text-blue-300">
+              Model Position: {curExpPct}%
+            </span>
+            <span class="px-4 py-2 rounded-full text-sm font-semibold bg-gray-800 text-gray-300">
+              Target: {tgtExpPct != null ? `${tgtExpPct}%` : '—'}
+            </span>
+            <span class={`px-4 py-2 rounded-full text-sm font-semibold bg-gray-800 ${exposureStateColor}`}>
+              {exposureStateLabel}
+            </span>
+          </div>
+          <div class="border border-blue-800/50 bg-blue-950/30 rounded-lg p-4">
+            <p class="text-sm text-gray-300">
+              <span class="font-semibold text-blue-300">Action:</span>
+              Hold {curExpPct}% of your {strategy.symbol} allocation
+              {tgtExpPct != null && tgtExpPct !== curExpPct && (
+                <span class="text-gray-400"> — strategy is moving toward {tgtExpPct}% ({exposureStateLabel.toLowerCase()})</span>
+              )}.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div class="flex items-center gap-4 mb-6">
+          <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+            position.in_position
+              ? 'bg-green-900/50 text-green-400'
+              : 'bg-gray-800 text-gray-400'
+          }`} data-i18n={position.in_position ? 'label.in_position' : 'label.no_position'}>
+            {position.in_position ? 'In Position' : 'No Position'}
+          </span>
+          <span class={`px-4 py-2 rounded-full text-sm font-semibold ${
+            signal.action === 'buy' || signal.action === 'risk_on' ? 'bg-green-900/50 text-green-400'
+              : signal.action === 'sell' || signal.action === 'risk_off' ? 'bg-red-900/50 text-red-400'
+              : 'bg-gray-800 text-gray-400'
+          }`}>
+            <span data-i18n="strategy.signal_prefix">Signal:</span> {signal.action.toUpperCase()}
+          </span>
+        </div>
+      )}
 
       <div class={`grid grid-cols-2 ${smGridClass[signalGridCols] || 'sm:grid-cols-4'} gap-6`}>
         {signalFields.map(field => {

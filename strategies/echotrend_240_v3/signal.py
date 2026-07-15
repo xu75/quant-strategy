@@ -65,9 +65,33 @@ class Signal:
     hold_bars: int = 0
     reason: str = ""
     regime: str = ""
-    target_exposure: float = 0.0
+    target_exposure: float = 0.0        # TRUE strategy target (bear=0, bull=1, CB=0)
+    current_exposure: float = 0.0       # executed model position (what to hold now)
+    exposure_state: str = ""            # reducing / increasing / holding
     mode: str = ""
     scores: dict = field(default_factory=dict)
+
+
+# Minimum gap before we call the position "increasing"/"reducing" rather than
+# "holding". Matches the engine's min_trade_exposure so display and execution agree.
+EXPOSURE_STATE_EPS = 0.035
+
+
+def exposure_state(current: float, target: float, eps: float = EXPOSURE_STATE_EPS) -> str:
+    """Classify the model's intent from executed exposure vs strategy target.
+
+    - reducing:   target materially below current (winding position down)
+    - increasing: target materially above current (building position up)
+    - holding:    within eps of target (at destination)
+    """
+    if current is None or target is None:
+        return ""
+    gap = target - current
+    if gap > eps:
+        return "increasing"
+    if gap < -eps:
+        return "reducing"
+    return "holding"
 
 
 def _build_engine_config(config: StrategyConfig) -> dict:
@@ -230,7 +254,9 @@ def get_current_signal(
         timestamp=features.index[-1],
         reason=reason,
         regime=result.final_regime,
-        target_exposure=result.final_exposure,
+        target_exposure=result.final_target_exposure,
+        current_exposure=result.final_exposure,
+        exposure_state=exposure_state(result.final_exposure, result.final_target_exposure),
         mode=result.final_mode,
         scores=engine.last_scores,
     )
@@ -411,7 +437,9 @@ def run_incremental(
         timestamp=new_watermark,
         reason=reason,
         regime=engine.trend_regime,
-        target_exposure=exposure,
+        target_exposure=engine.last_target_exposure,
+        current_exposure=exposure,
+        exposure_state=exposure_state(exposure, engine.last_target_exposure),
         mode=engine.mode,
         scores=engine.last_scores,
     )
