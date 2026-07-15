@@ -20,6 +20,7 @@ strategy_name: "TrendLock 40 Plus"
 ### 信号定义
 
 - 入场（Buy）：与 TrendLock 40 完全一致。prev_close <= prev_MA240 AND close > MA240（crossover 确认）
+- 入场过滤（斜率门，2026-07 生效）：金叉当根计算 slope = MA240(当前) / MA240(30 根 4H 之前) − 1；若 slope < −2% 则本次金叉不进场，等待下一次金叉。只在金叉当根判定一次，被挡后不做延迟补进。MA240 历史不足 30 根时正常放行。只影响开多入场，出场与持仓完全不受影响。详见第 5.1 节。
 - 出场（Sell）：持仓满 min_hold_bars 后，要求连续 exit_confirm_bars 根 K 线收盘价 < MA240 才卖出
 
 ### 执行语义
@@ -115,6 +116,45 @@ TrendLock 40 生产配置：ma_window=240, min_hold_bars=24, 无 exit_confirm
 
 ecb=2 mh=12 在所有三个窗口都优于基线，不存在"某个窗口好、其他窗口差"的过拟合特征。三窗口改善方向一致：收益提升 + 回撤降低 + 交易减少。
 
+## 5.1 MA240 开多斜率门（2026-07 新增）
+
+### 规则
+
+金叉当根计算 `slope = MA240(当前) / MA240(30 根 4H 之前) − 1`；若 `slope < −2%` 本次金叉不进场，等待下一次金叉。只在金叉当根判定一次，被挡后不做延迟补进；MA240 历史不足 30 根时正常放行；只影响开多入场，出场与持仓不受影响。
+
+阈值特意设为 −2%（而非 0）：轻微下行中的金叉仍放行，以保住"均线还在降、价格已反转"的 V 型周期底部行情（如 2019、2023 年初）。研究表明"斜率为负就禁止开多"的严格版会显著损害收益。
+
+### 设计依据（trade-level 验证）
+
+按金叉当根 MA240 斜率对基线（gate off）全部 80 笔交易分桶，验证脚本 `scripts/verify_slope_gate.py`：
+
+| 入场斜率桶 | 交易数 | 胜率 | 净 PnL 合计 |
+|-----------|--------|------|------------|
+| slope < −2%（将被拦截） | 10 | 10.0% | −6.4% |
+| slope ≥ −2%（放行） | 70 | 28.6% | +465.6% |
+
+结论方向与设计假设一致：陡峭下行中的金叉是熊市反弹尾部，胜率极低、合计亏损；利润全部来自其余入场。
+
+### Provenance 与口径差异（诚实标注）
+
+设计文档援引的口径为"30 笔 slope < −2% 金叉、胜率 13%"。本仓库 canonical 数据（`data/market/BTC-USD_1h.csv`，2020-01-01 起）复算为 **10 笔成交入场、胜率 10.0%**（另有 18 根满足 slope < −2% 的金叉，但其中 8 根发生在持仓中、不产生新入场）。差异的最可能来源：
+
+- **数据窗口不同**：本仓库数据从 2020 起，缺 2017–2019 熊市，而斜率门最易触发的正是深熊反弹尾部——原研究若含更早历史，steep-slope 金叉自然更多。
+- **数据源不同**：manifest 声明 BTC-USDT/OKX，仓库 canonical 文件为 BTC-USD，早期价格与均线轨迹存在差异。
+
+**方向性结论稳健**（steep-slope 金叉近乎无价值），但绝对笔数依赖数据窗口/源，跨源对比需对齐窗口后再引用（遵循 CLAUDE.md「Cross-strategy comparisons must use matching windows」）。
+
+### 回测影响（同数据 / 同费率 0.1% 每边，数据窗口至 2026-07-15）
+
+| 配置 | 交易 | 总收益 | 最大回撤 | 胜率 | Sharpe |
+|------|------|--------|---------|------|--------|
+| 基线（gate off） | 80 | 2071.15% | 41.88% | 26.25% | 1.344 |
+| **forward-only（2026-07-01 生效，生产默认）** | 79 | 2133.61% | 41.88% | 26.58% | 1.354 |
+| counterfactual（全历史应用） | 72 | 2350.38% | 36.33% | 29.17% | 1.444 |
+
+- **生产采用 forward-only**：规则自 2026-07-01 起对新金叉生效，历史回测不被改写（无 lookahead）。截至 2026-07-15，2026-07-01 后共 2 根金叉、拦截 1 根（发生在 MA240 下行期），收益与胜率小幅改善。
+- **counterfactual 仅供参考**：全历史应用是 in-sample、含过拟合成分，不作为生产宣称。它印证了方向（回撤 41.88%→36.33%、胜率 26.25%→29.17%），但收益提升幅度不应被当作前瞻性预期。
+
 ## 6. 风险与限制
 
 ### 失效场景
@@ -179,6 +219,7 @@ ecb=2 mh=12 在所有三个窗口都优于基线，不存在"某个窗口好、�
 - Sweep 脚本：`sweep_exit_optimization.py`
 - 生产信号：`strategies/btc_ma_trend_plus/signal.py`
 - 验证脚本：`scripts/validate_trendlock40_plus.py`
+- 斜率门验证脚本：`scripts/verify_slope_gate.py`（三配置对比 + trade-level 分桶）
 
 ### 命令
 
@@ -188,6 +229,9 @@ python3 sweep_exit_optimization.py
 
 # 运行验证
 python3 scripts/validate_trendlock40_plus.py
+
+# 运行斜率门验证（baseline / forward-only / counterfactual）
+python3 scripts/verify_slope_gate.py
 ```
 
 ### 输出文件
@@ -199,3 +243,4 @@ python3 scripts/validate_trendlock40_plus.py
 ## 9. 变更记录
 
 - 2026-05-04: 初始版本。基于四组 sweep 实验，选定 ecb=2 mh=12 作为 TrendLock 40 Plus 默认配置
+- 2026-07-15: 新增 MA240 开多斜率门（第 5.1 节），2026-07-01 forward-only 生效。金叉当根 slope < −2% 拦截开多；只影响入场。trade-level 验证 steep-slope 桶 10 笔/胜率 10.0%/净 −6.4%。Provenance 口径差异见 5.1。验证脚本 `scripts/verify_slope_gate.py`

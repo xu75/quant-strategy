@@ -38,6 +38,7 @@ const paper = {
     <h3 class="text-white font-medium mt-4 mb-2">信号定义</h3>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
       <li>入场（Buy）：与 TrendLock 40 完全一致。prev_close &le; prev_MA240 AND close &gt; MA240（crossover 确认）</li>
+      <li>入场过滤（斜率门，2026-07 生效）：金叉当根计算 slope = MA240(当前) / MA240(30 根 4H 之前) &minus; 1；若 slope &lt; &minus;2% 本次金叉不进场，等待下一次金叉。只判定一次、被挡不补进；MA240 历史不足 30 根时放行；仅影响开多入场，出场与持仓不受影响。</li>
       <li>出场（Sell）：持仓满 min_hold_bars 后，要求连续 exit_confirm_bars 根 K 线收盘价 &lt; MA240 才卖出</li>
     </ul>
 
