@@ -160,14 +160,26 @@ def load_subscribers() -> list[dict]:
 
 def format_webhook_json(strategy_name: str, slug: str,
                         old_action: str, new_action: str, signal_data: dict) -> dict:
-    """Format a JSON payload for generic webhooks (action change)."""
+    """Format a JSON payload for generic webhooks (action change).
+
+    Includes a top-level `msg` field for endpoints that require a named
+    content field (e.g. api.chuckfang.com returns data:false without it).
+    """
+    price = signal_data.get("price", 0)
+    symbol = signal_data.get("symbol", "")
+    action_emoji = {"buy": "🟢", "sell": "🔴"}.get(new_action, "📊")
+    msg = (
+        f"{action_emoji} {strategy_name} | {old_action.upper()} → {new_action.upper()} "
+        f"| {symbol} ${price:,.2f} | {SITE_URL}/strategy/{slug}"
+    )
     return {
+        "msg": msg,
         "event": "signal_change",
         "strategy": strategy_name,
-        "symbol": signal_data.get("symbol", ""),
+        "symbol": symbol,
         "old_signal": old_action,
         "new_signal": new_action,
-        "price": signal_data.get("price", 0),
+        "price": price,
         "reason": signal_data.get("reason", ""),
         "url": f"{SITE_URL}/strategy/{slug}",
     }
@@ -175,14 +187,26 @@ def format_webhook_json(strategy_name: str, slug: str,
 
 def format_webhook_json_regime(strategy_name: str, slug: str,
                                old_regime: str, new_regime: str, signal_data: dict) -> dict:
-    """Format a JSON payload for generic webhooks (regime change)."""
+    """Format a JSON payload for generic webhooks (regime change).
+
+    Includes a top-level `msg` field for endpoints that require it.
+    """
+    price = signal_data.get("price", 0)
+    symbol = signal_data.get("symbol", "")
+    regime_emoji = {"bull": "📈", "bear": "📉", "neutral": "📊"}
+    emoji = regime_emoji.get(new_regime, "🔄")
+    msg = (
+        f"{emoji} {strategy_name} | Regime {old_regime.upper()} → {new_regime.upper()} "
+        f"| {symbol} ${price:,.2f} | {SITE_URL}/strategy/{slug}"
+    )
     return {
+        "msg": msg,
         "event": "regime_change",
         "strategy": strategy_name,
-        "symbol": signal_data.get("symbol", ""),
+        "symbol": symbol,
         "old_regime": old_regime,
         "new_regime": new_regime,
-        "price": signal_data.get("price", 0),
+        "price": price,
         "exposure": signal_data.get("exposure"),
         "url": f"{SITE_URL}/strategy/{slug}",
     }
@@ -258,7 +282,24 @@ def send_webhook(subscriber: dict, strategy_name: str, slug: str,
         data = json.dumps(payload).encode()
         req = Request(sub_url, data=data, headers={"Content-Type": "application/json"})
         with urlopen(req, timeout=10) as resp:
-            return resp.status < 300
+            if resp.status >= 300:
+                print(f"[webhook] HTTP {resp.status} for {subscriber.get('id', '?')}")
+                return False
+            # Some endpoints (e.g. api.chuckfang.com) always return HTTP 200 but
+            # signal actual success/failure via a JSON body: {"data": true/false, ...}
+            try:
+                body = json.loads(resp.read().decode())
+                if isinstance(body, dict) and "data" in body:
+                    ok = bool(body["data"])
+                    if not ok:
+                        print(f"[webhook] Endpoint rejected for {subscriber.get('id', '?')}: {body.get('msg', body)}")
+                    else:
+                        print(f"[webhook] Sent successfully to {subscriber.get('id', '?')}")
+                    return ok
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                pass  # non-JSON body, trust HTTP status
+            print(f"[webhook] Sent successfully to {subscriber.get('id', '?')}")
+            return True
     except (URLError, OSError) as e:
         print(f"[webhook] Failed for {subscriber.get('id', '?')}: {e}")
         return False
