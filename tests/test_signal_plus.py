@@ -10,6 +10,7 @@ from strategies.btc_ma_trend_plus.signal import (
     compute_signals,
     get_current_signal,
     _compute_ma_slope,
+    _slope_gate_blocks,
 )
 
 
@@ -156,10 +157,17 @@ class TestSlopeGate:
     161.67/180 - 1 = -10.2% (< -2%, blocked).
     RISING [100,102,104,106,108,90,130]: only cross at bar 6 (prev 90 <=
     MA 101.33, close 130 > MA 109.33); slope 109.33/104 - 1 = +5.1% (kept).
+    STEEP_STRADDLE [300,280,260,240,220,250,150,140]: first cross at bar 5
+    (prev 220 <= MA 240, close 250 > MA 236.67); slope MA[5]/MA[2]-1 =
+    236.67/280-1 = -15.5% (would be blocked when active). Exit at bar 7
+    (bars 6,7 close 150,140 < MA -> 2 consecutive below). Used to straddle
+    the effective date: entry can be shielded (predates) while exit fires
+    after the gate is live -> proves the gate touches only entries.
     """
 
     FALLING = [200, 190, 180, 170, 160, 150, 175]
     RISING = [100, 102, 104, 106, 108, 90, 130]
+    STEEP_STRADDLE = [300, 280, 260, 240, 220, 250, 150, 140]
 
     def _cfg(self, **kw):
         base = dict(
@@ -206,11 +214,82 @@ class TestSlopeGate:
         buys = [s for s in signals if s.action == "buy"]
         assert len(buys) == 1  # ref_idx = 6 - 30 < 0 -> pass through
 
-    def test_gate_does_not_touch_exits(self):
-        """Sell logic is unaffected; blocked entry means no position to exit."""
+    def test_blocked_entry_opens_no_position(self):
+        """A blocked entry opens no position, so there is nothing to sell.
+
+        Note: this only proves the *consequence* of blocking, NOT that the exit
+        rule itself is untouched. See test_gate_live_does_not_block_exit for the
+        real contract test where a position is actually held.
+        """
         df = make_candles(self.FALLING)
         signals = compute_signals(df, self._cfg())
+        assert [s for s in signals if s.action == "buy"] == []
         assert [s for s in signals if s.action == "sell"] == []
+
+    def test_gate_live_does_not_block_exit(self):
+        """Real exit contract: enter before the effective date (entry shielded),
+        then exit AFTER the gate is live. The entry cross has slope -15.5% and
+        WOULD be blocked if it occurred after the date, yet the exit still fires.
+
+        STEEP_STRADDLE @ start 2026-06-30 (4H): entry bar 5 = 06-30 20:00
+        (< 2026-07-01, shielded); exit bar 7 = 07-01 04:00 (gate live)."""
+        df = make_candles(self.STEEP_STRADDLE, start="2026-06-30")
+        signals = compute_signals(df, self._cfg(slope_gate_effective_date="2026-07-01"))
+        buys = [s for s in signals if s.action == "buy"]
+        sells = [s for s in signals if s.action == "sell"]
+        assert len(buys) == 1 and buys[0].price == 250   # shielded entry
+        assert len(sells) == 1 and sells[0].price == 140  # exit fires post-activation
+
+    def test_same_straddle_entry_blocked_when_gate_over_all_history(self):
+        """Control: with the gate over all history, the same steep entry is
+        blocked -> no position -> no exit. Confirms the straddle's entry really
+        is gate-eligible (so the shield in the prior test is meaningful)."""
+        df = make_candles(self.STEEP_STRADDLE, start="2026-06-30")
+        signals = compute_signals(df, self._cfg(slope_gate_effective_date=""))
+        assert [s for s in signals if s.action == "buy"] == []
+        assert [s for s in signals if s.action == "sell"] == []
+
+    def test_slope_exactly_at_threshold_passes(self):
+        """Boundary: slope == threshold must PASS (strict '<' comparison)."""
+        # ma[3]/ma[0] - 1 = 75/100 - 1 = -0.25 exactly (binary-exact values)
+        ma = pd.Series([100.0, 90.0, 80.0, 75.0])
+        cfg = self._cfg(slope_gate_threshold=-0.25, slope_lookback_bars=3)
+        blocked, slope = _slope_gate_blocks(
+            ma, idx=3, cross_ts=pd.Timestamp("2026-07-01", tz="UTC"),
+            config=cfg, effective_ts=None,
+        )
+        assert slope == pytest.approx(-0.25)
+        assert blocked is False
+
+    def test_slope_just_below_threshold_blocks(self):
+        """Boundary: slope strictly below threshold must BLOCK."""
+        # ma[3]/ma[0] - 1 = 74/100 - 1 = -0.26 < -0.25
+        ma = pd.Series([100.0, 90.0, 80.0, 74.0])
+        cfg = self._cfg(slope_gate_threshold=-0.25, slope_lookback_bars=3)
+        blocked, slope = _slope_gate_blocks(
+            ma, idx=3, cross_ts=pd.Timestamp("2026-07-01", tz="UTC"),
+            config=cfg, effective_ts=None,
+        )
+        assert slope == pytest.approx(-0.26)
+        assert blocked is True
+
+    def test_effective_date_exact_timestamp_activates(self):
+        """Boundary: a cross whose timestamp == effective date IS gated.
+
+        The before-check uses strict '<', so cross_ts == effective_ts does not
+        shield. STEEP_STRADDLE @ start 2026-06-30 04:00 -> entry bar 5 lands
+        exactly on 2026-07-01 00:00 and must be blocked (slope -15.5%)."""
+        df = make_candles(self.STEEP_STRADDLE, start="2026-06-30 04:00")
+        signals = compute_signals(df, self._cfg(slope_gate_effective_date="2026-07-01"))
+        assert [s for s in signals if s.action == "buy"] == []
+
+    def test_effective_date_one_bar_before_shields(self):
+        """Companion: one bar earlier, the entry precedes the effective date
+        and is shielded (1 buy) — confirms the boundary is exactly at the date."""
+        df = make_candles(self.STEEP_STRADDLE, start="2026-06-30 00:00")
+        signals = compute_signals(df, self._cfg(slope_gate_effective_date="2026-07-01"))
+        buys = [s for s in signals if s.action == "buy"]
+        assert len(buys) == 1 and buys[0].price == 250
 
     def test_live_signal_blocked_returns_hold(self):
         """get_current_signal returns hold with slope-gate reason on steep cross."""

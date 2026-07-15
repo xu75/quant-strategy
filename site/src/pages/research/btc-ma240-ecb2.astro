@@ -26,8 +26,9 @@ const paper = {
     <h2 class="text-xl font-semibold mb-3">1. 研究目标</h2>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
       <li>在 TrendLock 40（BTC 4H MA240 + min_hold=24）基础上，通过出场确认机制减少 MA 附近假跌破导致的错误退出</li>
-      <li>不改变入场逻辑（crossover 确认），仅优化出场条件</li>
+      <li>本节（出场确认研究）不改变入场逻辑，仅优化出场条件</li>
       <li>边界：不涉及双均线、止盈止损、ADX 过滤等复杂化改造</li>
+      <li><span class="text-white">后续扩展（2026-07）</span>：在出场确认之上新增 MA240 开多斜率门——金叉触发条件不变，但金叉当根按 MA240 斜率过滤开多入场（详见下方规则）。当前生产入场 = crossover 触发 + 斜率门过滤，不再是纯 crossover。</li>
     </ul>
   </section>
 
@@ -205,7 +206,8 @@ const paper = {
           <th class="py-2 pr-4">项目</th><th class="py-2 pr-4">研究（sweep）</th><th class="py-2">生产（signal.py + pipeline）</th>
         </tr></thead>
         <tbody>
-          <tr class="border-b border-gray-800"><td class="py-2 pr-4">入场</td><td class="py-2 pr-4">crossover: prev_close &le; prev_ma AND close &gt; ma</td><td class="py-2">相同</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">入场触发</td><td class="py-2 pr-4">crossover: prev_close &le; prev_ma AND close &gt; ma</td><td class="py-2">相同（金叉触发条件不变）</td></tr>
+          <tr class="border-b border-gray-800"><td class="py-2 pr-4">入场过滤</td><td class="py-2 pr-4">无</td><td class="py-2">新增 MA240 开多斜率门（2026-07 生效）：金叉当根 slope &lt; &minus;2% 拦截开多；sweep 未含</td></tr>
           <tr class="border-b border-gray-800"><td class="py-2 pr-4">出场</td><td class="py-2 pr-4">min_hold 后连续 ecb 根 close &lt; ma</td><td class="py-2">相同</td></tr>
           <tr class="border-b border-gray-800"><td class="py-2 pr-4">执行</td><td class="py-2 pr-4">next-bar execution（bar N+1 开盘执行）</td><td class="py-2">close execution（bar N 收盘价执行）</td></tr>
           <tr class="border-b border-gray-800"><td class="py-2 pr-4">费率</td><td class="py-2 pr-4">0.001 per side</td><td class="py-2">0.001 per side</td></tr>
@@ -233,7 +235,8 @@ const paper = {
     <h3 class="text-white font-medium mt-6 mb-2">实现差异</h3>
     <ul class="list-disc pl-6 space-y-2 text-gray-300">
       <li>研究脚本使用 numpy 数组遍历，生产代码使用 pandas DataFrame 遍历</li>
-      <li>入场/出场信号逻辑语义一致，仅执行价格取值点不同</li>
+      <li>出场信号逻辑语义一致，仅执行价格取值点不同</li>
+      <li>入场：金叉触发逻辑一致；生产额外叠加 MA240 开多斜率门（2026-07 生效，sweep 未含），故生产入场笔数 &le; sweep</li>
     </ul>
   </section>
 
