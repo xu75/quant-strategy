@@ -45,6 +45,22 @@ def get_previous_signal(strategy_id: str) -> str | None:
         return None
 
 
+def get_previous_regime(strategy_id: str) -> str | None:
+    """Get the previous regime from git HEAD~1."""
+    path = f"data/{strategy_id}/latest.json"
+    try:
+        result = subprocess.run(
+            ["git", "show", f"HEAD~1:{path}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        return data.get("current_signal", {}).get("regime")
+    except (json.JSONDecodeError, subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+
 def get_current_signal(strategy_id: str) -> dict | None:
     """Read current latest.json for a strategy."""
     path = DATA_DIR / strategy_id / "latest.json"
@@ -59,7 +75,7 @@ def get_current_signal(strategy_id: str) -> dict | None:
 
 def format_message(strategy_name: str, slug: str,
                    old_action: str, new_action: str, signal_data: dict) -> str:
-    """Format an HTML message for Telegram."""
+    """Format an HTML message for Telegram (action change)."""
     emoji = {"buy": "\U0001f7e2", "sell": "\U0001f534"}.get(new_action, "\U0001f4ca")
     price = signal_data.get("price", 0)
     symbol = signal_data.get("symbol", "")
@@ -72,6 +88,28 @@ def format_message(strategy_name: str, slug: str,
         f"Symbol: {symbol}",
         f"Price: ${price:,.2f}" if price else "",
         f"Reason: {reason}" if reason else "",
+        "",
+        f'<a href="{SITE_URL}/strategy/{slug}">View Strategy →</a>',
+    ]
+    return "\n".join(line for line in lines if line is not None)
+
+
+def format_regime_message(strategy_name: str, slug: str,
+                          old_regime: str, new_regime: str, signal_data: dict) -> str:
+    """Format an HTML message for Telegram (regime change)."""
+    regime_emoji = {"bull": "📈", "bear": "📉", "neutral": "📊"}
+    emoji = regime_emoji.get(new_regime, "🔄")
+    price = signal_data.get("price", 0)
+    symbol = signal_data.get("symbol", "")
+    exposure = signal_data.get("exposure", None)
+
+    lines = [
+        f"{emoji} <b>{strategy_name}</b> — Regime Change",
+        "",
+        f"<code>{old_regime.upper()} → {new_regime.upper()}</code>",
+        f"Symbol: {symbol}",
+        f"Price: ${price:,.2f}" if price else "",
+        f"Exposure: {exposure:.1%}" if exposure is not None else "",
         "",
         f'<a href="{SITE_URL}/strategy/{slug}">View Strategy →</a>',
     ]
@@ -122,7 +160,7 @@ def load_subscribers() -> list[dict]:
 
 def format_webhook_json(strategy_name: str, slug: str,
                         old_action: str, new_action: str, signal_data: dict) -> dict:
-    """Format a JSON payload for generic webhooks."""
+    """Format a JSON payload for generic webhooks (action change)."""
     return {
         "event": "signal_change",
         "strategy": strategy_name,
@@ -131,6 +169,21 @@ def format_webhook_json(strategy_name: str, slug: str,
         "new_signal": new_action,
         "price": signal_data.get("price", 0),
         "reason": signal_data.get("reason", ""),
+        "url": f"{SITE_URL}/strategy/{slug}",
+    }
+
+
+def format_webhook_json_regime(strategy_name: str, slug: str,
+                               old_regime: str, new_regime: str, signal_data: dict) -> dict:
+    """Format a JSON payload for generic webhooks (regime change)."""
+    return {
+        "event": "regime_change",
+        "strategy": strategy_name,
+        "symbol": signal_data.get("symbol", ""),
+        "old_regime": old_regime,
+        "new_regime": new_regime,
+        "price": signal_data.get("price", 0),
+        "exposure": signal_data.get("exposure"),
         "url": f"{SITE_URL}/strategy/{slug}",
     }
 
@@ -174,26 +227,33 @@ def format_webhook_bark(strategy_name: str, slug: str,
 
 
 def send_webhook(subscriber: dict, strategy_name: str, slug: str,
-                 old_action: str, new_action: str, signal_data: dict) -> bool:
-    """Send notification to a single webhook subscriber."""
+                 old_val: str, new_val: str, signal_data: dict,
+                 event_type: str = "signal") -> bool:
+    """Send notification to a single webhook subscriber.
+
+    event_type: "signal" (buy/sell action change) or "regime" (regime change)
+    """
     sub_url = subscriber["url"]
     fmt = subscriber.get("format", "json")
 
     try:
         if fmt == "bark":
-            title = f"{strategy_name} Signal"
-            body = f"{old_action.upper()} → {new_action.upper()} | {signal_data.get('symbol', '')} ${signal_data.get('price', 0):,.2f}"
+            title = f"{strategy_name} {'Signal' if event_type == 'signal' else 'Regime'}"
+            body = f"{old_val.upper()} → {new_val.upper()} | {signal_data.get('symbol', '')} ${signal_data.get('price', 0):,.2f}"
             bark_url = f"{sub_url.rstrip('/')}/{title}/{body}"
             req = Request(bark_url, method="GET")
             with urlopen(req, timeout=10) as resp:
                 return resp.status == 200
         elif fmt == "discord":
-            payload = format_webhook_discord(strategy_name, slug, old_action, new_action, signal_data)
+            payload = format_webhook_discord(strategy_name, slug, old_val, new_val, signal_data)
         elif fmt == "text":
-            text = format_webhook_text(strategy_name, slug, old_action, new_action, signal_data)
+            text = format_webhook_text(strategy_name, slug, old_val, new_val, signal_data)
             payload = {"text": text, "content": text}
         else:
-            payload = format_webhook_json(strategy_name, slug, old_action, new_action, signal_data)
+            if event_type == "regime":
+                payload = format_webhook_json_regime(strategy_name, slug, old_val, new_val, signal_data)
+            else:
+                payload = format_webhook_json(strategy_name, slug, old_val, new_val, signal_data)
 
         data = json.dumps(payload).encode()
         req = Request(sub_url, data=data, headers={"Content-Type": "application/json"})
@@ -223,7 +283,9 @@ def main():
                      if d.is_dir() and (d / "latest.json").exists()
                      and d.name != "market"]
 
-    changes = []
+    # Each entry: (name, sid, old_val, new_val, signal_data, event_type)
+    notifications = []
+
     for sdir in sorted(strategy_dirs):
         sid = sdir.name
         current = get_current_signal(sid)
@@ -232,29 +294,46 @@ def main():
 
         strategy_info = current.get("strategy", {})
         signal_info = current.get("current_signal", {})
+        strategy_name = strategy_info.get("name", sid)
+
+        signal_data_base = {
+            "price": signal_info.get("price", 0),
+            "symbol": strategy_info.get("symbol", ""),
+        }
+
+        # --- Action change (buy/sell) ---
         new_action = signal_info.get("action", "")
         old_action = get_previous_signal(sid)
-
         if old_action and old_action != new_action and new_action in ("buy", "sell"):
-            signal_data = {
-                "price": signal_info.get("price", 0),
-                "symbol": strategy_info.get("symbol", ""),
-                "reason": signal_info.get("reason", ""),
-            }
-            changes.append((strategy_info.get("name", sid), sid, old_action, new_action, signal_data))
+            signal_data = {**signal_data_base, "reason": signal_info.get("reason", "")}
+            notifications.append((strategy_name, sid, old_action, new_action, signal_data, "signal"))
 
-    if not changes:
-        print("[notify] No signal changes detected")
+        # --- Regime change ---
+        new_regime = signal_info.get("regime")
+        if new_regime:
+            old_regime = get_previous_regime(sid)
+            if old_regime and old_regime != new_regime:
+                signal_data = {
+                    **signal_data_base,
+                    "exposure": signal_info.get("target_exposure"),
+                }
+                notifications.append((strategy_name, sid, old_regime, new_regime, signal_data, "regime"))
+
+    if not notifications:
+        print("[notify] No signal or regime changes detected")
         return
 
-    print(f"[notify] Detected {len(changes)} signal change(s)")
-    for name, sid, old, new, signal_data in changes:
+    print(f"[notify] Detected {len(notifications)} notification(s)")
+    for name, sid, old_val, new_val, signal_data, event_type in notifications:
         slug = strategy_slug(sid)
         if has_telegram:
-            msg = format_message(name, slug, old, new, signal_data)
+            if event_type == "regime":
+                msg = format_regime_message(name, slug, old_val, new_val, signal_data)
+            else:
+                msg = format_message(name, slug, old_val, new_val, signal_data)
             send_telegram(msg)
         for sub in subscribers:
-            send_webhook(sub, name, slug, old, new, signal_data)
+            send_webhook(sub, name, slug, old_val, new_val, signal_data, event_type)
 
 
 if __name__ == "__main__":
