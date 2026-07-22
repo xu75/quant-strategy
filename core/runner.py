@@ -97,8 +97,16 @@ def load_strategy_data(manifest, config, canonical_only: bool = False) -> pd.Dat
             if src.get("symbol") == primary_symbol and src.get("local_file"):
                 local_file = src["local_file"]
                 timeframe = src.get("timeframe", config.timeframe)
+                timestamp_semantics = src.get("timestamp_semantics")
+                futu_cutoff_date = src.get("futu_cutoff_date")
                 print(f"{LOG_PREFIX} [{manifest.id}] Loading primary data from local file: {local_file}")
-                df = load_local_history_by_name(local_file, target_bar=timeframe, canonical_only=canonical_only)
+                df = load_local_history_by_name(
+                    local_file,
+                    target_bar=timeframe,
+                    canonical_only=canonical_only,
+                    timestamp_semantics=timestamp_semantics,
+                    futu_cutoff_date=futu_cutoff_date,
+                )
                 print(
                     f"{LOG_PREFIX} [{manifest.id}] Loaded {len(df)} candles, "
                     f"{df.iloc[0]['timestamp']} to {df.iloc[-1]['timestamp']}"
@@ -177,9 +185,17 @@ def load_extra_data_sources(manifest, canonical_only: bool = False) -> dict[str,
             continue
         local_file = src.get("local_file")
         timeframe = src.get("timeframe", "1H")
+        timestamp_semantics = src.get("timestamp_semantics")
+        futu_cutoff_date = src.get("futu_cutoff_date")
         if local_file:
             print(f"{LOG_PREFIX} [{manifest.id}] Loading extra source '{key}': {local_file} @ {timeframe}")
-            extras[key] = load_local_history_by_name(local_file, target_bar=timeframe, canonical_only=canonical_only)
+            extras[key] = load_local_history_by_name(
+                local_file,
+                target_bar=timeframe,
+                canonical_only=canonical_only,
+                timestamp_semantics=timestamp_semantics,
+                futu_cutoff_date=futu_cutoff_date,
+            )
             print(f"{LOG_PREFIX} [{manifest.id}]   -> {len(extras[key])} candles")
 
     return extras

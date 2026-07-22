@@ -108,7 +108,7 @@ def test_trendlock_uses_canonical_primary_history_in_ci(monkeypatch):
     """TrendLock 40 must use committed BTC history before OKX fallback in CI."""
     calls: list[tuple] = []
 
-    def named_history(filename, target_bar, canonical_only=False):
+    def named_history(filename, target_bar, canonical_only=False, timestamp_semantics=None, futu_cutoff_date=None):
         calls.append(("named", filename, target_bar))
         return make_history()
 
@@ -161,3 +161,32 @@ def test_performance_period_boundaries_use_fixed_product_windows():
     assert boundaries["3y"] == end_date - pd.DateOffset(years=3)
     assert boundaries["5y"] == end_date - pd.DateOffset(years=5)
     assert "all" not in boundaries
+
+
+def test_manifest_timestamp_semantics_passed_to_loader(monkeypatch):
+    """Test that manifest timestamp_semantics and futu_cutoff_date are passed to loader."""
+    from core import runner
+    from core.registry import discover_strategies
+
+    calls = []
+
+    def capture_load(filename, target_bar, canonical_only=False, timestamp_semantics=None, futu_cutoff_date=None):
+        calls.append({
+            "filename": filename,
+            "timestamp_semantics": timestamp_semantics,
+            "futu_cutoff_date": futu_cutoff_date,
+        })
+        return make_history()
+
+    monkeypatch.setattr(runner, "load_local_history_by_name", capture_load)
+
+    manifest = next(m for m in discover_strategies() if m.id == "echotrend_240_v3")
+    adapter = load_strategy_module(manifest)
+
+    runner.load_strategy_data(manifest, adapter.config, canonical_only=True)
+
+    # Should have captured MSTR load with timestamp_semantics and cutoff
+    assert len(calls) == 1
+    assert calls[0]["filename"] == "MSTR_1h.csv"
+    assert calls[0]["timestamp_semantics"] == "futu_close_labeled"
+    assert calls[0]["futu_cutoff_date"] == "2026-04-30"

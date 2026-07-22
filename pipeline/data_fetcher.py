@@ -72,6 +72,102 @@ _INTERVAL_COVERING = {
 }
 
 
+def _relabel_futu_hourly_rth_to_bar_open(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert Futu K_60M RTH close labels to executable bar-open labels.
+
+    Futu's historical hourly rows are timestamped at candle end. A zero-volume
+    09:30 opening snapshot precedes completed candles labeled 10:30..15:30 and
+    a final half-hour candle labeled 16:00. Backtests execute at ``row.open``,
+    so retaining end labels exposes that open to signals only known an hour
+    later and also selects the snapshot while dropping the closing half-hour.
+
+    Args:
+        df: DataFrame with DatetimeIndex in US/Eastern timezone, containing RTH bars.
+
+    Returns:
+        DataFrame with timestamps shifted to executable bar-open time.
+    """
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("Input must have DatetimeIndex for time-based filtering")
+
+    rth_completed = df.between_time("10:30", "16:00", inclusive="both").copy()
+    if rth_completed.empty:
+        return rth_completed
+
+    shifted_index = []
+    for timestamp in rth_completed.index:
+        # 16:00 label → shift -30min to 15:30 (half-hour bar)
+        # Other labels → shift -1h (full hour bars)
+        duration = pd.Timedelta(minutes=30) if timestamp.minute == 0 else pd.Timedelta(hours=1)
+        shifted_index.append(timestamp - duration)
+
+    rth_completed.index = pd.DatetimeIndex(shifted_index, name=df.index.name)
+    return rth_completed.sort_index()
+
+
+def _apply_futu_hourly_correction(df: pd.DataFrame, cutoff_date: str | None = None) -> pd.DataFrame:
+    """Apply Futu close-label → bar-open correction to timestamp column format.
+
+    Converts timestamp column to DatetimeIndex, applies the correction,
+    then converts back to timestamp column format for consistency with
+    the rest of the pipeline.
+
+    Args:
+        df: DataFrame with 'timestamp' column (UTC or US/Eastern).
+        cutoff_date: Optional date string (YYYY-MM-DD). Only bars on or before
+            this date (inclusive) are corrected. Bars after this date are
+            assumed to have correct bar-open labels already (e.g., from yfinance).
+
+    Returns:
+        DataFrame with corrected timestamps in 'timestamp' column format.
+    """
+    if "timestamp" not in df.columns:
+        raise ValueError("DataFrame must have 'timestamp' column")
+
+    # Convert to US/Eastern if not already
+    df = df.copy()
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+
+    # Check if already in US/Eastern, otherwise convert
+    if df["timestamp"].dt.tz is None:
+        df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+
+    df["timestamp"] = df["timestamp"].dt.tz_convert("US/Eastern")
+
+    # If cutoff_date is provided, split the data
+    if cutoff_date:
+        cutoff_ts = pd.Timestamp(cutoff_date, tz="US/Eastern") + pd.Timedelta(days=1)  # End of cutoff day
+        futu_mask = df["timestamp"] < cutoff_ts
+        futu_df = df[futu_mask].copy()
+        yfinance_df = df[~futu_mask].copy()
+
+        if not futu_df.empty:
+            # Apply correction only to Futu data
+            futu_indexed = futu_df.set_index("timestamp").sort_index()
+            futu_corrected = _relabel_futu_hourly_rth_to_bar_open(futu_indexed)
+            futu_corrected = futu_corrected.reset_index()
+            futu_corrected["timestamp"] = futu_corrected["timestamp"].dt.tz_convert("UTC")
+
+            # Combine corrected Futu data with unchanged yfinance data
+            if not yfinance_df.empty:
+                yfinance_df["timestamp"] = yfinance_df["timestamp"].dt.tz_convert("UTC")
+                result = pd.concat([futu_corrected, yfinance_df], ignore_index=True)
+                result = result.sort_values("timestamp").reset_index(drop=True)
+                return result
+            return futu_corrected
+        else:
+            # All data is after cutoff, no correction needed
+            df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
+            return df
+
+    # No cutoff: apply correction to all data (legacy behavior)
+    df_indexed = df.set_index("timestamp").sort_index()
+    df_corrected = _relabel_futu_hourly_rth_to_bar_open(df_indexed)
+    df_corrected = df_corrected.reset_index()
+    df_corrected["timestamp"] = df_corrected["timestamp"].dt.tz_convert("UTC")
+    return df_corrected
+
+
 def _resample_to_target(df: pd.DataFrame, source_freq: str, target_freq: str) -> pd.DataFrame:
     """Resample finer-grained data to target frequency."""
     tmp = df.set_index("timestamp").sort_index()
@@ -102,6 +198,8 @@ def load_local_history_by_name(
     filename: str,
     target_bar: str = "1H",
     canonical_only: bool = False,
+    timestamp_semantics: str | None = None,
+    futu_cutoff_date: str | None = None,
 ) -> pd.DataFrame:
     """Load a named local history CSV from canonical or legacy directory.
 
@@ -118,6 +216,15 @@ def load_local_history_by_name(
 
     Interval covering is source-constrained: if base file comes from canonical,
     finer files must also come from canonical (no cross-source mixing).
+
+    timestamp_semantics: Optional data source timestamp contract. Supported values:
+      - "futu_close_labeled": Apply Futu K_60M close-label → bar-open correction.
+        Only applies to 1H equity data (MSTR, QQQ). Requires US/Eastern timezone.
+
+    futu_cutoff_date: When timestamp_semantics is "futu_close_labeled", only apply
+      correction to bars on or before this date (inclusive). Bars after this date
+      are assumed to be from a different source (e.g., yfinance) with bar-open labels.
+      Format: "YYYY-MM-DD" (e.g., "2026-04-30").
 
     No silent yfinance fallback — raises FileNotFoundError if no local file found.
     """
@@ -166,6 +273,31 @@ def load_local_history_by_name(
             break
 
     if base_df is not None:
+        # Apply timestamp semantics corrections
+        if timestamp_semantics == "futu_close_labeled":
+            if target_lower != "1h":
+                raise ValueError(
+                    f"timestamp_semantics='futu_close_labeled' only supports 1H data, "
+                    f"got target_bar='{target_bar}'. "
+                    f"Resampling after correction would break event-time alignment."
+                )
+            if futu_cutoff_date:
+                print(f"[data_fetcher] Applying Futu close-label → bar-open correction to {filename} "
+                      f"(data <= {futu_cutoff_date})")
+                base_df = _apply_futu_hourly_correction(base_df, cutoff_date=futu_cutoff_date)
+            else:
+                print(f"[data_fetcher] Applying Futu close-label → bar-open correction to {filename}")
+                base_df = _apply_futu_hourly_correction(base_df)
+        elif timestamp_semantics and timestamp_semantics != "futu_close_labeled":
+            raise ValueError(
+                f"Unknown timestamp_semantics: '{timestamp_semantics}'. "
+                f"Supported values: 'futu_close_labeled' or null"
+            )
+        elif futu_cutoff_date and not timestamp_semantics:
+            raise ValueError(
+                f"futu_cutoff_date specified but timestamp_semantics is missing. "
+                f"futu_cutoff_date requires timestamp_semantics='futu_close_labeled'"
+            )
         return base_df
 
     raise FileNotFoundError(

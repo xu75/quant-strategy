@@ -1,7 +1,7 @@
 # strategies/echotrend_240_v3/manifest.yaml
 id: echotrend_240_v3
 name: "EchoTrend 240 V3"
-version: "1.0.0"
+version: "1.1.0"
 description: "BTC 4H SMA240 regime gate — MSTR 趋势跟踪（decision_row 即時執行，CB，crash mode confirm，CAP1.0）"
 
 config:
@@ -28,6 +28,8 @@ data_sources:
     timeframe: "1H"
     source: "local"
     local_file: "MSTR_1h.csv"
+    timestamp_semantics: "futu_close_labeled"
+    futu_cutoff_date: "2026-04-30"  # Futu data ends, yfinance begins 2026-05-01
   btc:
     symbol: "BTC-USDT"
     timeframe: "1H"
@@ -108,4 +110,4 @@ page:
       description: "When >= 3 of 5 reentry conditions met, step_up = 0.90 for fast position rebuild. Conditions: MSTR 1H >= +3.5%, BTC 1H >= +1.0%, QQQ 1H >= +0.3%, MSTR/BTC RS >= +1.0%, MSTR close >= VWAP."
     - title: "Position Management (CAP1.0)"
       description: "Target position is binary: 100% MSTR in bull regime, 0% in bear regime. No leverage. Execution uses gap*step, so transitional partial positions exist during regime flips. Position sizing uses current equity (cash + shares * price), not fixed initial_shares."
-  data_source_desc: "Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D bars. CI pipeline updates data via Yahoo Finance (equities) and OKX (crypto) every 4 hours. Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution)."
+  data_source_desc: "Market data from canonical repository (data/market/): BTC-USD and MSTR 1H/1D bars, QQQ 1H/1D bars. MSTR 1H data combines historical Futu K_60M (through 2026-04-30, close-labeled, corrected to bar-open on load) and ongoing yfinance updates (from 2026-05-01, bar-open labeled). CI pipeline updates equity data via Yahoo Finance daily. Signals generated from dual-feed pipeline (BTC 1H → 4H regime + MSTR 1H execution)."
