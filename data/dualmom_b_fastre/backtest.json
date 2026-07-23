@@ -12,20 +12,20 @@
     "secondary_symbol": "SPY"
   },
   "performance": {
-    "total_return_pct": 475.05,
-    "realized_return_pct": 475.05,
+    "total_return_pct": 472.11,
+    "realized_return_pct": 472.11,
     "max_drawdown_pct": 28.65,
     "win_rate_pct": 62.96,
     "total_trades": 37,
     "avg_hold_bars": 98.2,
     "sharpe_ratio": 0.88,
-    "buy_hold_return_pct": 849.51,
+    "buy_hold_return_pct": 844.66,
     "buy_hold_max_drawdown_pct": 35.12,
     "has_open_position": true
   },
   "period": {
     "start": "2013-11-21T00:00:00+00:00",
-    "end": "2026-07-21T00:00:00+00:00"
+    "end": "2026-07-22T00:00:00+00:00"
   },
   "trades": [
     {
@@ -274,10 +274,10 @@
     {
       "entry_time": "2026-04-13T00:00:00+00:00",
       "entry_price": 609.48,
-      "exit_time": "2026-07-21T00:00:00+00:00",
-      "exit_price": 708.97,
-      "hold_bars": 61,
-      "pnl_pct": 16.21,
+      "exit_time": "2026-07-22T00:00:00+00:00",
+      "exit_price": 705.35,
+      "hold_bars": 62,
+      "pnl_pct": 15.61,
       "asset": "QQQ",
       "status": "open"
     }
@@ -286,80 +286,80 @@
   "periods": {
     "since_launch": {
       "start": "2026-04-10T00:00:00+00:00",
-      "end": "2026-07-21T00:00:00+00:00",
+      "end": "2026-07-22T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 16.21,
-        "realized_return_pct": 16.21,
+        "total_return_pct": 15.62,
+        "realized_return_pct": 15.62,
         "max_drawdown_pct": 6.81,
         "win_rate_pct": 0.0,
         "total_trades": 0,
         "avg_hold_bars": 0.0,
-        "sharpe_ratio": 2.692,
-        "buy_hold_return_pct": 16.02,
+        "sharpe_ratio": 2.585,
+        "buy_hold_return_pct": 15.43,
         "buy_hold_max_drawdown_pct": 6.81,
         "has_open_position": true
       }
     },
     "1y": {
-      "start": "2025-07-21T00:00:00+00:00",
-      "end": "2026-07-21T00:00:00+00:00",
+      "start": "2025-07-22T00:00:00+00:00",
+      "end": "2026-07-22T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 20.1,
-        "realized_return_pct": 20.1,
+        "total_return_pct": 20.11,
+        "realized_return_pct": 20.11,
         "max_drawdown_pct": 11.96,
         "win_rate_pct": 100.0,
         "total_trades": 1,
         "avg_hold_bars": 228.0,
         "sharpe_ratio": 1.128,
-        "buy_hold_return_pct": 26.13,
+        "buy_hold_return_pct": 26.14,
         "buy_hold_max_drawdown_pct": 11.96,
         "has_open_position": true
       }
     },
     "2y": {
-      "start": "2024-07-21T00:00:00+00:00",
-      "end": "2026-07-21T00:00:00+00:00",
+      "start": "2024-07-22T00:00:00+00:00",
+      "end": "2026-07-22T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 35.95,
-        "realized_return_pct": 35.95,
+        "total_return_pct": 33.27,
+        "realized_return_pct": 33.27,
         "max_drawdown_pct": 11.96,
         "win_rate_pct": 42.86,
         "total_trades": 7,
         "avg_hold_bars": 101.1,
-        "sharpe_ratio": 0.972,
-        "buy_hold_return_pct": 50.79,
+        "sharpe_ratio": 0.917,
+        "buy_hold_return_pct": 47.82,
         "buy_hold_max_drawdown_pct": 22.77,
         "has_open_position": true
       }
     },
     "3y": {
-      "start": "2023-07-21T00:00:00+00:00",
-      "end": "2026-07-21T00:00:00+00:00",
+      "start": "2023-07-22T00:00:00+00:00",
+      "end": "2026-07-22T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 73.19,
-        "realized_return_pct": 73.19,
+        "total_return_pct": 72.31,
+        "realized_return_pct": 72.31,
         "max_drawdown_pct": 13.56,
         "win_rate_pct": 57.14,
         "total_trades": 7,
         "avg_hold_bars": 101.1,
-        "sharpe_ratio": 1.174,
-        "buy_hold_return_pct": 92.1,
+        "sharpe_ratio": 1.164,
+        "buy_hold_return_pct": 91.11,
         "buy_hold_max_drawdown_pct": 22.77,
         "has_open_position": true
       }
     },
     "5y": {
-      "start": "2021-07-21T00:00:00+00:00",
-      "end": "2026-07-21T00:00:00+00:00",
+      "start": "2021-07-22T00:00:00+00:00",
+      "end": "2026-07-22T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 113.86,
-        "realized_return_pct": 113.86,
+        "total_return_pct": 111.37,
+        "realized_return_pct": 111.37,
         "max_drawdown_pct": 13.56,
         "win_rate_pct": 66.67,
         "total_trades": 12,
         "avg_hold_bars": 101.0,
-        "sharpe_ratio": 1.091,
-        "buy_hold_return_pct": 102.11,
+        "sharpe_ratio": 1.075,
+        "buy_hold_return_pct": 99.76,
         "buy_hold_max_drawdown_pct": 35.12,
         "has_open_position": true
       }
@@ -375,18 +375,18 @@
         "symbol": "QQQ",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3401,
+        "rows": 3402,
         "start": "2013-01-02T00:00:00+00:00",
-        "end": "2026-07-21T00:00:00+00:00"
+        "end": "2026-07-22T00:00:00+00:00"
       },
       {
         "key": "spy",
         "symbol": "SPY",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 7173,
+        "rows": 7174,
         "start": "1998-01-02T00:00:00+00:00",
-        "end": "2026-07-21T00:00:00+00:00"
+        "end": "2026-07-22T00:00:00+00:00"
       }
     ]
   }

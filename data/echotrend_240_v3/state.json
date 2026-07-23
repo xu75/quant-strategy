@@ -1,10 +1,10 @@
 {
   "engine": {
-    "bar_index": 11359,
+    "bar_index": 11522,
     "exposure_ema": 1.0,
     "last_scores": {
-      "trend": 25.0,
-      "risk": 10.0,
+      "trend": 30.0,
+      "risk": 0.0,
       "rs": 50.0,
       "raw": 1.0,
       "target": 1.0
@@ -14,25 +14,25 @@
     "mode_counter": 0,
     "trend_regime": "bull",
     "regime_counter": 0,
-    "regime_change_bar": 11326,
-    "regime_flips": 108,
-    "last_rebalance_bar": 11330,
+    "regime_change_bar": 11482,
+    "regime_flips": 110,
+    "last_rebalance_bar": 11486,
     "cb_triggered": false,
     "cb_trigger_date": "2026-07-01",
-    "prev_bar_high": 102.08509826660156,
-    "prev_bar_low": 100.68009948730467,
-    "intraday_high": 104.5999984741211,
-    "current_date": "2026-07-21"
+    "prev_bar_high": 100.41000366210938,
+    "prev_bar_low": 99.5,
+    "intraday_high": 101.93000030517578,
+    "current_date": "2026-07-22"
   },
   "portfolio": {
-    "cash": 5178.363939391968,
-    "shares": 2881.398550227103,
+    "cash": 5852.0449734172635,
+    "shares": 3256.2540690138267,
     "initial_capital": 10000.0,
-    "total_costs": 17546.68340679978
+    "total_costs": 21039.97522412517
   },
-  "watermark": "2026-07-21T19:30:00+00:00",
+  "watermark": "2026-07-22T19:30:00+00:00",
   "strategy_id": "echotrend_240_v3",
-  "strategy_version": "1.0.0",
+  "strategy_version": "1.1.0",
   "config_hash": "d89e8ddbbb365abe",
   "mode": "full-backtest"
 }
