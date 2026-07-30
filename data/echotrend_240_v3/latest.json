@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-29T11:06:58.301288+00:00",
+  "updated_at": "2026-07-30T10:53:29.332425+00:00",
   "strategy": {
     "name": "EchoTrend 240 V3",
     "code": "echotrend_240_v3",
@@ -9,18 +9,18 @@
   },
   "current_signal": {
     "action": "hold",
-    "price": 96.17,
+    "price": 93.32,
     "ma_value": 0.0,
-    "timestamp": "2026-07-28T19:30:00+00:00",
+    "timestamp": "2026-07-29T19:30:00+00:00",
     "hold_bars": 0,
     "reason": "Exposure 0.98, mode=neutral, regime=bull",
     "regime": "bull",
     "mode": "neutral",
     "target_exposure": 1.0,
-    "current_exposure": 0.9817,
+    "current_exposure": 0.9811,
     "exposure_state": "holding",
     "scores": {
-      "trend": 5.0,
+      "trend": 0.0,
       "risk": 0.0,
       "rs": 50.0,
       "raw": 1.0,
