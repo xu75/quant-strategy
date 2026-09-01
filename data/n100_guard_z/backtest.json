@@ -427,7 +427,7 @@
   "periods": {
     "since_launch": {
       "start": "2026-05-26T00:00:00+00:00",
-      "end": "2026-08-27T00:00:00+00:00",
+      "end": "2026-08-31T00:00:00+00:00",
       "performance": {
         "total_return_pct": -2.39,
         "realized_return_pct": -2.39,
@@ -436,14 +436,14 @@
         "total_trades": 2,
         "avg_hold_bars": 17.0,
         "sharpe_ratio": -0.366,
-        "buy_hold_return_pct": 1.74,
+        "buy_hold_return_pct": 2.2,
         "buy_hold_max_drawdown_pct": 13.7,
         "has_open_position": true
       }
     },
     "1y": {
-      "start": "2025-08-27T00:00:00+00:00",
-      "end": "2026-08-27T00:00:00+00:00",
+      "start": "2025-08-31T00:00:00+00:00",
+      "end": "2026-08-31T00:00:00+00:00",
       "performance": {
         "total_return_pct": 21.94,
         "realized_return_pct": 21.94,
@@ -451,56 +451,56 @@
         "win_rate_pct": 50.0,
         "total_trades": 6,
         "avg_hold_bars": 55.3,
-        "sharpe_ratio": 1.12,
-        "buy_hold_return_pct": 30.46,
+        "sharpe_ratio": 1.123,
+        "buy_hold_return_pct": 31.97,
         "buy_hold_max_drawdown_pct": 16.3,
         "has_open_position": true
       }
     },
     "2y": {
-      "start": "2024-08-27T00:00:00+00:00",
-      "end": "2026-08-27T00:00:00+00:00",
+      "start": "2024-08-31T00:00:00+00:00",
+      "end": "2026-08-31T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 55.46,
-        "realized_return_pct": 55.46,
+        "total_return_pct": 57.56,
+        "realized_return_pct": 57.56,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 55.56,
         "total_trades": 9,
         "avg_hold_bars": 65.4,
-        "sharpe_ratio": 1.374,
-        "buy_hold_return_pct": 54.16,
+        "sharpe_ratio": 1.42,
+        "buy_hold_return_pct": 57.59,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
       }
     },
     "3y": {
-      "start": "2023-08-27T00:00:00+00:00",
-      "end": "2026-08-27T00:00:00+00:00",
+      "start": "2023-08-31T00:00:00+00:00",
+      "end": "2026-08-31T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 103.29,
-        "realized_return_pct": 103.29,
+        "total_return_pct": 95.62,
+        "realized_return_pct": 95.62,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 71.43,
         "total_trades": 14,
         "avg_hold_bars": 66.6,
-        "sharpe_ratio": 1.448,
-        "buy_hold_return_pct": 103.76,
+        "sharpe_ratio": 1.382,
+        "buy_hold_return_pct": 95.88,
         "buy_hold_max_drawdown_pct": 24.01,
         "has_open_position": true
       }
     },
     "5y": {
-      "start": "2021-08-27T00:00:00+00:00",
-      "end": "2026-08-27T00:00:00+00:00",
+      "start": "2021-08-31T00:00:00+00:00",
+      "end": "2026-08-31T00:00:00+00:00",
       "performance": {
-        "total_return_pct": 160.0,
-        "realized_return_pct": 160.0,
+        "total_return_pct": 154.54,
+        "realized_return_pct": 154.54,
         "max_drawdown_pct": 16.19,
         "win_rate_pct": 70.59,
         "total_trades": 17,
         "avg_hold_bars": 72.8,
-        "sharpe_ratio": 1.387,
-        "buy_hold_return_pct": 117.3,
+        "sharpe_ratio": 1.361,
+        "buy_hold_return_pct": 113.73,
         "buy_hold_max_drawdown_pct": 27.5,
         "has_open_position": true
       }
@@ -516,126 +516,126 @@
         "symbol": "QQQ",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3425,
+        "rows": 3426,
         "start": "2013-01-02T00:00:00+00:00",
-        "end": "2026-08-27T00:00:00+00:00"
+        "end": "2026-08-31T00:00:00+00:00"
       },
       {
         "key": "spy",
         "symbol": "SPY",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 7197,
+        "rows": 7198,
         "start": "1998-01-02T00:00:00+00:00",
-        "end": "2026-08-27T00:00:00+00:00"
+        "end": "2026-08-31T00:00:00+00:00"
       },
       {
         "key": "etf_513100",
         "symbol": "513100",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 3181,
+        "rows": 3182,
         "start": "2013-07-31T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159941",
         "symbol": "159941",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 2707,
+        "rows": 2708,
         "start": "2015-07-13T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_513300",
         "symbol": "513300",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 1413,
+        "rows": 1414,
         "start": "2020-11-05T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159501",
         "symbol": "159501",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 780,
+        "rows": 781,
         "start": "2023-06-14T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159513",
         "symbol": "159513",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 750,
+        "rows": 751,
         "start": "2023-07-28T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159659",
         "symbol": "159659",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 813,
+        "rows": 814,
         "start": "2023-04-25T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159632",
         "symbol": "159632",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 989,
+        "rows": 990,
         "start": "2022-08-03T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159660",
         "symbol": "159660",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 819,
+        "rows": 820,
         "start": "2023-04-17T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_159696",
         "symbol": "159696",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 730,
+        "rows": 731,
         "start": "2023-08-25T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_513110",
         "symbol": "513110",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 838,
+        "rows": 839,
         "start": "2023-03-20T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_513390",
         "symbol": "513390",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 807,
+        "rows": 808,
         "start": "2023-05-08T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_513870",
         "symbol": "513870",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 687,
+        "rows": 688,
         "start": "2023-11-02T00:00:00+00:00",
-        "end": "2026-08-31T00:00:00+00:00"
+        "end": "2026-09-01T00:00:00+00:00"
       },
       {
         "key": "etf_nav",
