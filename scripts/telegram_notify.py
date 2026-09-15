@@ -16,7 +16,9 @@ Detection logic (compares current latest.json vs previous git commit):
         (reducing/increasing/holding) — never a bare BUY/SELL, because a daily
         snapshot collapses intraday events and 'action' is only an audit label.
     Binary strategies (no current_exposure):
-        Fire on action change to buy/sell, or regime change.
+        Fire on the durable position.in_position transition. Fall back to an
+        action change only when either snapshot lacks the position contract;
+        also report independent regime changes.
 
 Webhook success is decided by the JSON body (data:true/false), not HTTP 200 —
 api.chuckfang.com always returns 200. Failures make the process exit non-zero.
@@ -62,11 +64,13 @@ def get_previous_signal_data(strategy_id: str) -> dict | None:
             return None
         data = json.loads(result.stdout)
         signal = data.get("current_signal", {})
+        position = data.get("position", {})
         return {
             "action": signal.get("action"),
             "regime": signal.get("regime"),
             "target_exposure": signal.get("target_exposure"),
             "current_exposure": signal.get("current_exposure"),
+            "in_position": position.get("in_position"),
         }
     except (json.JSONDecodeError, subprocess.TimeoutExpired, FileNotFoundError):
         return None
@@ -167,9 +171,43 @@ def build_notifications(strategy_id: str, current: dict, prev: dict | None) -> l
         return notes
 
     # --- Binary strategies (no current_exposure) ---
+    # `action` is an event on the latest bar, not durable state. A daily
+    # pipeline can therefore observe hold -> hold even though a 4H entry or
+    # exit occurred between runs. Prefer the persisted position transition;
+    # retain action comparison only for older strategies/snapshots without a
+    # boolean position contract.
     new_action = sig.get("action", "")
     old_action = prev.get("action") if prev else None
-    if old_action and old_action != new_action and new_action in ("buy", "sell"):
+    curr_in_position = current.get("position", {}).get("in_position")
+    prev_in_position = prev.get("in_position") if prev else None
+    has_position_contract = (
+        isinstance(prev_in_position, bool) and isinstance(curr_in_position, bool)
+    )
+    position_changed = has_position_contract and prev_in_position != curr_in_position
+
+    if position_changed:
+        inferred_action = "buy" if curr_in_position else "sell"
+        old_state = "long" if prev_in_position else "flat"
+        new_state = "long" if curr_in_position else "flat"
+        notes.append({
+            "kind": "action",
+            "strategy": name, "slug": slug, "symbol": symbol, "price": price,
+            "old_action": old_action or "hold", "new_action": inferred_action,
+            "reason": (
+                f"Model position changed from {old_state} to {new_state} "
+                "since the previous pipeline run"
+            ),
+            "detection_source": "position_transition",
+            "old_in_position": prev_in_position,
+            "new_in_position": curr_in_position,
+            "observed_at": sig.get("timestamp"),
+        })
+    elif (
+        not has_position_contract
+        and old_action
+        and old_action != new_action
+        and new_action in ("buy", "sell")
+    ):
         notes.append({
             "kind": "action",
             "strategy": name, "slug": slug, "symbol": symbol, "price": price,
@@ -257,6 +295,7 @@ def format_message(strategy_name: str, slug: str,
     """Telegram HTML for a binary action change."""
     emoji = {"buy": "\U0001f7e2", "sell": "\U0001f534"}.get(new_action, "\U0001f4ca")
     price = signal_data.get("price", 0)
+    price_label = signal_data.get("price_label", "Price")
     symbol = signal_data.get("symbol", "")
     reason = signal_data.get("reason", "")
     lines = [
@@ -264,7 +303,7 @@ def format_message(strategy_name: str, slug: str,
         "",
         f"<code>{old_action.upper()} → {new_action.upper()}</code>",
         f"Symbol: {symbol}",
-        f"Price: ${price:,.2f}" if price else "",
+        f"{price_label}: ${price:,.2f}" if price else "",
         f"Reason: {reason}" if reason else "",
         "",
         f'<a href="{SITE_URL}/strategy/{slug}">View Strategy →</a>',
@@ -297,12 +336,17 @@ def format_webhook_json(note: dict) -> dict:
     """Webhook payload for a binary action change (includes `msg`)."""
     action_emoji = {"buy": "🟢", "sell": "🔴"}.get(note["new_action"], "📊")
     price = note.get("price", 0)
+    price_text = (
+        f"latest ${price:,.2f}"
+        if note.get("detection_source") == "position_transition"
+        else f"${price:,.2f}"
+    )
     msg = (
         f"{action_emoji} {note['strategy']} | {note['old_action'].upper()} → "
-        f"{note['new_action'].upper()} | {note['symbol']} ${price:,.2f} "
+        f"{note['new_action'].upper()} | {note['symbol']} {price_text} "
         f"| {SITE_URL}/strategy/{note['slug']}"
     )
-    return {
+    payload = {
         "msg": msg,
         "event": "signal_change",
         "strategy": note["strategy"],
@@ -313,6 +357,15 @@ def format_webhook_json(note: dict) -> dict:
         "reason": note.get("reason", ""),
         "url": f"{SITE_URL}/strategy/{note['slug']}",
     }
+    if note.get("detection_source") == "position_transition":
+        payload.update({
+            "detection_source": "position_transition",
+            "old_in_position": note.get("old_in_position"),
+            "new_in_position": note.get("new_in_position"),
+            "observed_at": note.get("observed_at"),
+            "price_semantics": "latest_snapshot",
+        })
+    return payload
 
 
 def format_webhook_json_regime(note: dict) -> dict:
@@ -448,7 +501,16 @@ def _telegram_message(note: dict) -> str:
         )
     return format_message(
         note["strategy"], note["slug"], note["old_action"], note["new_action"],
-        {"price": note.get("price", 0), "symbol": note["symbol"], "reason": note.get("reason", "")},
+        {
+            "price": note.get("price", 0),
+            "price_label": (
+                "Latest price"
+                if note.get("detection_source") == "position_transition"
+                else "Price"
+            ),
+            "symbol": note["symbol"],
+            "reason": note.get("reason", ""),
+        },
     )
 
 
