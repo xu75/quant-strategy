@@ -45,8 +45,9 @@ ever appearing as the latest `action`.
 
 The missing webhook on 2026-07-14 had a second, independent cause: the endpoint
 returned HTTP 200 with `data=false`, which the old sender treated as success.
-That delivery bug was fixed on main in commit `d5385e6`; run `29490407162`
-subsequently logged successful Telegram and webhook delivery.
+That delivery bug was fixed on main in commit
+[`d5385e6bd7ded614c1649b6681052d436db5758c`](https://github.com/xu75/quant-strategy/commit/d5385e6bd7ded614c1649b6681052d436db5758c);
+run `29490407162` subsequently logged successful Telegram and webhook delivery.
 
 ## 4. Fix
 
