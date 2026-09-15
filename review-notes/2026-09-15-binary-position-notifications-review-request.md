@@ -133,4 +133,3 @@ Dogfood: replaying actual snapshots `5b2cf4c -> 8765429` produced one BUY;
 ## Related documents
 
 - `docs/bug-report/trendlock-binary-notification-gap/bug-report.md`
-
