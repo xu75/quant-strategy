@@ -21,6 +21,9 @@ with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""}
         format_position_message,
         format_position_webhook_json,
         format_message,
+        format_webhook_json,
+        get_previous_signal_data,
+        _telegram_message,
         send_webhook,
         strategy_slug,
         EXPOSURE_NOTIFY_THRESHOLD,
@@ -41,6 +44,24 @@ def _v3_current(action="sell", curr_exp=0.2408, target=0.0, regime="bear"):
             "exposure_state": "reducing" if target < curr_exp else "increasing",
             "reason": "v3_reduce_neutral",
         },
+    }
+
+
+def _trendlock_current(*, action="hold", in_position=True, timestamp="2026-07-10T08:00:00+00:00"):
+    """A binary TrendLock snapshot where action may have returned to hold."""
+    return {
+        "strategy": {
+            "name": "TrendLock 40 Plus",
+            "code": "btc_ma_trend_plus",
+            "symbol": "BTC-USDT",
+        },
+        "current_signal": {
+            "action": action,
+            "price": 64_407.0,
+            "timestamp": timestamp,
+            "reason": "Holding, price above MA240",
+        },
+        "position": {"in_position": in_position, "entry_bar_idx": 14291 if in_position else None},
     }
 
 
@@ -134,6 +155,105 @@ class TestActionNotificationBinary:
         prev = {"action": "hold"}
         notes = build_notifications("n100_guard_z", current, prev)
         assert notes == []
+
+
+class TestBinaryPositionTransitionDetection:
+    """Regression coverage for the TrendLock signals missed in July 2026."""
+
+    def test_entry_detected_after_action_has_returned_to_hold(self):
+        current = _trendlock_current(action="hold", in_position=True)
+        prev = {"action": "hold", "in_position": False}
+
+        notes = build_notifications("btc_ma_trend_plus", current, prev)
+
+        assert len(notes) == 1
+        assert notes[0]["kind"] == "action"
+        assert notes[0]["new_action"] == "buy"
+        assert notes[0]["detection_source"] == "position_transition"
+        assert notes[0]["old_in_position"] is False
+        assert notes[0]["new_in_position"] is True
+
+    def test_exit_detected_after_action_has_returned_to_hold(self):
+        current = _trendlock_current(
+            action="hold",
+            in_position=False,
+            timestamp="2026-07-14T08:00:00+00:00",
+        )
+        prev = {"action": "hold", "in_position": True}
+
+        notes = build_notifications("btc_ma_trend_plus", current, prev)
+
+        assert len(notes) == 1
+        assert notes[0]["new_action"] == "sell"
+        assert notes[0]["detection_source"] == "position_transition"
+        assert notes[0]["old_in_position"] is True
+        assert notes[0]["new_in_position"] is False
+
+    def test_position_transition_does_not_duplicate_current_action(self):
+        current = _trendlock_current(action="sell", in_position=False)
+        prev = {"action": "hold", "in_position": True}
+
+        notes = build_notifications("btc_ma_trend_plus", current, prev)
+
+        assert len(notes) == 1
+        assert notes[0]["new_action"] == "sell"
+
+    def test_inferred_transition_labels_price_as_latest_snapshot(self):
+        current = _trendlock_current(action="hold", in_position=True)
+        note = build_notifications(
+            "btc_ma_trend_plus", current, {"action": "hold", "in_position": False}
+        )[0]
+
+        telegram = _telegram_message(note)
+        webhook = format_webhook_json(note)
+
+        assert "Latest price:" in telegram
+        assert "since the previous pipeline run" in telegram
+        assert "latest $" in webhook["msg"]
+        assert webhook["price_semantics"] == "latest_snapshot"
+
+    def test_stable_position_and_hold_stays_silent(self):
+        current = _trendlock_current(action="hold", in_position=True)
+        prev = {"action": "hold", "in_position": True}
+
+        assert build_notifications("btc_ma_trend_plus", current, prev) == []
+
+    def test_stable_position_does_not_fall_back_to_transient_action(self):
+        current = _trendlock_current(action="buy", in_position=True)
+        prev = {"action": "hold", "in_position": True}
+
+        assert build_notifications("btc_ma_trend_plus", current, prev) == []
+
+    def test_continuous_strategy_keeps_single_exposure_notification(self):
+        current = _v3_current(action="sell", curr_exp=0.2408, target=0.0)
+        current["position"] = {"in_position": True}
+        prev = {
+            "action": "hold",
+            "regime": "bear",
+            "current_exposure": 0.0183,
+            "target_exposure": 0.0,
+            "in_position": False,
+        }
+
+        notes = build_notifications("echotrend_240_v3", current, prev)
+
+        assert len(notes) == 1
+        assert notes[0]["kind"] == "position"
+
+
+class TestPreviousSignalData:
+    def test_preserves_false_position_state_from_git_snapshot(self):
+        snapshot = {
+            "current_signal": {"action": "hold"},
+            "position": {"in_position": False},
+        }
+        completed = MagicMock(returncode=0, stdout=json.dumps(snapshot))
+
+        with patch("scripts.telegram_notify.subprocess.run", return_value=completed):
+            prev = get_previous_signal_data("btc_ma_trend_plus")
+
+        assert prev["action"] == "hold"
+        assert prev["in_position"] is False
 
 
 class TestWebhookVerification:
