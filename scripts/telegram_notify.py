@@ -38,6 +38,7 @@ SITE_URL = "https://quant-strategy.mesh-hub.xyz"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+WEBHOOK_SUBSCRIBERS_JSON = os.environ.get("WEBHOOK_SUBSCRIBERS_JSON", "")
 
 # Fire a position update when executed exposure moves at least this much.
 EXPOSURE_NOTIFY_THRESHOLD = 0.035
@@ -89,7 +90,25 @@ def get_current_signal(strategy_id: str) -> dict | None:
 
 
 def load_subscribers() -> list[dict]:
-    """Load webhook subscribers from config file."""
+    """Load webhook subscribers from env var or config file.
+
+    Priority: WEBHOOK_SUBSCRIBERS_JSON env var > config/subscribers.json
+    Env var mode allows GitHub Actions to use encrypted secrets without
+    committing sensitive URLs to the repository.
+    """
+    # Priority 1: Environment variable (GitHub Actions secrets)
+    if WEBHOOK_SUBSCRIBERS_JSON:
+        try:
+            subscribers = json.loads(WEBHOOK_SUBSCRIBERS_JSON)
+            if not isinstance(subscribers, list):
+                print("[error] WEBHOOK_SUBSCRIBERS_JSON must be a JSON array")
+                return []
+            return subscribers
+        except json.JSONDecodeError as e:
+            print(f"[error] Invalid JSON in WEBHOOK_SUBSCRIBERS_JSON: {e}")
+            return []
+
+    # Priority 2: Local config file (dev/manual runs)
     if not SUBSCRIBERS_FILE.exists():
         return []
     try:
