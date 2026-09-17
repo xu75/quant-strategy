@@ -52,6 +52,14 @@ const ogImage = new URL(image, Astro.site);
         "publisher": {
           "@type": "Organization",
           "name": "Quant Strategy Lab"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://quant-strategy.mesh-hub.xyz/?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
         }
       }
     </script>
