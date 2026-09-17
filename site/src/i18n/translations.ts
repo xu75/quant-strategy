@@ -9,6 +9,7 @@ export const translations: Record<string, Record<string, string>> = {
     'footer.tagline': 'Quant Strategy - Open strategy research for low-frequency quant trading',
     'footer.disclaimer': 'Disclaimer',
     'footer.source': 'GitHub',
+    'footer.feedback': 'Feedback',
     'footer.notice': 'This is not investment advice. For research purposes only.',
     // Homepage
     'home.subtitle': 'Low-frequency quant research lab. We replace emotional trading with deterministic rules to navigate market and human uncertainty, delivering hands-off strategies with reliable returns and controlled drawdowns.',
@@ -154,6 +155,7 @@ export const translations: Record<string, Record<string, string>> = {
     'footer.tagline': 'Quant Strategy — 开放策略研究，低频量化交易',
     'footer.disclaimer': '免责声明',
     'footer.source': 'GitHub',
+    'footer.feedback': '反馈',
     'footer.notice': '本站不提供投资建议，仅供研究参考。',
     // Homepage
     'home.subtitle': '低频量化研究实验室。我们用确定性规则替代情绪化交易，以策略确定性应对市场与人性的双重不确定性，为没有时间盯盘的投资者提供收益靠谱、回撤可控的自动化策略参考。',
