@@ -9,13 +9,14 @@ Covers the V3 continuous-exposure contract (F: V3 executable position instructio
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""}):
+with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": "", "WEBHOOK_SUBSCRIBERS_JSON": ""}):
     from scripts.telegram_notify import (
         build_notifications,
         format_position_message,
@@ -26,6 +27,7 @@ with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""}
         _telegram_message,
         send_webhook,
         strategy_slug,
+        load_subscribers,
         EXPOSURE_NOTIFY_THRESHOLD,
     )
 
@@ -258,7 +260,7 @@ class TestPreviousSignalData:
 
 class TestWebhookVerification:
     def _sub(self):
-        return {"id": "xu_mate80", "url": "https://api.chuckfang.com/xxx/", "format": "json"}
+        return {"id": "test_webhook", "url": "https://webhook.example.com/test/", "format": "json"}
 
     def _note(self):
         return {
@@ -296,3 +298,61 @@ class TestWebhookVerification:
 class TestStrategySlug:
     def test_underscore_to_hyphen(self):
         assert strategy_slug("echotrend_240_v3") == "echotrend-240-v3"
+
+
+class TestLoadSubscribers:
+    """Test load_subscribers() schema validation and fallback behavior."""
+
+    def test_valid_secret_returns_subscribers(self):
+        valid_json = '[{"id":"test","url":"https://example.com/hook/","format":"json"}]'
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": valid_json}):
+            subs = load_subscribers()
+            assert len(subs) == 1
+            assert subs[0]["id"] == "test"
+            assert subs[0]["url"] == "https://example.com/hook/"
+
+    def test_invalid_json_exits_non_zero(self):
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": "not json"}):
+            with patch("sys.exit") as mock_exit:
+                load_subscribers()
+                mock_exit.assert_called_once_with(1)
+
+    def test_non_array_json_exits_non_zero(self):
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '{"not":"array"}'}):
+            with patch("sys.exit") as mock_exit:
+                load_subscribers()
+                mock_exit.assert_called_once_with(1)
+
+    def test_array_with_non_object_element_exits_non_zero(self):
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '["string"]'}):
+            with patch("sys.exit") as mock_exit:
+                load_subscribers()
+                mock_exit.assert_called_once_with(1)
+
+    def test_missing_required_field_exits_non_zero(self):
+        # Missing 'url'
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"format":"json"}]'}):
+            with patch("sys.exit") as mock_exit:
+                load_subscribers()
+                mock_exit.assert_called_once_with(1)
+
+    def test_missing_format_field_exits_non_zero(self):
+        # Missing 'format'
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://example.com/"}]'}):
+            with patch("sys.exit") as mock_exit:
+                load_subscribers()
+                mock_exit.assert_called_once_with(1)
+
+    def test_no_secret_falls_back_to_local_file(self):
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": ""}):
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("builtins.open", MagicMock(return_value=MagicMock(__enter__=lambda s: MagicMock(read=lambda: '[]')))):
+                    subs = load_subscribers()
+                    assert subs == []
+
+    def test_no_secret_and_no_file_returns_empty(self):
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": ""}):
+            with patch("pathlib.Path.exists", return_value=False):
+                subs = load_subscribers()
+                assert subs == []
+

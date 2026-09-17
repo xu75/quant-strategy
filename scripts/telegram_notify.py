@@ -102,11 +102,23 @@ def load_subscribers() -> list[dict]:
             subscribers = json.loads(WEBHOOK_SUBSCRIBERS_JSON)
             if not isinstance(subscribers, list):
                 print("[error] WEBHOOK_SUBSCRIBERS_JSON must be a JSON array")
-                return []
+                sys.exit(1)
+
+            # Validate each subscriber object
+            for i, sub in enumerate(subscribers):
+                if not isinstance(sub, dict):
+                    print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}] must be an object, got {type(sub).__name__}")
+                    sys.exit(1)
+                required_fields = ["url", "format"]
+                missing = [f for f in required_fields if f not in sub]
+                if missing:
+                    print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}] missing required fields: {missing}")
+                    sys.exit(1)
+
             return subscribers
         except json.JSONDecodeError as e:
             print(f"[error] Invalid JSON in WEBHOOK_SUBSCRIBERS_JSON: {e}")
-            return []
+            sys.exit(1)
 
     # Priority 2: Local config file (dev/manual runs)
     if not SUBSCRIBERS_FILE.exists():

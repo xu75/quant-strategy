@@ -5,21 +5,21 @@
 
 ## 已泄露的信息
 - **文件**: `config/subscribers.json`
-- **内容**: Webhook URL `https://api.chuckfang.com/73422055/`
+- **内容**: Webhook URL（已从当前文档中移除）
 - **首次提交**: commit `78be093721f8c7d5e58dc0849eb6a0dc5bdf73fb` (2026-05-11)
 - **可见范围**: 整个公开仓库的历史记录
 
 ## 已完成的临时措施
 ✅ 将 `config/subscribers.json` 添加到 `.gitignore`  
 ✅ 从 Git 追踪中移除该文件（`git rm --cached`）  
+✅ 从当前文档中移除明文 webhook URL
 ⚠️ **但历史记录中仍然存在**
 
 ## 必须立即执行的操作
 
 ### 1. 吊销泄露的 Webhook（最高优先级）
 ```
-旧 URL: https://api.chuckfang.com/73422055/
-行动: 在 chuckfang.com 管理后台重新生成新的 webhook URL
+行动: 在 webhook 服务后台重新生成新的 URL
 ```
 
 ### 2. 从 Git 历史中彻底删除敏感文件
