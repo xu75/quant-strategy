@@ -15,5 +15,8 @@
     "astro": "^5.9.0",
     "js-yaml": "^4.1.0",
     "tailwindcss": "^4.1.7"
+  },
+  "devDependencies": {
+    "@vercel/node": "^13.0.1"
   }
 }
