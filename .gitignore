@@ -20,6 +20,7 @@ venv/
 # Environment & secrets
 .env
 config.json
+config/subscribers.json
 *.key
 
 # OS
