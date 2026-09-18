@@ -83,13 +83,15 @@ Google 会显示：
 
 ---
 
-## 步骤 4：请求索引（加速收录）
+## 步骤 4：请求重新抓取（可选）
 
-### 方法 1：URL 检查工具（推荐优先索引）
+### 方法 1：URL 检查工具
 
 1. 在顶部搜索框输入 URL
 2. 点击"请求编入索引"
-3. 每天有配额限制（约 10 个 URL）
+3. 每天有配额限制（Google 未公开具体数量）
+
+**注意**：请求不保证收录或更快索引，仅作为向 Google 提交单个 URL 的方式。
 
 **优先提交这些 URL**：
 ```
@@ -101,7 +103,7 @@ https://quant-strategy.mesh-hub.xyz/backtest/btc-ma240-4d/
 
 ### 方法 2：等待自动抓取
 
-提交 sitemap 后，Google 会根据其算法决定何时、是否抓取和索引页面。
+提交 sitemap 后，Google 会将其作为发现提示，但不保证下载或使用。抓取和索引由 Google 算法决定。
 
 **根据 [Google 官方文档](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)**：
 - "重新抓取可能需要几天到几周时间"
@@ -213,7 +215,7 @@ site:quant-strategy.mesh-hub.xyz
    - 技术社区文章
 
 3. **持续监控**
-   - 每周检查 `site:` 收录数量
+   - 每周检查 Search Console "网页"索引报告（`site:` 仅供补充排查，不统计数量）
    - 每月查看 Search Console "效果"报告
    - 根据数据优化内容
 

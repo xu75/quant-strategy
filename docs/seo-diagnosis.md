@@ -32,7 +32,7 @@ created: 2026-09-17
 | **Canonical URL** | ✅ 配置 | 所有页面有 canonical 标签 |
 | **HTTPS** | ✅ 启用 | Vercel 自动 HTTPS |
 | **响应式设计** | ✅ 支持 | viewport meta 配置正确 |
-| **内容可见性** | ✅ SSR | Astro 静态生成，内容在 HTML 源码中 |
+| **内容可见性** | ✅ SSG | Astro 静态生成，内容在 HTML 源码中 |
 
 ### 2. 内容质量检查
 
@@ -215,7 +215,7 @@ site:quant-strategy.mesh-hub.xyz echotrend
 
 | 行动 | 官方说明 |
 |------|---------|
-| 提交 Google Search Console | 提交后 Google 会发现 sitemap；[sitemap 不保证索引或提升排名](https://developers.google.com/search/help/crawling-index-faq) |
+| 提交 Google Search Console | 提交 sitemap 为 Google 提供发现提示；[sitemap 不保证索引或提升排名](https://developers.google.com/search/help/crawling-index-faq) |
 | 页面抓取（Crawling） | [重新抓取可能需要几天到几周](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)（官方表述） |
 | 编入索引（Indexing） | 无法预测或保证；抓取请求不保证页面会出现在搜索结果中 |
 | 搜索排名 | 取决于内容质量、E-E-A-T 信号、外部链接等多个因素 |
@@ -271,4 +271,4 @@ site:quant-strategy.mesh-hub.xyz
 
 ---
 
-**结论**：网站 SEO 配置已经符合最佳实践，主要问题是**缺少主动提交和外部信号**。完成上述 P0 行动后，预计 1-2 周内会开始被收录。
+**结论**：网站 SEO 配置已经符合最佳实践。建议完成 P0 行动（提交 Search Console、建立外部链接）并通过 Search Console 监控实际抓取和索引状态。
