@@ -65,16 +65,8 @@ created: 2026-09-17
 # 设置测试用环境变量
 export WEBHOOK_SUBSCRIBERS_JSON='[{"id":"test","url":"https://example.com/","format":"json"}]'
 
-# 验证配置格式（不发送消息）
-python3 -c "
-import sys
-sys.path.insert(0, '.')
-from scripts.telegram_notify import load_subscribers
-subs = load_subscribers()
-print(f'✓ Configuration valid: {len(subs)} subscriber(s)')
-for i, sub in enumerate(subs):
-    print(f'  [{i}] {sub[\"id\"]}: {sub[\"url\"]} ({sub[\"format\"]})')
-"
+# 验证配置格式（不发送消息，不打印敏感URL）
+python3 -c "from scripts.telegram_notify import load_subscribers; print(f'✓ Configuration valid: {len(load_subscribers())} subscriber(s)')"
 
 # 实际触发通知（会检测信号变化并发送真实消息）
 python scripts/telegram_notify.py
