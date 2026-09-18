@@ -13,10 +13,11 @@ import os
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": "", "WEBHOOK_SUBSCRIBERS_JSON": ""}):
+with patch.dict("os.environ", {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""}):
     from scripts.telegram_notify import (
         build_notifications,
         format_position_message,
@@ -313,35 +314,56 @@ class TestLoadSubscribers:
 
     def test_invalid_json_exits_non_zero(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": "not json"}):
-            with patch("sys.exit") as mock_exit:
+            with pytest.raises(SystemExit) as exc_info:
                 load_subscribers()
-                mock_exit.assert_called_once_with(1)
+            assert exc_info.value.code == 1
 
     def test_non_array_json_exits_non_zero(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '{"not":"array"}'}):
-            with patch("sys.exit") as mock_exit:
+            with pytest.raises(SystemExit) as exc_info:
                 load_subscribers()
-                mock_exit.assert_called_once_with(1)
+            assert exc_info.value.code == 1
 
     def test_array_with_non_object_element_exits_non_zero(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '["string"]'}):
-            with patch("sys.exit") as mock_exit:
+            with pytest.raises(SystemExit) as exc_info:
                 load_subscribers()
-                mock_exit.assert_called_once_with(1)
+            assert exc_info.value.code == 1
 
     def test_missing_required_field_exits_non_zero(self):
         # Missing 'url'
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"format":"json"}]'}):
-            with patch("sys.exit") as mock_exit:
+            with pytest.raises(SystemExit) as exc_info:
                 load_subscribers()
-                mock_exit.assert_called_once_with(1)
+            assert exc_info.value.code == 1
 
     def test_missing_format_field_exits_non_zero(self):
         # Missing 'format'
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://example.com/"}]'}):
-            with patch("sys.exit") as mock_exit:
+            with pytest.raises(SystemExit) as exc_info:
                 load_subscribers()
-                mock_exit.assert_called_once_with(1)
+            assert exc_info.value.code == 1
+
+    def test_url_must_be_string(self):
+        # url is a number
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":123,"format":"json"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
+    def test_url_must_be_http_or_https(self):
+        # url doesn't start with http:// or https://
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"ftp://example.com","format":"json"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
+    def test_format_must_be_valid_enum(self):
+        # format is not in the valid set
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://example.com","format":"jsno"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
 
     def test_no_secret_falls_back_to_local_file(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": ""}):
@@ -355,4 +377,3 @@ class TestLoadSubscribers:
             with patch("pathlib.Path.exists", return_value=False):
                 subs = load_subscribers()
                 assert subs == []
-

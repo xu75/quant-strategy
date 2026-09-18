@@ -6,7 +6,7 @@
 > **Open strategy research for low-frequency quant trading.**
 > Replace emotional trading with deterministic rules. Strategy logic fully transparent.
 
-**🌐 Live Site**: [quant-strategy.mesh-hub.xyz](https://quant-strategy.mesh-hub.xyz)  
+**🌐 Live Site**: [quant-strategy.mesh-hub.xyz](https://quant-strategy.mesh-hub.xyz)
 **📡 Telegram Signals**: [t.me/meshhubsignal_channel](https://t.me/meshhubsignal_channel)
 
 This is not just another backtesting framework—it's a **live, verifiable signal pipeline**. The execution pipeline is decoupled from individual strategies, with signals automatically generated and published to a static frontend.

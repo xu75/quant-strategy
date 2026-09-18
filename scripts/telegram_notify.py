@@ -38,7 +38,6 @@ SITE_URL = "https://quant-strategy.mesh-hub.xyz"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
-WEBHOOK_SUBSCRIBERS_JSON = os.environ.get("WEBHOOK_SUBSCRIBERS_JSON", "")
 
 # Fire a position update when executed exposure moves at least this much.
 EXPOSURE_NOTIFY_THRESHOLD = 0.035
@@ -95,24 +94,49 @@ def load_subscribers() -> list[dict]:
     Priority: WEBHOOK_SUBSCRIBERS_JSON env var > config/subscribers.json
     Env var mode allows GitHub Actions to use encrypted secrets without
     committing sensitive URLs to the repository.
+
+    Schema validation enforces:
+    - url: non-empty string starting with http:// or https://
+    - format: one of json / discord / text / bark
     """
+    # Read env var at call time (not module import time) for testability
+    webhook_json = os.environ.get("WEBHOOK_SUBSCRIBERS_JSON", "")
+
     # Priority 1: Environment variable (GitHub Actions secrets)
-    if WEBHOOK_SUBSCRIBERS_JSON:
+    if webhook_json:
         try:
-            subscribers = json.loads(WEBHOOK_SUBSCRIBERS_JSON)
+            subscribers = json.loads(webhook_json)
             if not isinstance(subscribers, list):
                 print("[error] WEBHOOK_SUBSCRIBERS_JSON must be a JSON array")
                 sys.exit(1)
 
             # Validate each subscriber object
+            valid_formats = {"json", "discord", "text", "bark"}
             for i, sub in enumerate(subscribers):
                 if not isinstance(sub, dict):
                     print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}] must be an object, got {type(sub).__name__}")
                     sys.exit(1)
+
+                # Check required fields exist
                 required_fields = ["url", "format"]
                 missing = [f for f in required_fields if f not in sub]
                 if missing:
                     print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}] missing required fields: {missing}")
+                    sys.exit(1)
+
+                # Validate url is a non-empty HTTP(S) string
+                url = sub["url"]
+                if not isinstance(url, str) or not url:
+                    print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}].url must be a non-empty string")
+                    sys.exit(1)
+                if not (url.startswith("http://") or url.startswith("https://")):
+                    print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}].url must start with http:// or https://")
+                    sys.exit(1)
+
+                # Validate format is one of the supported types
+                fmt = sub["format"]
+                if fmt not in valid_formats:
+                    print(f"[error] WEBHOOK_SUBSCRIBERS_JSON[{i}].format must be one of {valid_formats}, got '{fmt}'")
                     sys.exit(1)
 
             return subscribers
