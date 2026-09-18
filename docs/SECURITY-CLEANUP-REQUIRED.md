@@ -1,84 +1,36 @@
-# 🚨 安全清理待办 (URGENT)
+# 🚨 安全清理记录
 
 ## 问题
 在将仓库设为 public 之前，`config/subscribers.json` 已被提交到 Git 历史中，包含敏感的 webhook URL。
 
 ## 已泄露的信息
 - **文件**: `config/subscribers.json`
-- **内容**: Webhook URL `https://api.chuckfang.com/73422055/`
+- **内容**: Webhook URL（已从当前文档和 HEAD 中移除）
 - **首次提交**: commit `78be093721f8c7d5e58dc0849eb6a0dc5bdf73fb` (2026-05-11)
-- **可见范围**: 整个公开仓库的历史记录
+- **可见范围**: 整个公开仓库的历史记录中仍可访问
 
-## 已完成的临时措施
-✅ 将 `config/subscribers.json` 添加到 `.gitignore`  
-✅ 从 Git 追踪中移除该文件（`git rm --cached`）  
-⚠️ **但历史记录中仍然存在**
+## 已完成的措施（2026-09-17）
+✅ 将 `config/subscribers.json` 添加到 `.gitignore`
+✅ 从 Git 追踪中移除该文件（`git rm --cached`）
+✅ 从当前文档中移除明文 webhook URL
+✅ 迁移到 GitHub Secrets（`WEBHOOK_SUBSCRIBERS_JSON`）
+✅ 添加配置校验（URL/format schema）
 
-## 必须立即执行的操作
+## Owner 决策（2026-09-18）
 
-### 1. 吊销泄露的 Webhook（最高优先级）
-```
-旧 URL: https://api.chuckfang.com/73422055/
-行动: 在 chuckfang.com 管理后台重新生成新的 webhook URL
-```
+**不执行以下操作**（已确认接受风险）：
+- ❌ 不轮换泄露的 webhook URL
+- ❌ 不重写 Git 历史（不使用 BFG/git-filter-repo）
 
-### 2. 从 Git 历史中彻底删除敏感文件
+**理由**：
+- Webhook endpoint 为内部测试用途，无生产数据
+- 重写历史会影响协作者和已 fork 的仓库
+- 当前 HEAD 已清理，新配置使用 GitHub Secrets
 
-#### 方案 A: 使用 BFG Repo-Cleaner（推荐）
-```bash
-# 1. 安装 BFG
-brew install bfg  # macOS
-# 或从 https://rtyley.github.io/bfg-repo-cleaner/ 下载
-
-# 2. 备份仓库
-cd /path/to/quant-strategy
-git clone --mirror . ../quant-strategy-backup.git
-
-# 3. 删除敏感文件
-bfg --delete-files subscribers.json .
-
-# 4. 清理引用和垃圾回收
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
-
-# 5. 强制推送（会重写历史）
-git push origin --force --all
-git push origin --force --tags
-```
-
-#### 方案 B: 使用 git-filter-repo（更彻底）
-```bash
-# 1. 安装
-pip install git-filter-repo
-
-# 2. 备份
-cp -r . ../quant-strategy-backup
-
-# 3. 删除文件及其所有历史
-git filter-repo --path config/subscribers.json --invert-paths
-
-# 4. 强制推送
-git push origin --force --all
-git push origin --force --tags
-```
-
-### 3. 验证清理结果
-```bash
-# 检查文件是否还在历史中
-git log --all --full-history -- config/subscribers.json
-
-# 应该返回空，说明清理成功
-```
-
-### 4. 通知协作者
-如果有其他人 clone 了这个仓库，他们需要：
-```bash
-# 删除本地仓库
-rm -rf quant-strategy
-
-# 重新 clone
-git clone https://github.com/xu75/quant-strategy.git
-```
+**接受的风险**：
+- ⚠️ 历史 commit 中的 webhook URL 仍然公开可访问
+- ⚠️ 任何人都可以通过 `git log --all --full-history -- config/subscribers.json` 查看
+- ⚠️ 如果这些 webhook 未来被用于生产环境，必须先轮换
 
 ## 未来防护措施
 
