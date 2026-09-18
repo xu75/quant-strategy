@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
+from urllib.parse import urlparse
 
 DATA_DIR = Path("data")
 SUBSCRIBERS_FILE = Path("config/subscribers.json")
@@ -88,15 +89,98 @@ def get_current_signal(strategy_id: str) -> dict | None:
         return None
 
 
+def validate_subscribers(subscribers: list, source: str) -> None:
+    """Validate subscriber list schema and exit on error.
+
+    Args:
+        subscribers: List of subscriber dicts to validate
+        source: Source identifier for error messages (e.g. "WEBHOOK_SUBSCRIBERS_JSON", "config/subscribers.json")
+
+    Schema validation enforces:
+    - url: non-empty HTTP(S) string with hostname (e.g. https://example.com/path)
+    - format: one of json / discord / text / bark (must be string type)
+    """
+    if not isinstance(subscribers, list):
+        print(f"[error] {source} must be a JSON array")
+        sys.exit(1)
+
+    valid_formats = {"json", "discord", "text", "bark"}
+    for i, sub in enumerate(subscribers):
+        if not isinstance(sub, dict):
+            print(f"[error] {source}[{i}] must be an object, got {type(sub).__name__}")
+            sys.exit(1)
+
+        # Check required fields exist
+        required_fields = ["url", "format"]
+        missing = [f for f in required_fields if f not in sub]
+        if missing:
+            print(f"[error] {source}[{i}] missing required fields: {missing}")
+            sys.exit(1)
+
+        # Validate url is a well-formed HTTP(S) URL with hostname
+        url = sub["url"]
+        if not isinstance(url, str) or not url:
+            print(f"[error] {source}[{i}].url must be a non-empty string")
+            sys.exit(1)
+
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                print(f"[error] {source}[{i}].url must use http:// or https:// scheme")
+                sys.exit(1)
+            if not parsed.hostname:
+                print(f"[error] {source}[{i}].url must include a valid hostname")
+                sys.exit(1)
+        except Exception as e:
+            print(f"[error] {source}[{i}].url is not a valid URL: {e}")
+            sys.exit(1)
+
+        # Validate format is a string and in the supported set
+        fmt = sub["format"]
+        if not isinstance(fmt, str):
+            print(f"[error] {source}[{i}].format must be a string, got {type(fmt).__name__}")
+            sys.exit(1)
+        if fmt not in valid_formats:
+            print(f"[error] {source}[{i}].format must be one of {valid_formats}, got '{fmt}'")
+            sys.exit(1)
+
+
 def load_subscribers() -> list[dict]:
-    """Load webhook subscribers from config file."""
+    """Load webhook subscribers from env var or config file.
+
+    Priority: WEBHOOK_SUBSCRIBERS_JSON env var > config/subscribers.json
+    Env var mode allows GitHub Actions to use encrypted secrets without
+    committing sensitive URLs to the repository.
+
+    Both sources are validated with the same schema rules.
+    """
+    # Read env var at call time (not module import time) for testability
+    webhook_json = os.environ.get("WEBHOOK_SUBSCRIBERS_JSON", "")
+
+    # Priority 1: Environment variable (GitHub Actions secrets)
+    if webhook_json:
+        try:
+            subscribers = json.loads(webhook_json)
+            validate_subscribers(subscribers, "WEBHOOK_SUBSCRIBERS_JSON")
+            return subscribers
+        except json.JSONDecodeError as e:
+            print(f"[error] Invalid JSON in WEBHOOK_SUBSCRIBERS_JSON: {e}")
+            sys.exit(1)
+
+    # Priority 2: Local config file (dev/manual runs)
     if not SUBSCRIBERS_FILE.exists():
         return []
     try:
         with open(SUBSCRIBERS_FILE) as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return []
+            subscribers = json.load(f)
+            validate_subscribers(subscribers, str(SUBSCRIBERS_FILE))
+            return subscribers
+    except json.JSONDecodeError as e:
+        print(f"[error] Invalid JSON in {SUBSCRIBERS_FILE}: {e}")
+        sys.exit(1)
+    except OSError as e:
+        print(f"[error] Failed to read {SUBSCRIBERS_FILE}: {e}")
+        sys.exit(1)
 
 
 def strategy_slug(strategy_id: str) -> str:

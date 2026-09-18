@@ -96,10 +96,11 @@ jobs:
           fi
 
       - name: Notify on signal changes
-        # Runs unconditionally: webhook subscribers (config/subscribers.json) must
+        # Runs unconditionally: webhook subscribers (GitHub Secret or local file) must
         # fire even when Telegram secrets are absent. The script skips channels it
         # can't reach and exits non-zero if any configured delivery fails.
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WEBHOOK_SUBSCRIBERS_JSON: ${{ secrets.WEBHOOK_SUBSCRIBERS_JSON }}
         run: python scripts/telegram_notify.py
