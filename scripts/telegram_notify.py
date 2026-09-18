@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
+from urllib.parse import urlparse
 
 DATA_DIR = Path("data")
 SUBSCRIBERS_FILE = Path("config/subscribers.json")
@@ -116,18 +117,22 @@ def validate_subscribers(subscribers: list, source: str) -> None:
             print(f"[error] {source}[{i}] missing required fields: {missing}")
             sys.exit(1)
 
-        # Validate url is a non-empty HTTP(S) string with hostname
+        # Validate url is a well-formed HTTP(S) URL with hostname
         url = sub["url"]
         if not isinstance(url, str) or not url:
             print(f"[error] {source}[{i}].url must be a non-empty string")
             sys.exit(1)
-        if not (url.startswith("http://") or url.startswith("https://")):
-            print(f"[error] {source}[{i}].url must start with http:// or https://")
-            sys.exit(1)
-        # Ensure URL has a hostname (not just "https://")
-        url_without_protocol = url.replace("http://", "").replace("https://", "")
-        if not url_without_protocol or url_without_protocol.startswith("/"):
-            print(f"[error] {source}[{i}].url must include a hostname (e.g. https://example.com/path)")
+
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                print(f"[error] {source}[{i}].url must use http:// or https:// scheme")
+                sys.exit(1)
+            if not parsed.hostname:
+                print(f"[error] {source}[{i}].url must include a valid hostname")
+                sys.exit(1)
+        except Exception as e:
+            print(f"[error] {source}[{i}].url is not a valid URL: {e}")
             sys.exit(1)
 
         # Validate format is a string and in the supported set

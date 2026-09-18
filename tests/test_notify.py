@@ -379,6 +379,20 @@ class TestLoadSubscribers:
                 load_subscribers()
             assert exc_info.value.code == 1
 
+    def test_url_with_userinfo_but_no_hostname_is_rejected(self):
+        # url like "https://user@" has no hostname
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://user@","format":"json"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
+    def test_url_with_query_but_no_hostname_is_rejected(self):
+        # url like "https://?x=1" has no hostname
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://?x=1","format":"json"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
     def test_no_secret_falls_back_to_local_file(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": ""}):
             with patch("pathlib.Path.exists", return_value=True):

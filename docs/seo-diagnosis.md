@@ -262,13 +262,14 @@ npm install @astrojs/rss
 
 | 行动 | 官方说明 |
 |------|---------|
-| 提交 Google Search Console | 提交后 Google 会发现 sitemap，但抓取时间不确定 |
-| 页面收录 | "重新抓取可能需要几天到几周"（官方表述） |
+| 提交 Google Search Console | 提交后 Google 会发现 sitemap；[sitemap 不保证索引或提升排名](https://developers.google.com/search/help/crawling-index-faq) |
+| 页面抓取（Crawling） | [重新抓取可能需要几天到几周](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)（官方表述） |
+| 编入索引（Indexing） | 无法预测或保证；抓取请求不保证页面会出现在搜索结果中 |
 | 搜索排名 | 取决于内容质量、E-E-A-T 信号、外部链接等多个因素 |
 
 **建议**：通过 Search Console 的"网页"和"抓取统计信息"报告监控实际状态，不要依赖时间预测。
 
-**注意**：金融/量化领域属于 YMYL (Your Money Your Life) 类别。根据 [Google E-E-A-T 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，此类内容需要展示更高的专业性（Expertise）、权威性（Authoritativeness）和可信度（Trustworthiness）。
+**注意**：金融/量化领域属于 YMYL (Your Money Your Life) 类别。根据 [Google people-first content 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，Google 的排名系统对可能影响用户财务稳定的主题更加重视强 E-E-A-T 信号（专业性 Expertise、权威性 Authoritativeness、可信度 Trustworthiness）。
 
 ---
 

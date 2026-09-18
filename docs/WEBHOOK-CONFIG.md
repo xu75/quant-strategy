@@ -66,14 +66,21 @@ created: 2026-09-17
 export WEBHOOK_SUBSCRIBERS_JSON='[{"id":"test","url":"https://example.com/","format":"json"}]'
 
 # 验证配置格式（不发送消息）
-python scripts/telegram_notify.py --help 2>&1 | head -5
-# 如果配置有误，脚本在 load_subscribers() 时会报错并 exit 1
+python3 -c "
+import sys
+sys.path.insert(0, '.')
+from scripts.telegram_notify import load_subscribers
+subs = load_subscribers()
+print(f'✓ Configuration valid: {len(subs)} subscriber(s)')
+for i, sub in enumerate(subs):
+    print(f'  [{i}] {sub[\"id\"]}: {sub[\"url\"]} ({sub[\"format\"]})')
+"
 
-# 实际触发通知（会发送真实消息）
+# 实际触发通知（会检测信号变化并发送真实消息）
 python scripts/telegram_notify.py
 ```
 
-**注意**：`telegram_notify.py` 检测信号变化并发送通知。要避免误发消息，建议先在测试环境配置 webhook endpoint。
+**注意**：第二个命令会发送真实通知如果检测到信号变化。仅在测试环境或准备接收通知时运行。
 
 ## 安全建议
 
