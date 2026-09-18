@@ -27,8 +27,8 @@
 
 3. **字段说明**：
    - `id`: 订阅者标识符（用于日志）
-   - `url`: Webhook 接收端点（必须以 `/` 结尾）
-   - `format`: 消息格式（目前仅支持 `"json"`）
+   - `url`: Webhook 接收端点（必须以 `http://` 或 `https://` 开头）
+   - `format`: 消息格式，支持：`json` / `discord` / `text` / `bark`
 
 ### 本地开发
 
@@ -59,7 +59,7 @@
 export WEBHOOK_SUBSCRIBERS_JSON='[{"id":"test","url":"https://example.com/","format":"json"}]'
 
 # 运行策略（会触发 webhook）
-python scripts/run_strategy.py --mode=daily-signal
+python run_strategy.py --mode=daily-signal
 ```
 
 ## 安全建议

@@ -235,25 +235,30 @@ npm install @astrojs/rss
 - 添加 preconnect 到 CDN
 - 图片懒加载（如果有更多图片）
 
-### 4. 添加多语言 hreflang
-已有中英文切换，可以添加 hreflang 标签：
+### 4. 添加多语言 hreflang（可选）
+
+当前网站有中英文内容，但使用客户端切换而非独立 URL。如果未来改为独立 URL 路由（如 `/en/` 和 `/zh/`），可以添加 hreflang 标签：
 ```html
-<link rel="alternate" hreflang="en" href="https://quant-strategy.mesh-hub.xyz/" />
-<link rel="alternate" hreflang="zh-CN" href="https://quant-strategy.mesh-hub.xyz/?lang=zh" />
+<link rel="alternate" hreflang="en" href="https://quant-strategy.mesh-hub.xyz/en/" />
+<link rel="alternate" hreflang="zh-CN" href="https://quant-strategy.mesh-hub.xyz/zh/" />
 <link rel="alternate" hreflang="x-default" href="https://quant-strategy.mesh-hub.xyz/" />
 ```
 
+**注意**：当前实现使用客户端语言切换（localStorage），无需 hreflang。
+
 ---
 
-## 预期时间线
+## 预期时间线参考
 
-| 行动 | 预期结果时间 |
+**注意**：以下时间线仅为行业经验参考值，实际时间可能因网站权重、内容质量、外部链接、竞争程度等因素而有较大差异。
+
+| 行动 | 典型时间范围 |
 |------|------------|
-| 提交 Google Search Console | 1-3 天内开始抓取 |
-| 首页被收录 | 3-7 天 |
-| 内页被收录 | 1-2 周 |
-| 搜索排名开始显示 | 2-4 周 |
-| 稳定排名 | 2-3 个月 |
+| 提交 Google Search Console | 通常 1-3 天内开始抓取 |
+| 首页被收录 | 通常 3-7 天 |
+| 内页被收录 | 通常 1-2 周 |
+| 搜索排名开始显示 | 通常 2-4 周 |
+| 稳定排名 | 通常 2-3 个月 |
 
 **注意**：金融/量化领域属于 YMYL (Your Money Your Life) 类别，Google 会更谨慎地索引和排名这类内容。
 
