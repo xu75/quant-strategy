@@ -365,6 +365,20 @@ class TestLoadSubscribers:
                 load_subscribers()
             assert exc_info.value.code == 1
 
+    def test_url_without_hostname_is_rejected(self):
+        # url is just "https://" without hostname
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://","format":"json"}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
+    def test_format_must_be_string_type(self):
+        # format is a list instead of string
+        with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": '[{"url":"https://example.com","format":[]}]'}):
+            with pytest.raises(SystemExit) as exc_info:
+                load_subscribers()
+            assert exc_info.value.code == 1
+
     def test_no_secret_falls_back_to_local_file(self):
         with patch.dict(os.environ, {"WEBHOOK_SUBSCRIBERS_JSON": ""}):
             with patch("pathlib.Path.exists", return_value=True):

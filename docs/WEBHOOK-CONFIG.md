@@ -1,3 +1,10 @@
+---
+feature_ids: []
+topics: [webhook, configuration, github-secrets, security]
+doc_kind: guide
+created: 2026-09-17
+---
+
 # Webhook 配置指南
 
 ## 概述
@@ -58,9 +65,15 @@
 # 设置测试用环境变量
 export WEBHOOK_SUBSCRIBERS_JSON='[{"id":"test","url":"https://example.com/","format":"json"}]'
 
-# 运行策略（会触发 webhook）
-python run_strategy.py --mode=daily-signal
+# 验证配置格式（不发送消息）
+python scripts/telegram_notify.py --help 2>&1 | head -5
+# 如果配置有误，脚本在 load_subscribers() 时会报错并 exit 1
+
+# 实际触发通知（会发送真实消息）
+python scripts/telegram_notify.py
 ```
+
+**注意**：`telegram_notify.py` 检测信号变化并发送通知。要避免误发消息，建议先在测试环境配置 webhook endpoint。
 
 ## 安全建议
 

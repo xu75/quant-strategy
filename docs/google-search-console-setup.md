@@ -1,3 +1,10 @@
+---
+feature_ids: []
+topics: [seo, google-search-console, site-verification]
+doc_kind: guide
+created: 2026-09-17
+---
+
 # Google Search Console 提交指南
 
 ## 目标
@@ -94,12 +101,13 @@ https://quant-strategy.mesh-hub.xyz/backtest/btc-ma240-4d/
 
 ### 方法 2：等待自动抓取
 
-提交 sitemap 后，Google 会自动抓取所有页面，通常需要：
-- **首次发现**: 通常 1-3 天
-- **完整抓取**: 通常 1-2 周
-- **搜索结果显示**: 通常 2-4 周
+提交 sitemap 后，Google 会根据其算法决定何时、是否抓取和索引页面。
 
-**注意**：时间线仅供参考，实际可能因网站权重、内容质量、外部链接等因素而有较大差异。
+**根据 [Google 官方文档](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)**：
+- "重新抓取可能需要几天到几周时间"
+- Google 无法预测或保证 URL 何时、是否被抓取或索引
+
+**建议**：通过 Search Console 监控实际抓取和索引状态，不要依赖时间预测。
 
 ---
 
@@ -127,11 +135,7 @@ https://quant-strategy.mesh-hub.xyz/backtest/btc-ma240-4d/
 site:quant-strategy.mesh-hub.xyz
 ```
 
-**预期时间线参考**（实际可能因网站而异）：
-- **第 1-3 天**: 可能显示 0 个结果（正常）
-- **第 4-7 天**: 首页可能被收录，显示 1 个结果
-- **第 7-14 天**: 部分页面可能被收录，显示 5-10 个结果
-- **第 14-30 天**: 大部分页面可能被收录，显示 20+ 个结果
+**说明**：此命令显示 Google 已索引的页面。新网站初期可能显示 0 个结果，随着时间推移会逐渐增加。具体时间因网站而异，无法预测。
 
 ---
 
@@ -165,15 +169,16 @@ site:quant-strategy.mesh-hub.xyz
 
 ### Q4: 多久能在搜索结果中看到网站？
 
-**经验参考**（实际时间可能因网站权重、内容质量、外部链接等因素而有较大差异）：
-- **首页收录**: 通常 3-7 天
-- **搜索排名**: 通常 2-4 周
-- **稳定排名**: 通常 2-3 个月
+**根据 Google 官方说明**：
+- Google 无法预测或保证 URL 何时、是否被抓取或索引
+- 重新抓取可能需要几天到几周时间
+- 实际时间因网站权重、内容质量、外部链接等因素而有很大差异
 
-**加速方法**（见主诊断文档 `seo-diagnosis.md` 的"立即行动清单"）：
+**建议行动**（见主诊断文档 `seo-diagnosis.md` 的"立即行动清单"）：
 - 建立外部链接（GitHub README、社交媒体）
 - 发布相关文章并引用网站
 - 确保内容定期更新
+- 通过 Search Console 监控实际状态
 
 ---
 

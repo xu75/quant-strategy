@@ -1,3 +1,10 @@
+---
+feature_ids: []
+topics: [seo, site-indexing, search-optimization, google]
+doc_kind: diagnosis
+created: 2026-09-17
+---
+
 # SEO 诊断报告与改进建议
 
 ## 执行摘要
@@ -56,8 +63,9 @@
 ### 可能原因
 
 #### 1. **时间因素**（最可能）
-- 新网站需要 **2-4 周**才会被 Google 首次抓取
-- 如果没有主动提交 sitemap，可能需要 **1-3 个月**
+- 新网站需要时间被 Google 发现和评估
+- 根据 [Google 官方文档](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)，重新抓取可能需要几天到几周
+- Google 无法预测或保证 URL 何时、是否被抓取或索引
 
 #### 2. **缺少外部信号**
 - ❌ 无外部链接（backlinks）
@@ -70,7 +78,7 @@
 
 #### 4. **内容特征**
 - 金融量化内容属于**专业小众领域**
-- 实时数据更新可能导致爬虫误判为"频繁变动内容"
+- 根据 [Google E-E-A-T 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，YMYL（Your Money Your Life）内容需要展示更高的专业性、权威性和可信度
 
 ---
 
@@ -248,19 +256,19 @@ npm install @astrojs/rss
 
 ---
 
-## 预期时间线参考
+## 预期时间线
 
-**注意**：以下时间线仅为行业经验参考值，实际时间可能因网站权重、内容质量、外部链接、竞争程度等因素而有较大差异。
+**重要提示**：根据 [Google 官方文档](https://developers.google.com/search/help/crawling-index-faq)，Google 无法预测或保证 URL 何时、是否被抓取或索引。以下是基于官方说明的建议行动，而非时间保证：
 
-| 行动 | 典型时间范围 |
-|------|------------|
-| 提交 Google Search Console | 通常 1-3 天内开始抓取 |
-| 首页被收录 | 通常 3-7 天 |
-| 内页被收录 | 通常 1-2 周 |
-| 搜索排名开始显示 | 通常 2-4 周 |
-| 稳定排名 | 通常 2-3 个月 |
+| 行动 | 官方说明 |
+|------|---------|
+| 提交 Google Search Console | 提交后 Google 会发现 sitemap，但抓取时间不确定 |
+| 页面收录 | "重新抓取可能需要几天到几周"（官方表述） |
+| 搜索排名 | 取决于内容质量、E-E-A-T 信号、外部链接等多个因素 |
 
-**注意**：金融/量化领域属于 YMYL (Your Money Your Life) 类别，Google 会更谨慎地索引和排名这类内容。
+**建议**：通过 Search Console 的"网页"和"抓取统计信息"报告监控实际状态，不要依赖时间预测。
+
+**注意**：金融/量化领域属于 YMYL (Your Money Your Life) 类别。根据 [Google E-E-A-T 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，此类内容需要展示更高的专业性（Expertise）、权威性（Authoritativeness）和可信度（Trustworthiness）。
 
 ---
 
