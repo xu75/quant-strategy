@@ -9,12 +9,13 @@ created: 2026-09-17
 
 ## 执行摘要
 
-网站 `quant-strategy.mesh-hub.xyz` 的 SEO 基础设施已经**配置完整**，但可能因为以下原因尚未被搜索引擎收录：
+网站 `quant-strategy.mesh-hub.xyz` 的 SEO 基础设施已经**配置完整**。要提高搜索引擎发现和索引的可能性，建议：
 
-1. **域名可能较新** - 搜索引擎需要时间发现新站点
-2. **缺少外部链接** - 没有其他网站链接到我们
-3. **未主动提交** - 可能未向 Google Search Console 提交
-4. **内容索引价值** - 金融量化策略可能被认为是专业/小众内容
+1. **提交到 Google Search Console** - 主动通知 Google 网站存在
+2. **建立外部链接** - 在 GitHub README、社交媒体等处添加网站链接
+3. **监控 Search Console** - 观察实际抓取和索引状态
+
+**注意**：即使完成所有建议，Google 也无法保证何时或是否索引页面。以下诊断基于技术检查，不对收录时间或结果做出保证。
 
 ---
 
@@ -58,27 +59,23 @@ created: 2026-09-17
 
 ---
 
-## 问题诊断：为什么未被收录？
+## 问题诊断：为什么可能未被收录？
 
-### 可能原因
+### 观察到的状态
 
-#### 1. **时间因素**（最可能）
-- 新网站需要时间被 Google 发现和评估
-- 根据 [Google 官方文档](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)，重新抓取可能需要几天到几周
-- Google 无法预测或保证 URL 何时、是否被抓取或索引
+#### 1. **可能未主动提交**
+- 需验证是否已提交到 Google Search Console
+- 需验证是否已提交到 Bing Webmaster Tools
 
-#### 2. **缺少外部信号**
-- ❌ 无外部链接（backlinks）
-- ❌ 无社交媒体分享记录
-- ❌ 无其他网站引用
+#### 2. **外部信号可能不足**
+- 建议检查是否有外部链接（backlinks）
+- 建议检查是否有社交媒体分享记录
 
-#### 3. **主动提交状态未知**
-- 未验证是否提交到 Google Search Console
-- 未验证是否提交到 Bing Webmaster Tools
+#### 3. **内容特征**
+- 金融量化内容属于专业小众领域
+- 根据 [Google people-first content 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，YMYL（Your Money Your Life）主题的排名系统更加重视强 E-E-A-T 信号（专业性、权威性、可信度）
 
-#### 4. **内容特征**
-- 金融量化内容属于**专业小众领域**
-- 根据 [Google E-E-A-T 指南](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)，YMYL（Your Money Your Life）内容需要展示更高的专业性、权威性和可信度
+**注意**：根据 [Google 官方文档](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)，重新抓取可能需要几天到几周，且 Google 无法预测或保证 URL 何时、是否被抓取或索引。
 
 ---
 
@@ -159,36 +156,26 @@ created: 2026-09-17
 }
 ```
 
-#### 3.2 添加 FAQ 页面
-创建 `/faq` 页面回答常见问题：
-- What is a quant strategy?
-- How do I use these signals?
-- What is backtesting?
-- Are these strategies profitable?
+#### 3.2 持续内容更新
+保持网站活跃：
+- 定期更新策略回测数据（当前已自动化 ✅）
+- 添加策略解读文档
+- 记录重要市场事件及策略表现
 
-有助于长尾关键词收录（"what is bitcoin ma strategy" 等）
-
-#### 3.3 添加博客/更新日志
-创建 `/blog` 或 `/changelog` 页面：
-- 策略更新记录
-- 市场观察
-- 回测结果分析
-
-定期更新内容会提高爬虫访问频率。
+**注意**：内容更新的主要价值在于为用户提供最新信息。
 
 ### 阶段 4：监控与验证（优先级：P0）
 
 #### 4.1 验证收录状态
 ```bash
-# Google 收录检查
+# Google 收录检查（仅供参考，以 Search Console 为准）
 site:quant-strategy.mesh-hub.xyz
 
 # 特定页面检查
 site:quant-strategy.mesh-hub.xyz echotrend
-
-# Bing 收录检查
-site:quant-strategy.mesh-hub.xyz
 ```
+
+**注意**：`site:` 操作符的结果不一定完整。以 Search Console 的"网页"索引报告和 URL 检查工具为准。
 
 #### 4.2 手动触发抓取
 在 Google Search Console 中：
@@ -204,46 +191,12 @@ site:quant-strategy.mesh-hub.xyz
 
 ## 技术改进建议（可选，非阻塞）
 
-### 1. 改进 sitemap 配置
-
-当前 sitemap 缺少 `<lastmod>` 和 `<changefreq>`：
-
-```typescript
-// astro.config.mjs
-export default defineConfig({
-  // ...
-  integrations: [
-    sitemap({
-      changefreq: 'daily',
-      priority: 0.7,
-      lastmod: new Date(),
-      // 自定义每个 URL 的优先级
-      serialize(item) {
-        if (item.url === 'https://quant-strategy.mesh-hub.xyz/') {
-          item.priority = 1.0;
-        } else if (item.url.includes('/strategy/')) {
-          item.priority = 0.9;
-          item.changefreq = 'daily';
-        }
-        return item;
-      },
-    }),
-  ],
-});
-```
-
-### 2. 添加 RSS feed
-为博客/更新日志创建 RSS：
-```bash
-npm install @astrojs/rss
-```
-
-### 3. 性能优化
+### 1. 性能优化
 当前已经很好，可以进一步：
 - 添加 preconnect 到 CDN
 - 图片懒加载（如果有更多图片）
 
-### 4. 添加多语言 hreflang（可选）
+### 2. 添加多语言 hreflang（可选）
 
 当前网站有中英文内容，但使用客户端切换而非独立 URL。如果未来改为独立 URL 路由（如 `/en/` 和 `/zh/`），可以添加 hreflang 标签：
 ```html

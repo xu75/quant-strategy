@@ -135,7 +135,7 @@ https://quant-strategy.mesh-hub.xyz/backtest/btc-ma240-4d/
 site:quant-strategy.mesh-hub.xyz
 ```
 
-**说明**：此命令显示 Google 已索引的页面。新网站初期可能显示 0 个结果，随着时间推移会逐渐增加。具体时间因网站而异，无法预测。
+**说明**：此命令显示 Google 已索引的页面，但根据 [Google 官方文档](https://developers.google.com/search/docs/monitor-debug/search-operators/all-search-site)，`site:` 操作符的结果不一定完整。**建议以 Search Console 的"网页"索引报告和 URL 检查工具为准**，`site:` 仅作补充观察。
 
 ---
 
@@ -159,13 +159,13 @@ site:quant-strategy.mesh-hub.xyz
 
 ### Q3: 页面已提交但未被索引？
 
-可能原因：
-1. **内容质量**：页面内容太少或重复
-2. **Robots 阻止**：检查 robots.txt（已验证无问题）
-3. **服务器错误**：检查"抓取统计信息"中的错误
-4. **时间不够**：新站点需要 2-4 周建立信任
+在 Search Console 点击具体 URL 查看"未编入索引原因"。常见原因包括：
+- 内容质量问题（页面内容太少或重复）
+- Robots.txt 或 meta robots 阻止
+- 服务器错误或爬取失败
+- Google 决定不索引该页面
 
-在 Search Console 点击具体 URL 查看"未编入索引原因"。
+**注意**：提交 sitemap 不保证页面会被索引。根据 [Google 官方 FAQ](https://developers.google.com/search/help/crawling-index-faq)，sitemap 不保证索引或提升排名。
 
 ### Q4: 多久能在搜索结果中看到网站？
 
@@ -184,25 +184,18 @@ site:quant-strategy.mesh-hub.xyz
 
 ## 成功标志
 
-✅ **验证阶段**（当天完成）：
+✅ **验证阶段**（可立即完成）：
 - [ ] Google Search Console 验证通过
 - [ ] Sitemap 成功提交
 - [ ] 首页请求编入索引
 
-✅ **抓取阶段**（1 周内）：
-- [ ] "抓取统计信息"显示抓取请求 > 0
-- [ ] "网页"报告显示发现的页面 > 0
+✅ **监控阶段**（持续观察）：
+- [ ] "抓取统计信息"显示抓取请求
+- [ ] "网页"报告显示已发现的页面
 - [ ] 无抓取错误（5xx、4xx）
+- [ ] Search Console "网页"报告显示已编入索引的页面
 
-✅ **索引阶段**（2 周内）：
-- [ ] `site:quant-strategy.mesh-hub.xyz` 显示 ≥1 个结果
-- [ ] 首页已编入索引
-- [ ] 主要策略页面已编入索引
-
-✅ **排名阶段**（1 个月内）：
-- [ ] 搜索"quant strategy"能找到网站
-- [ ] 搜索品牌词（特定策略名）能找到对应页面
-- [ ] Search Console 显示搜索展示次数 > 0
+**注意**：Google 无法预测或保证抓取/索引时间。通过 Search Console 监控实际状态，不要依赖时间预测或页面数量目标。
 
 ---
 
