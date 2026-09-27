@@ -892,9 +892,9 @@
         "symbol": "BTC-USDT",
         "timeframe": "1H",
         "source": "canonical",
-        "rows": 59041,
+        "rows": 59066,
         "start": "2020-01-01T00:00:00+00:00",
-        "end": "2026-09-26T11:00:00+00:00"
+        "end": "2026-09-27T12:00:00+00:00"
       },
       {
         "key": "qqq",
@@ -919,9 +919,9 @@
         "symbol": "BTC-USD",
         "timeframe": "1D",
         "source": "canonical",
-        "rows": 2460,
+        "rows": 2461,
         "start": "2020-01-01T00:00:00+00:00",
-        "end": "2026-09-24T16:00:00+00:00"
+        "end": "2026-09-25T16:00:00+00:00"
       },
       {
         "key": "qqq_daily",
