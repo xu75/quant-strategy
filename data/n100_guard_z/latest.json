@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-06T16:18:06.233962+00:00",
+  "updated_at": "2026-11-07T15:13:06.296718+00:00",
   "strategy": {
     "name": "N100 Guard-Z",
     "code": "n100_guard_z",
@@ -8,14 +8,14 @@
   },
   "current_signal": {
     "action": "sell",
-    "price": 647.05,
-    "ma_value": 668.89,
-    "timestamp": "2026-11-05T00:00:00+00:00",
+    "price": 656.1,
+    "ma_value": 669.06,
+    "timestamp": "2026-11-06T00:00:00+00:00",
     "hold_bars": 0,
     "reason": "TRUE_CASH_STRETCH",
     "holding": "\u7eb3\u65af\u8fbe\u514bETF\u534e\u5b89",
-    "qqq_12m": 0.06076539541483039,
-    "spy_12m": 0.09812854575785535,
+    "qqq_12m": 0.07588331681207294,
+    "spy_12m": 0.10157564662867946,
     "current_etf": "159632",
     "current_zscore": 0.0,
     "current_premium": 0.0
