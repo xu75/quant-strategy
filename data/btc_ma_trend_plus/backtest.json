@@ -21,13 +21,13 @@
     "total_trades": 85,
     "avg_hold_bars": 97.5,
     "sharpe_ratio": 1.369,
-    "buy_hold_return_pct": 652.96,
+    "buy_hold_return_pct": 653.97,
     "buy_hold_max_drawdown_pct": 77.08,
     "has_open_position": false
   },
   "period": {
     "start": "2020-01-01T00:00:00+00:00",
-    "end": "2026-11-07T12:00:00+00:00"
+    "end": "2026-11-08T12:00:00+00:00"
   },
   "trades": [
     {
@@ -715,7 +715,7 @@
   "periods": {
     "since_launch": {
       "start": "2026-04-06T00:00:00+00:00",
-      "end": "2026-11-07T12:00:00+00:00",
+      "end": "2026-11-08T12:00:00+00:00",
       "performance": {
         "total_return_pct": 30.56,
         "realized_return_pct": 30.56,
@@ -723,15 +723,15 @@
         "win_rate_pct": 37.5,
         "total_trades": 8,
         "avg_hold_bars": 103.6,
-        "sharpe_ratio": 1.753,
-        "buy_hold_return_pct": 9.89,
+        "sharpe_ratio": 1.749,
+        "buy_hold_return_pct": 10.03,
         "buy_hold_max_drawdown_pct": 29.25,
         "has_open_position": false
       }
     },
     "1y": {
-      "start": "2025-11-07T12:00:00+00:00",
-      "end": "2026-11-07T12:00:00+00:00",
+      "start": "2025-11-08T12:00:00+00:00",
+      "end": "2026-11-08T12:00:00+00:00",
       "performance": {
         "total_return_pct": 9.59,
         "realized_return_pct": 9.59,
@@ -740,55 +740,55 @@
         "total_trades": 14,
         "avg_hold_bars": 77.6,
         "sharpe_ratio": 0.492,
-        "buy_hold_return_pct": -24.61,
+        "buy_hold_return_pct": -25.22,
         "buy_hold_max_drawdown_pct": 45.15,
         "has_open_position": false
       }
     },
     "2y": {
-      "start": "2024-11-07T12:00:00+00:00",
-      "end": "2026-11-07T12:00:00+00:00",
+      "start": "2024-11-08T12:00:00+00:00",
+      "end": "2026-11-08T12:00:00+00:00",
       "performance": {
-        "total_return_pct": 20.26,
-        "realized_return_pct": 20.26,
+        "total_return_pct": 19.72,
+        "realized_return_pct": 19.72,
         "max_drawdown_pct": 35.32,
         "win_rate_pct": 21.21,
         "total_trades": 33,
         "avg_hold_bars": 78.6,
-        "sharpe_ratio": 0.464,
-        "buy_hold_return_pct": -0.31,
+        "sharpe_ratio": 0.456,
+        "buy_hold_return_pct": -0.62,
         "buy_hold_max_drawdown_pct": 53.47,
         "has_open_position": false
       }
     },
     "3y": {
-      "start": "2023-11-07T12:00:00+00:00",
-      "end": "2026-11-07T12:00:00+00:00",
+      "start": "2023-11-08T12:00:00+00:00",
+      "end": "2026-11-08T12:00:00+00:00",
       "performance": {
-        "total_return_pct": 157.31,
-        "realized_return_pct": 157.31,
+        "total_return_pct": 153.76,
+        "realized_return_pct": 153.76,
         "max_drawdown_pct": 35.32,
         "win_rate_pct": 23.26,
         "total_trades": 43,
         "avg_hold_bars": 97.0,
-        "sharpe_ratio": 1.129,
-        "buy_hold_return_pct": 118.61,
+        "sharpe_ratio": 1.115,
+        "buy_hold_return_pct": 115.89,
         "buy_hold_max_drawdown_pct": 53.47,
         "has_open_position": false
       }
     },
     "5y": {
-      "start": "2021-11-07T12:00:00+00:00",
-      "end": "2026-11-07T12:00:00+00:00",
+      "start": "2021-11-08T12:00:00+00:00",
+      "end": "2026-11-08T12:00:00+00:00",
       "performance": {
-        "total_return_pct": 215.84,
-        "realized_return_pct": 215.84,
+        "total_return_pct": 194.86,
+        "realized_return_pct": 194.86,
         "max_drawdown_pct": 41.88,
         "win_rate_pct": 23.08,
         "total_trades": 65,
         "avg_hold_bars": 92.4,
-        "sharpe_ratio": 0.874,
-        "buy_hold_return_pct": 22.5,
+        "sharpe_ratio": 0.832,
+        "buy_hold_return_pct": 14.51,
         "buy_hold_max_drawdown_pct": 77.08,
         "has_open_position": false
       }
@@ -804,9 +804,9 @@
         "symbol": "BTC-USDT",
         "timeframe": "4H",
         "source": "canonical",
-        "rows": 15015,
+        "rows": 15021,
         "start": "2020-01-01T00:00:00+00:00",
-        "end": "2026-11-07T12:00:00+00:00"
+        "end": "2026-11-08T12:00:00+00:00"
       }
     ]
   }
