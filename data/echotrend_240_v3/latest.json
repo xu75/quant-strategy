@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-27T18:23:22.961038+00:00",
+  "updated_at": "2026-11-28T17:12:10.535020+00:00",
   "strategy": {
     "name": "EchoTrend 240 V3",
     "code": "echotrend_240_v3",
@@ -21,7 +21,7 @@
     "exposure_state": "holding",
     "scores": {
       "trend": 30.0,
-      "risk": 0.0,
+      "risk": 25.0,
       "rs": 60.0,
       "raw": 1.0,
       "target": 1.0
